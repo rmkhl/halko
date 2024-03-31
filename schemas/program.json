@@ -1,0 +1,113 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "/schemas/program",
+    "$comment": "Definition for program",
+    "type": "object",
+    "properties": {
+        "id": {
+            "$comment": "ID (as unix timestamp)",
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "maximum_runtime": {
+            "$comment": "Length of time in seconds",
+            "type": "integer"
+        },
+        "phases": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "time_constraint": {
+                        "$comment": "Valid runtime for a phase",
+                        "type": "object",
+                        "properties": {
+                            "runtime": {
+                                "$comment": "runtime in seconds",
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "temperature_constraint": {
+                        "$comment": "Valid temperature range",
+                        "type": "object",
+                        "properties": {
+                            "minimum": {
+                                "$comment": "Minimum temperature in Celsius",
+                                "type": "number"
+                            },
+                            "maximum": {
+                                "$comment": "Maximum temperature in Celsius",
+                                "type": "number"
+                            }
+                        },
+                        "oneOf": [
+                            {
+                                "required": [
+                                    "minimum"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "maximum"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "minimum",
+                                    "maximum"
+                                ]
+                            }
+                        ]
+                    },
+                    "heater": {
+                        "$ref": "/schemas/phase"
+                    },
+                    "fan": {
+                        "$ref": "/schemas/phase"
+                    },
+                    "humidifier": {
+                        "$ref": "/schemas/phase"
+                    }
+                },
+                "allOf": [
+                    {
+                        "required": [
+                            "heater",
+                            "fan",
+                            "humidifier"
+                        ]
+                    },
+                    {
+                        "oneOf": [
+                            {
+                                "required": [
+                                    "time_constraint"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "temperature_constraint"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "time_constraint",
+                                    "temperature_constraint"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "minLength": 1
+        }
+    },
+    "required": [
+        "name",
+        "maximum_runtime",
+        "phases"
+    ]
+}

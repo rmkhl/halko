@@ -1,0 +1,112 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "/schemas/phase",
+    "$comment": "Definition for program phase",
+    "type": "object",
+    "properties": {
+        "id": {
+            "$comment": "ID (as unix timestamp)",
+            "type": "string"
+        },
+        "name": {
+            "$comment": "Name for program phase",
+            "type": "string"
+        },
+        "constant_cycle": {
+            "$comment": "Constant power cycle to be applied",
+            "$ref": "/schemas/cycle"
+        },
+        "valid_range": {
+            "$comment": "Valid temperature range",
+            "type": "array",
+            "items": {
+                "$comment": "Valid sensor range",
+                "type": "object",
+                "properties": {
+                    "sensor": {
+                        "$comment": "Name of temperatur sensor",
+                        "type": "string"
+                    },
+                    "above": {
+                        "$comment": "Minimum temperature in Celsius",
+                        "type": "number"
+                    },
+                    "below": {
+                        "$comment": "Minimum temperature in Celsius",
+                        "type": "number"
+                    }
+                },
+                "required": ["sensor", "minimum", "maximum"]
+            }
+        },
+        "delta_cycles": {
+            "type": "array",
+            "items": {
+                "$comment": "Temperature controlled power cycles phases",
+                "type": "object",
+                "properties": {
+                    "delta": {
+                        "$comment": "Crossing delta in Celsius",
+                        "type": "number"
+                    },
+                    "above": {
+                        "$comment": "If initial delta is above",
+                        "$ref": "/schemas/cycle"
+                    },
+                    "below": {
+                        "$comment": "If initial delta is below",
+                        "$ref": "/schemas/cycle"
+                    }
+                },
+                "allOf": [
+                    {
+                        "required": [
+                            "delta"
+                        ]
+                    },
+                    {
+                        "oneOf": [
+                            {
+                                "required": [
+                                    "above"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "below"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "below",
+                                    "above"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "allOf": [
+        {
+            "required": [
+                "name"
+            ]
+        },
+        {
+            "oneOf": [
+                {
+                    "required": [
+                        "constant_cycle"
+                    ]
+                },
+                {
+                    "required": [
+                        "delta_cycles"
+                    ]
+                }
+            ]
+        }
+    ]
+}
