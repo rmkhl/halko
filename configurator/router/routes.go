@@ -5,7 +5,7 @@ import (
 	"github.com/rmkhl/halko/configurator/database"
 )
 
-func setupRoutes(r *gin.Engine, db database.Interface) {
+func setupRoutes(r *gin.Engine, db *database.Interface) {
 	api := r.Group("api")
 	v1 := api.Group("v1")
 

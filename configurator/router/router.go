@@ -7,10 +7,10 @@ import (
 
 type Router struct {
 	*gin.Engine
-	db database.Interface
+	db *database.Interface
 }
 
-func New(db database.Interface) *Router {
+func New(db *database.Interface) *Router {
 	ginRouter := gin.Default()
 
 	r := &Router{ginRouter, db}
