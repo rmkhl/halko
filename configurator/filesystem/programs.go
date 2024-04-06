@@ -1,21 +1,34 @@
 package filesystem
 
-import "github.com/rmkhl/halko/configurator/domain"
+import (
+	"encoding/json"
+
+	"github.com/rmkhl/halko/configurator/domain"
+)
 
 type Programs struct{}
 
 func (p *Programs) Current() (*domain.Program, error) {
-	return nil, nil
+	prog, err := byID(programs, "current", parseProgram)
+	return prog, transformError(err)
 }
 
 func (p *Programs) ByID(id string) (*domain.Program, error) {
-	return byID(programs, id, parseProgram)
+	prog, err := byID(programs, id, parseProgram)
+	return prog, transformError(err)
 }
 
 func (p *Programs) All() ([]*domain.Program, error) {
-	return all(programs, parseProgram)
+	progs, err := all(programs, parseProgram)
+	return progs, transformError(err)
 }
 
 func parseProgram(data []byte) (*domain.Program, error) {
-	return nil, nil
+	var prog domain.Program
+
+	if err := json.Unmarshal(data, &prog); err != nil {
+		return nil, err
+	}
+
+	return &prog, nil
 }

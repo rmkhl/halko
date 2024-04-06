@@ -1,6 +1,14 @@
 package database
 
-import "github.com/rmkhl/halko/configurator/domain"
+import (
+	"errors"
+
+	"github.com/rmkhl/halko/configurator/domain"
+)
+
+var (
+	ErrNotFound = errors.New("not found")
+)
 
 type Interface struct {
 	Cycles   Cycles

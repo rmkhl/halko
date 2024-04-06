@@ -8,33 +8,20 @@ import (
 	"github.com/rmkhl/halko/configurator/database"
 )
 
-func currentProgram(programs database.Programs) gin.HandlerFunc {
+func allCycles(cycles database.Cycles) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		curr, err := programs.Current()
+		cycles, err := cycles.All()
 		status, err := statusAndError(err)
 		if err != nil {
 			ctx.JSON(status, errorJSON(err))
 			return
 		}
 
-		ctx.JSON(status, curr)
+		ctx.JSON(status, cycles)
 	}
 }
 
-func allPrograms(programs database.Programs) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		programs, err := programs.All()
-		status, err := statusAndError(err)
-		if err != nil {
-			ctx.JSON(status, errorJSON(err))
-			return
-		}
-
-		ctx.JSON(status, programs)
-	}
-}
-
-func program(programs database.Programs) gin.HandlerFunc {
+func cycle(cycles database.Cycles) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id, ok := ctx.Params.Get("id")
 		if !ok {
@@ -42,13 +29,13 @@ func program(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		program, err := programs.ByID(id)
+		cycle, err := cycles.ByID(id)
 		status, err := statusAndError(err)
 		if err != nil {
 			ctx.JSON(status, errorJSON(err))
 			return
 		}
 
-		ctx.JSON(status, program)
+		ctx.JSON(status, cycle)
 	}
 }

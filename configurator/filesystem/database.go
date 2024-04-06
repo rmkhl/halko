@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -24,6 +25,8 @@ const (
 
 func New() *database.Interface {
 	return &database.Interface{
+		Cycles:   &Cycles{},
+		Phases:   &Phases{},
 		Programs: &Programs{},
 	}
 }
@@ -75,4 +78,12 @@ func filenamesByEntity(entity entity) ([]string, error) {
 	return utils.Map(files, func(f fs.DirEntry) string {
 		return f.Name()
 	}), nil
+}
+
+func transformError(err error) error {
+	if errors.Is(err, os.ErrNotExist) {
+		return database.ErrNotFound
+
+	}
+	return err
 }
