@@ -6,24 +6,43 @@ import (
 	"github.com/rmkhl/halko/configurator/domain"
 )
 
-type Programs struct{}
+type (
+	program struct {
+		*domain.Program
+	}
 
-func (p *Programs) Current() (*domain.Program, error) {
-	prog, err := byID(programs, "current", parseProgram)
-	return prog, transformError(err)
+	programs struct{}
+)
+
+func (p *programs) ByID(id string) (*domain.Program, error) {
+	prog, err := byID(id, new(program))
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return runtimeCast[domain.Program](prog)
 }
 
-func (p *Programs) ByID(id string) (*domain.Program, error) {
-	prog, err := byID(programs, id, parseProgram)
-	return prog, transformError(err)
+func (p *programs) All() ([]*domain.Program, error) {
+	progs, err := all(new(program))
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return runtimeCastSlice[domain.Program](progs)
 }
 
-func (p *Programs) All() ([]*domain.Program, error) {
-	progs, err := all(programs, parseProgram)
-	return progs, transformError(err)
+func (p *programs) CreateOrUpdate(_ *domain.Program) (*domain.Program, error) {
+	return nil, nil
 }
 
-func parseProgram(data []byte) (*domain.Program, error) {
+func (p *program) id() string {
+	return string(p.ID)
+}
+
+func (p *program) setID(id string) {
+	p.ID = domain.ID(id)
+}
+
+func (p *program) unmarshalJSON(data []byte) (any, error) {
 	var prog domain.Program
 
 	if err := json.Unmarshal(data, &prog); err != nil {

@@ -7,7 +7,9 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrInvalidInput          = errors.New("invalid input")
+	ErrNotFound              = errors.New("not found")
+	ErrUnexpectedReturnValue = errors.New("unexpected return value")
 )
 
 type Interface struct {
@@ -16,20 +18,20 @@ type Interface struct {
 	Programs Programs
 }
 
-type Fetchable[T any] interface {
-	ByID(id string) (T, error)
+type Entity[T any] interface {
 	All() ([]T, error)
+	ByID(id string) (T, error)
+	CreateOrUpdate(T) (T, error)
 }
 
 type Programs interface {
-	Fetchable[*domain.Program]
-	Current() (*domain.Program, error)
+	Entity[*domain.Program]
 }
 
 type Phases interface {
-	Fetchable[*domain.Phase]
+	Entity[*domain.Phase]
 }
 
 type Cycles interface {
-	Fetchable[*domain.Cycle]
+	Entity[*domain.Cycle]
 }

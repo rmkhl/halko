@@ -1,0 +1,12 @@
+services:
+  configurator:
+    build:
+      context: ./configurator
+      dockerfile: Dockerfile
+    working_dir: /configurator
+    volumes:
+      - ./configurator:/configurator
+      - ./fsdb:/fsdb
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

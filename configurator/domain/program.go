@@ -1,6 +1,7 @@
 package domain
 
 type Program struct {
+	HasID
 	Name           string         `json:"name"`
 	MaximumRuntime uint64         `json:"maximum_runtime"`
 	Phases         []ProgramPhase `json:"phases"`
