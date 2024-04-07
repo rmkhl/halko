@@ -30,8 +30,12 @@ func (c *cycles) All() ([]*domain.Cycle, error) {
 	return runtimeCastSlice[domain.Cycle](cycles)
 }
 
-func (c *cycles) CreateOrUpdate(_ *domain.Cycle) (*domain.Cycle, error) {
-	return nil, nil
+func (c *cycles) CreateOrUpdate(cc *domain.Cycle) (*domain.Cycle, error) {
+	ccc, err := save(&cycle{cc})
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return runtimeCast[domain.Cycle](ccc)
 }
 
 func (c *cycle) id() string {

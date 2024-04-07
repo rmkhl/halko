@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rmkhl/halko/configurator/database"
@@ -96,7 +97,7 @@ func resolveAndUpdateID(o Object) string {
 }
 
 func filenameByID(entity entity, id string) string {
-	return fmt.Sprintf("%s/%s/%s", basePath, entity, id)
+	return fmt.Sprintf("%s/%s/%s.json", basePath, entity, id)
 }
 
 func filenamesByEntity(entity entity) ([]string, error) {
@@ -112,7 +113,7 @@ func filenamesByEntity(entity entity) ([]string, error) {
 	files := utils.Filter(
 		entries,
 		func(item os.DirEntry) bool {
-			return !item.IsDir()
+			return !item.IsDir() && strings.HasSuffix(item.Name(), ".json")
 		},
 	)
 	return utils.Map(files, func(f fs.DirEntry) string {
