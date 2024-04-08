@@ -35,7 +35,11 @@ func (p *programs) CreateOrUpdate(pp *domain.Program) (*domain.Program, error) {
 	if err != nil {
 		return nil, transformError(err)
 	}
-	return runtimeCast[domain.Program](ppp)
+	cast, err := runtimeCast[program](ppp)
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return cast.Program, nil
 }
 
 func (p *program) id() string {

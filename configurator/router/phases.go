@@ -88,6 +88,6 @@ func updatePhase(phases database.Phases) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusCreated, updated)
+		ctx.JSON(http.StatusOK, updated)
 	}
 }

@@ -35,7 +35,11 @@ func (c *cycles) CreateOrUpdate(cc *domain.Cycle) (*domain.Cycle, error) {
 	if err != nil {
 		return nil, transformError(err)
 	}
-	return runtimeCast[domain.Cycle](ccc)
+	cast, err := runtimeCast[cycle](ccc)
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return cast.Cycle, nil
 }
 
 func (c *cycle) id() string {

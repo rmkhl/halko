@@ -88,6 +88,6 @@ func updateProgram(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusCreated, updated)
+		ctx.JSON(http.StatusOK, updated)
 	}
 }

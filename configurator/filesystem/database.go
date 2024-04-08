@@ -41,11 +41,7 @@ func byID(id string, o Object) (any, error) {
 	if !ok {
 		return nil, database.ErrInvalidInput
 	}
-	b, err := os.ReadFile(filenameByID(e, id))
-	if err != nil {
-		return nil, err
-	}
-	return o.unmarshalJSON(b)
+	return readFromFile(o, filenameByID(e, id))
 }
 
 func all(o Object) ([]any, error) {
@@ -53,13 +49,13 @@ func all(o Object) ([]any, error) {
 	if !ok {
 		return nil, database.ErrInvalidInput
 	}
-	filenames, err := filenamesByEntity(e)
+	filenames, err := filepathsByEntity(e)
 	if err != nil {
 		return nil, err
 	}
 	data := make([]any, 0, len(filenames))
 	for _, fn := range filenames {
-		item, err := byID(fn, o)
+		item, err := readFromFile(o, fn)
 		if err != nil {
 			return nil, err
 		}
@@ -68,18 +64,27 @@ func all(o Object) ([]any, error) {
 	return data, nil
 }
 
+func readFromFile(o Object, filepath string) (any, error) {
+	b, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	return o.unmarshalJSON(b)
+}
+
 func save(o Object) (any, error) {
 	e, ok := entityForType(o)
 	if !ok {
 		return nil, database.ErrInvalidInput
 	}
 
+	id := resolveAndUpdateID(o)
+
 	data, err := json.Marshal(o)
 	if err != nil {
 		return nil, err
 	}
 
-	id := resolveAndUpdateID(o)
 	if err = os.WriteFile(filenameByID(e, id), data, 0664); err != nil {
 		return nil, err
 	}
@@ -89,7 +94,7 @@ func save(o Object) (any, error) {
 
 func resolveAndUpdateID(o Object) string {
 	id := o.id()
-	if !domain.ID(o.id()).IsValid() {
+	if !domain.ID(id).IsValid() {
 		id = strconv.FormatInt(time.Now().Unix(), 10)
 		o.setID(id)
 	}
@@ -97,11 +102,15 @@ func resolveAndUpdateID(o Object) string {
 }
 
 func filenameByID(entity entity, id string) string {
-	return fmt.Sprintf("%s/%s/%s.json", basePath, entity, id)
+	return fmt.Sprintf("%s/%s.json", pathByEntity(entity), id)
 }
 
-func filenamesByEntity(entity entity) ([]string, error) {
-	dirName := fmt.Sprintf("%s/%s", basePath, entity)
+func pathByEntity(entity entity) string {
+	return fmt.Sprintf("%s/%s", basePath, entity)
+}
+
+func filepathsByEntity(entity entity) ([]string, error) {
+	dirName := pathByEntity(entity)
 	dir, err := os.Open(dirName)
 	if err != nil {
 		return nil, err
@@ -117,7 +126,7 @@ func filenamesByEntity(entity entity) ([]string, error) {
 		},
 	)
 	return utils.Map(files, func(f fs.DirEntry) string {
-		return f.Name()
+		return fmt.Sprintf("%s/%s", dirName, f.Name())
 	}), nil
 }
 

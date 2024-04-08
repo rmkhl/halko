@@ -35,7 +35,11 @@ func (p *phases) CreateOrUpdate(pp *domain.Phase) (*domain.Phase, error) {
 	if err != nil {
 		return nil, transformError(err)
 	}
-	return runtimeCast[domain.Phase](ppp)
+	cast, err := runtimeCast[phase](ppp)
+	if err != nil {
+		return nil, transformError(err)
+	}
+	return cast.Phase, nil
 }
 
 func (p *phase) id() string {

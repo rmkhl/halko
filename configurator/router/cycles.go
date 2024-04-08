@@ -88,6 +88,6 @@ func updateCycle(cycles database.Cycles) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusCreated, updated)
+		ctx.JSON(http.StatusOK, updated)
 	}
 }
