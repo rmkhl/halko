@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { App } from "./App";
 
-ReactDOM.render(
-  <h1>Hello, TypeScript-React with Parcel!</h1>,
-  document.getElementById("root")
-);
+import "./i18n";
+
+ReactDOM.render(<App />, document.getElementById("root"));
