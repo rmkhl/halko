@@ -1,4 +1,4 @@
-import { Paper, ThemeProvider, Typography } from "@mui/material";
+import { CssBaseline, Paper, ThemeProvider, Typography } from "@mui/material";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -9,6 +9,9 @@ import {
 import { Route } from "./types";
 import { Navigation } from "./components/Navigation";
 import { theme } from "./material-ui/theme";
+import { Cycles } from "./components/cycles";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
 
 const getRouter = (routes: Route[]) =>
   createBrowserRouter([
@@ -46,7 +49,7 @@ export const App: React.FC = () => {
       {
         name: t("tabs.cycles"),
         path: "cycles",
-        element: <Typography>TODO CYCLES</Typography>,
+        element: <Cycles />,
       },
     ],
     [t]
@@ -55,8 +58,12 @@ export const App: React.FC = () => {
   return (
     <React.StrictMode>
       <ThemeProvider theme={theme}>
+        <CssBaseline />
+
         <Paper sx={{ height: "100%", width: "100%", borderRadius: 0 }}>
-          <RouterProvider router={getRouter(routes)} />
+          <Provider store={store}>
+            <RouterProvider router={getRouter(routes)} />
+          </Provider>
         </Paper>
       </ThemeProvider>
     </React.StrictMode>
