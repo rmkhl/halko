@@ -1,0 +1,153 @@
+{
+    "name": "executor-test",
+    "default_step_runtime": 36000,
+    "steps": [
+        {
+            "name": "Heating full humidity",
+            "type": "heating",
+            "temperature_constraint": {
+                "maximum": 80
+            },
+            "heater": {
+                "name": "within 20 degrees",
+                "delta_cycles": [
+                    {
+                        "delta": 10,
+                        "below": 0,
+                        "above": 0
+                    },
+                    {
+                        "delta": 5,
+                        "below": 25,
+                        "above": 25
+                    },
+                    {
+                        "delta": 0,
+                        "below": 50,
+                        "above": 50
+                    },
+                    {
+                        "delta": -5,
+                        "below": 100,
+                        "above": 75
+                    },
+                    {
+                        "delta": -10,
+                        "below": 100,
+                        "above": 100
+                    }
+                ]
+            },
+            "fan": {
+                "name": "constant full power",
+                "constant_cycle": 100
+            },
+            "humidifier": {
+                "name": "constant full power",
+                "constant_cycle": 100
+            }
+        },
+        {
+            "name": "Heating half humidity",
+            "type": "heating",
+            "temperature_constraint": {
+                "minimum": 70,
+                "maximum": 120
+            },
+            "heater": {
+                "name": "within 20 degrees",
+                "delta_cycles": [
+                    {
+                        "delta": 10,
+                        "below": 0,
+                        "above": 0
+                    },
+                    {
+                        "delta": 5,
+                        "below": 25,
+                        "above": 25
+                    },
+                    {
+                        "delta": 0,
+                        "below": 50,
+                        "above": 50
+                    },
+                    {
+                        "delta": -5,
+                        "below": 100,
+                        "above": 75
+                    },
+                    {
+                        "delta": -10,
+                        "below": 100,
+                        "above": 100
+                    }
+                ]
+            },
+            "fan": {
+                "name": "constant full power",
+                "constant_cycle": 100
+            },
+            "humidifier": {
+                "name": "constant half power",
+                "constant_cycle": 50
+            }
+        },
+        {
+            "name": "Acclimate no humidity",
+            "type": "acclimate",
+            "temperature_constraint": {
+                "minimum": 110,
+                "maximum": 130
+            },
+            "heater": {
+                "name": "within 20 degrees",
+                "time_constraint": 1200,
+                "delta_cycles": [
+                    {
+                        "delta": 5,
+                        "below": 25,
+                        "above": 0
+                    },
+                    {
+                        "delta": 0,
+                        "below": 50,
+                        "above": 25
+                    },
+                    {
+                        "delta": -5,
+                        "below": 100,
+                        "above": 50
+                    }
+                ]
+            },
+            "fan": {
+                "name": "constant full power",
+                "constant_cycle": 100
+            },
+            "humidifier": {
+                "name": "power off",
+                "constant_cycle": 0
+            }
+        },
+        {
+            "name": "Cooling",
+            "type": "cooling",
+            "temperature_constraint": {
+                "minimum": 30
+            },
+            "heater": {
+                "name": "power off",
+                "constant_cycle": 0
+            },
+            "fan": {
+                "name": "power off",
+                "constant_cycle": 0
+            },
+            "humidifier": {
+                "name": "power off",
+                "constant_cycle": 0
+            }
+        }
+    ]
+}
