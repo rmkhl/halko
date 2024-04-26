@@ -6,7 +6,7 @@ import (
 
 type (
 	Power struct {
-		mutex    sync.Mutex
+		mutex    sync.RWMutex
 		tick     int
 		current  *Cycle
 		upcoming *Cycle
@@ -72,12 +72,14 @@ func (p *Power) Tick() {
 }
 
 func (p *Power) IsRunning() bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	return p.current != nil
 }
 
 func (p *Power) CycleInfo() (string, int, bool) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 
 	if p.current == nil {
 		return "Off", 0, false

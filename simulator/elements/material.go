@@ -6,7 +6,7 @@ import (
 
 type (
 	Wood struct {
-		mutex       sync.Mutex
+		mutex       sync.RWMutex
 		temperature float32
 		min_temp    float32
 		max_temp    float32
@@ -19,8 +19,8 @@ func NewWood(min_temp float32, max_temp float32) *Wood {
 }
 
 func (w *Wood) TargetReached() bool {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
 
 	return w.temperature >= w.max_temp
 }
@@ -44,8 +44,8 @@ func (w *Wood) AmbientTemperature(temperature float32) {
 
 // Implement the TemperatureSensor interface
 func (w *Wood) Temperature() float32 {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
+	w.mutex.RLock()
+	defer w.mutex.RUnlock()
 
 	return w.temperature
 }

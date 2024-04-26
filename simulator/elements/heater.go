@@ -7,7 +7,7 @@ import (
 type (
 	Heater struct {
 		*Power
-		mutex       sync.Mutex
+		mutex       sync.RWMutex
 		temperature float32
 		min_temp    float32
 		max_temp    float32
@@ -37,8 +37,8 @@ func (h *Heater) Tick() {
 
 // Implement TemperatureSensor interface
 func (h *Heater) Temperature() float32 {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
 
 	return h.temperature
 }
