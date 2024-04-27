@@ -1,10 +1,12 @@
 import { FetchArgs, createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { Cycle } from "../../types/api";
+import { Cycle, Phase } from "../../types/api";
 
 const cyclesTag = "cycles" as const;
+const phasesTag = "phases" as const;
 const list = "LIST";
 const cyclesEndpoint = "cycles";
+const phasesEndpoint = "phases";
 
 interface Entity {
   id: string;
@@ -15,7 +17,7 @@ export const configuratorApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:8080/api/v1",
   }),
-  tagTypes: [cyclesTag],
+  tagTypes: [cyclesTag, phasesTag],
   endpoints: (builder) => ({
     getCycles: builder.query<Cycle[], void>({
       query: () => ({
@@ -28,20 +30,34 @@ export const configuratorApi = createApi({
           return response.json();
         },
       }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map(({ id }) => ({ type: cyclesTag, id })),
-              { type: cyclesTag, id: list },
-            ]
-          : [{ type: cyclesTag, id: list }],
+      providesTags: () => [{ type: cyclesTag, id: list }],
     }),
     saveCycle: builder.mutation<string, Cycle>({
       query: (cycle) => ({
         ...entitySaveConfigByEndpoint(cyclesEndpoint, cycle),
       }),
-      invalidatesTags: (_, error, cycle) =>
+      invalidatesTags: (_, error) =>
         error ? [] : [{ type: cyclesTag, id: list }],
+    }),
+    getPhases: builder.query<Phase[], void>({
+      query: () => ({
+        url: phasesEndpoint,
+        responseHandler: (response) => {
+          if (!response.ok) {
+            return response.text();
+          }
+
+          return response.json();
+        },
+      }),
+      providesTags: () => [{ type: phasesTag, id: list }],
+    }),
+    savePhase: builder.mutation<string, Phase>({
+      query: (phase) => ({
+        ...entitySaveConfigByEndpoint(phasesEndpoint, phase),
+      }),
+      invalidatesTags: (_, error) =>
+        error ? [] : [{ type: phasesTag, id: list }],
     }),
   }),
 });
@@ -56,4 +72,9 @@ const entitySaveConfigByEndpoint = (
   headers: { "Content-type": "application/json" },
 });
 
-export const { useGetCyclesQuery, useSaveCycleMutation } = configuratorApi;
+export const {
+  useGetCyclesQuery,
+  useSaveCycleMutation,
+  useGetPhasesQuery,
+  useSavePhaseMutation,
+} = configuratorApi;

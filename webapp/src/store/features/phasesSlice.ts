@@ -1,49 +1,49 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { Cycle } from "../../types/api";
+import { Phase } from "../../types/api";
 import {
   getJSONFromSessionStorage,
   removeFromSessionStorage,
   setJSONToSessionStorage,
 } from "../../util";
 
-const editKey = "editCycle";
+const editKey = "editPhase";
 
 const initialState = {
-  cycles: [] as Cycle[],
-  edit: getJSONFromSessionStorage<Cycle>(editKey),
+  cycles: [] as Phase[],
+  edit: getJSONFromSessionStorage<Phase>(editKey),
 };
 
-export const cyclesSlice = createSlice({
-  name: "cycles",
+export const phasesSlice = createSlice({
+  name: "phases",
   initialState,
   reducers: {
-    setCycles: (
+    setPhases: (
       state: typeof initialState,
       action: PayloadAction<typeof initialState.cycles>
     ) => ({
       ...state,
       cycles: action.payload.sort((a, b) => a.name.localeCompare(b.name)),
     }),
-    setEditCycle: (
+    setEditPhase: (
       state: typeof initialState,
       action: PayloadAction<typeof initialState.edit>
     ) => {
-      const { payload: cycle } = action;
+      const { payload: phase } = action;
 
-      if (!cycle) {
+      if (!phase) {
         removeFromSessionStorage(editKey);
       } else {
-        setJSONToSessionStorage(editKey, cycle);
+        setJSONToSessionStorage(editKey, phase);
       }
 
       return {
         ...state,
-        edit: cycle,
+        edit: phase,
       };
     },
   },
 });
 
-export const { setCycles, setEditCycle } = cyclesSlice.actions;
+export const { setPhases, setEditPhase } = phasesSlice.actions;
 
-export default cyclesSlice.reducer;
+export default phasesSlice.reducer;

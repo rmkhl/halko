@@ -12,6 +12,8 @@ import { theme } from "./material-ui/theme";
 import { Cycles } from "./components/cycles";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
+import { Phases } from "./components/phases/Phases";
+import { Phase } from "./components/phases/Phase";
 
 const getRouter = (routes: Route[]) =>
   createBrowserRouter([
@@ -20,6 +22,7 @@ const getRouter = (routes: Route[]) =>
       element: <Navigation routes={routes} />,
       children: [
         ...routes,
+        { path: "phases/:id", element: <Phase /> },
         { path: "/", element: <Navigate to="/current" /> },
         { path: "*", element: <Navigate to="/current" /> },
       ],
@@ -32,11 +35,6 @@ export const App: React.FC = () => {
   const routes: Route[] = useMemo(
     () => [
       {
-        name: t("tabs.current"),
-        path: "current",
-        element: <Typography>TODO CURRENT</Typography>,
-      },
-      {
         name: t("tabs.programs"),
         path: "programs",
         element: <Typography>TODO PROGRAMS</Typography>,
@@ -44,7 +42,7 @@ export const App: React.FC = () => {
       {
         name: t("tabs.phases"),
         path: "phases",
-        element: <Typography>TODO PHASES</Typography>,
+        element: <Phases />,
       },
       {
         name: t("tabs.cycles"),

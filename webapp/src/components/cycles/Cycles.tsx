@@ -4,8 +4,10 @@ import { Button, Stack } from "@mui/material";
 import { Cycle } from "./Cycle";
 import { Cycle as ApiCycle } from "../../types/api";
 import { useTranslation } from "react-i18next";
-
-type FormMode = "create" | "edit" | "view";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../../store/store";
+import { setEditCycle } from "../../store/features/cyclesSlice";
+import { FormMode } from "../../types";
 
 const emptyCycle: ApiCycle = {
   id: "",
@@ -26,26 +28,27 @@ const emptyCycle: ApiCycle = {
 
 export const Cycles: React.FC = () => {
   const { data: cycles, isFetching } = useGetCyclesQuery();
-  const [edit, setEdit] = useState("");
   const [mode, setMode] = useState<FormMode>("view");
-  const [newCycle, setNewCycle] = useState<ApiCycle>({ ...emptyCycle });
+
+  const editCycle = useSelector((state: RootState) => state.cycles.edit);
+  const dispatch = useDispatch();
 
   const { t } = useTranslation();
 
-  const handleEdit = (id: string) => () => {
-    setEdit(id);
+  const handleEdit = (cycle: ApiCycle) => {
+    dispatch(setEditCycle(cycle));
   };
 
   const handleSave = () => {
-    setEdit("");
+    dispatch(setEditCycle(undefined));
     setMode("view");
   };
 
   const allCycles = useMemo(() => {
     const allCycles: ApiCycle[] = [];
 
-    if (mode === "create") {
-      allCycles.push(newCycle);
+    if (editCycle && !editCycle.id) {
+      allCycles.push(editCycle);
     }
 
     if (cycles) {
@@ -55,25 +58,21 @@ export const Cycles: React.FC = () => {
     }
 
     return allCycles;
-  }, [cycles, newCycle, mode]);
+  }, [cycles, editCycle, mode]);
 
   const addNew = () => {
-    setMode("create");
+    dispatch(setEditCycle({ ...emptyCycle }));
   };
 
   const cancelEdit = () => {
-    setEdit("");
+    dispatch(setEditCycle(undefined));
     setMode("view");
   };
 
   return (
     <Stack direction="column" gap={6}>
       <Stack direction="row" justifyContent="end" gap={6}>
-        <Button
-          color="success"
-          onClick={addNew}
-          disabled={mode === "create" || edit !== ""}
-        >
+        <Button color="success" onClick={addNew} disabled={!!editCycle}>
           {t("cycle.new")}
         </Button>
       </Stack>
@@ -82,10 +81,10 @@ export const Cycles: React.FC = () => {
         <Cycle
           key={`cycle-${c.id}`}
           cycle={c}
-          mode={edit === c.id ? "edit" : mode}
-          handleEdit={handleEdit(c.id)}
+          mode={editCycle?.id === c.id ? "edit" : mode}
+          handleEdit={handleEdit}
           onSave={handleSave}
-          canEdit={!edit}
+          canEdit={!editCycle}
           handleCancelEdit={cancelEdit}
         />
       ))}

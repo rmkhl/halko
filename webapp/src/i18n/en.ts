@@ -7,6 +7,7 @@ const common = {
 };
 
 export const en = {
+  common,
   header: {
     title: "Halko",
   },
@@ -17,7 +18,21 @@ export const en = {
     programs: "Programs",
   },
   cycle: {
-    states: "States",
     ...common,
+  },
+  phases: {
+    ...common,
+    validRange: {
+      title: "Valid ranges",
+      oven: "Oven",
+      material: "Material",
+      above: "Above",
+      below: "Below",
+    },
+    cycles: {
+      title: "Cycles",
+      constant: "Constant",
+      delta: "Delta",
+    },
   },
 };
