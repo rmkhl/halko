@@ -33,6 +33,8 @@ export const en = {
       title: "Cycles",
       constant: "Constant",
       delta: "Delta",
+      select: "Select cycle",
+      cancel: common.cancel,
     },
   },
 };

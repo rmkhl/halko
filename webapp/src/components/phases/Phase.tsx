@@ -1,15 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetPhasesQuery } from "../../store/services";
-import { Phase as ApiPhase } from "../../types/api";
-import {
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Phase as ApiPhase, Cycle } from "../../types/api";
+import { Stack } from "@mui/material";
 import { FormMode } from "../../types";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
@@ -49,26 +42,6 @@ export const Phase: React.FC = () => {
 
   const dispatch = useDispatch();
 
-  const updateEdited =
-    (field: keyof ApiPhase) => (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (editPhase) {
-        dispatch(
-          setEditPhase({ ...editPhase, [field]: event.currentTarget.value })
-        );
-      }
-    };
-
-  const updateValidRange = (validRange: ApiPhase["validRange"]) => {
-    if (editPhase) {
-      dispatch(
-        setEditPhase({
-          ...editPhase,
-          validRange,
-        })
-      );
-    }
-  };
-
   useEffect(() => {
     if (id === "new") {
       setMode("edit");
@@ -98,6 +71,37 @@ export const Phase: React.FC = () => {
 
   const editingThis = useMemo(() => mode === "edit", [mode]);
 
+  const updateEdited =
+    (field: keyof ApiPhase) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (editPhase) {
+        dispatch(
+          setEditPhase({ ...editPhase, [field]: event.currentTarget.value })
+        );
+      }
+    };
+
+  const updateValidRange = (validRange: ApiPhase["validRange"]) => {
+    if (editPhase) {
+      dispatch(
+        setEditPhase({
+          ...editPhase,
+          validRange,
+        })
+      );
+    }
+  };
+
+  const updateConstantCycle = (cycle?: Cycle) => {
+    if (editPhase) {
+      dispatch(
+        setEditPhase({
+          ...editPhase,
+          constantCycle: cycle,
+        })
+      );
+    }
+  };
+
   if (!id) {
     navigate("/phases");
   }
@@ -120,8 +124,9 @@ export const Phase: React.FC = () => {
 
       <Cycles
         editing={editingThis}
-        cycleMode={editPhase?.cycleMode}
-        onChange={updateEdited("cycleMode")}
+        phase={editingThis && editPhase ? editPhase : phase}
+        onChangeCycleMode={updateEdited("cycleMode")}
+        onChangeConstantCycle={updateConstantCycle}
       />
     </Stack>
   );

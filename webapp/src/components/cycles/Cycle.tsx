@@ -10,17 +10,24 @@ import { FormButtons } from "./FormButtons";
 import { NameComponent } from "../form";
 
 interface Props {
-  canEdit: boolean;
+  canEdit?: boolean;
   cycle: ApiCycle;
-  mode: "view" | "edit";
+  mode?: "view" | "edit";
 
-  handleCancelEdit: () => void;
-  handleEdit: (c: ApiCycle) => void;
-  onSave: () => void;
+  handleCancelEdit?: () => void;
+  handleEdit?: (c: ApiCycle) => void;
+  onSave?: () => void;
 }
 
 export const Cycle: React.FC<Props> = (props) => {
-  const { canEdit, cycle, mode, handleCancelEdit, handleEdit, onSave } = props;
+  const {
+    canEdit,
+    cycle,
+    mode = "view",
+    handleCancelEdit,
+    handleEdit,
+    onSave,
+  } = props;
 
   const [saveCycle, { isLoading, error, isSuccess }] = useSaveCycleMutation();
   const editCycle = useSelector((state: RootState) => state.cycles.edit);
@@ -48,7 +55,7 @@ export const Cycle: React.FC<Props> = (props) => {
       saveCycle(editCycle);
     }
 
-    onSave();
+    onSave?.();
   };
 
   const stackStyle = useMemo((): React.CSSProperties => {
@@ -77,7 +84,7 @@ export const Cycle: React.FC<Props> = (props) => {
           editing={editingThis}
           editDisabled={!canEdit}
           saveDisabled={!editCycle?.name}
-          handleEdit={() => handleEdit(cycle)}
+          handleEdit={() => handleEdit?.(cycle)}
           handleSave={handleSave}
           handleCancelEdit={handleCancelEdit}
         />

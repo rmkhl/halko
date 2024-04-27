@@ -8,7 +8,7 @@ interface Props {
   saveDisabled: boolean;
   handleEdit: () => void;
   handleSave: () => void;
-  handleCancelEdit: () => void;
+  handleCancelEdit?: () => void;
 }
 
 export const FormButtons: React.FC<Props> = (props) => {
@@ -33,8 +33,10 @@ export const FormButtons: React.FC<Props> = (props) => {
       </Button>
     </Stack>
   ) : (
-    <Button disabled={editDisabled} onClick={handleEdit}>
-      {t("cycle.edit")}
-    </Button>
+    !editDisabled && (
+      <Button disabled={editDisabled} onClick={handleEdit}>
+        {t("cycle.edit")}
+      </Button>
+    )
   );
 };
