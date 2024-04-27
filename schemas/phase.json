@@ -24,14 +24,14 @@
                 "type": "object",
                 "properties": {
                     "sensor": {
-                        "$comment": "Name of temperatur sensor",
+                        "$comment": "Name of temperature sensor",
                         "type": "string"
                     },
-                    "above": {
+                    "minimum": {
                         "$comment": "Minimum temperature in Celsius",
                         "type": "number"
                     },
-                    "below": {
+                    "maximum": {
                         "$comment": "Minimum temperature in Celsius",
                         "type": "number"
                     }
