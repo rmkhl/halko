@@ -6,7 +6,7 @@ export const Phases: React.FC = () => {
   const { data: phases, isFetching } = useGetPhasesQuery();
 
   return (
-    <Stack direction="column" gap={6}>
+    <Stack direction="column" gap={6} width="60rem">
       {phases?.map((p) => (
         <Typography>{p.name}</Typography>
       ))}

@@ -91,12 +91,23 @@ export const Phase: React.FC = () => {
     }
   };
 
-  const updateConstantCycle = (cycle?: Cycle) => {
+  const updateConstantCycle = (constantCycle: ApiPhase["constantCycle"]) => {
     if (editPhase) {
       dispatch(
         setEditPhase({
           ...editPhase,
-          constantCycle: cycle,
+          constantCycle,
+        })
+      );
+    }
+  };
+
+  const updateDeltaCycles = (deltaCycles?: ApiPhase["deltaCycles"]) => {
+    if (editPhase) {
+      dispatch(
+        setEditPhase({
+          ...editPhase,
+          deltaCycles,
         })
       );
     }
@@ -107,7 +118,7 @@ export const Phase: React.FC = () => {
   }
 
   return (
-    <Stack direction="column" gap={6}>
+    <Stack direction="column" gap={6} width="60rem">
       <NameComponent
         editing={editingThis}
         name={editingThis ? editPhase?.name : phase.name}
@@ -127,6 +138,7 @@ export const Phase: React.FC = () => {
         phase={editingThis && editPhase ? editPhase : phase}
         onChangeCycleMode={updateEdited("cycleMode")}
         onChangeConstantCycle={updateConstantCycle}
+        onChangeDeltaCycles={updateDeltaCycles}
       />
     </Stack>
   );

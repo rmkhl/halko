@@ -70,7 +70,7 @@ export const Cycles: React.FC = () => {
   };
 
   return (
-    <Stack direction="column" gap={6}>
+    <Stack direction="column" gap={6} width="60rem">
       <Stack direction="row" justifyContent="end" gap={6}>
         <Button color="success" onClick={addNew} disabled={!!editCycle}>
           {t("cycle.new")}

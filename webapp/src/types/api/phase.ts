@@ -6,7 +6,7 @@ interface ValidSensorRange {
   below: number;
 }
 
-interface DeltaCycle {
+export interface DeltaCycle {
   delta: number;
   above: Cycle;
   below: Cycle;

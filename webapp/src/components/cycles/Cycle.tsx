@@ -13,6 +13,8 @@ interface Props {
   canEdit?: boolean;
   cycle: ApiCycle;
   mode?: "view" | "edit";
+  showInfo?: boolean;
+  size?: "sm" | "lg";
 
   handleCancelEdit?: () => void;
   handleEdit?: (c: ApiCycle) => void;
@@ -27,6 +29,8 @@ export const Cycle: React.FC<Props> = (props) => {
     handleCancelEdit,
     handleEdit,
     onSave,
+    showInfo = true,
+    size = "lg",
   } = props;
 
   const [saveCycle, { isLoading, error, isSuccess }] = useSaveCycleMutation();
@@ -67,27 +71,33 @@ export const Cycle: React.FC<Props> = (props) => {
   }, [editingThis]);
 
   return (
-    <Stack direction="column" gap={3} style={stackStyle}>
-      <NameComponent
-        editing={editingThis}
-        name={editingThis ? editCycle?.name : cycle.name}
-        handleChange={updateEdited("name")}
-      />
+    <Stack style={stackStyle} alignItems="center">
+      <Stack gap={3}>
+        {showInfo && (
+          <NameComponent
+            editing={editingThis}
+            name={editingThis ? editCycle?.name : cycle.name}
+            handleChange={updateEdited("name")}
+          />
+        )}
 
-      <Stack direction="row" gap={3}>
-        <States
-          cycle={editingThis ? editCycle || cycle : cycle}
-          handleChange={editingThis ? handleStatesChange : undefined}
-        />
+        <Stack direction="row" gap={3}>
+          <States
+            cycle={editingThis ? editCycle || cycle : cycle}
+            handleChange={editingThis ? handleStatesChange : undefined}
+            showInfo={showInfo}
+            size={size}
+          />
 
-        <FormButtons
-          editing={editingThis}
-          editDisabled={!canEdit}
-          saveDisabled={!editCycle?.name}
-          handleEdit={() => handleEdit?.(cycle)}
-          handleSave={handleSave}
-          handleCancelEdit={handleCancelEdit}
-        />
+          <FormButtons
+            editing={editingThis}
+            editDisabled={!canEdit}
+            saveDisabled={!editCycle?.name}
+            handleEdit={() => handleEdit?.(cycle)}
+            handleSave={handleSave}
+            handleCancelEdit={handleCancelEdit}
+          />
+        </Stack>
       </Stack>
     </Stack>
   );

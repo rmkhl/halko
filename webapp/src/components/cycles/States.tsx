@@ -5,13 +5,15 @@ import { Cycle } from "../../types/api";
 interface Props {
   cycle: Cycle;
   handleChange?: (updatedStated: boolean[]) => void;
+  showInfo?: boolean;
+  size?: "sm" | "lg";
 }
 
 const colorOn = "orange";
 const colorOff = "lightblue";
 
 export const States: React.FC<Props> = (props) => {
-  const { cycle, handleChange } = props;
+  const { cycle, handleChange, showInfo = true, size = "lg" } = props;
   const { id, states } = cycle;
 
   const ratio = useMemo(
@@ -26,6 +28,8 @@ export const States: React.FC<Props> = (props) => {
     handleChange?.(newStates);
   };
 
+  const sqSize = useMemo(() => (size === "lg" ? "2em" : "1.5em"), [size]);
+
   return (
     <Stack direction="row" gap={3} alignItems="center">
       <Stack direction="row">
@@ -36,8 +40,8 @@ export const States: React.FC<Props> = (props) => {
               backgroundColor: s ? colorOn : colorOff,
               cursor: !handleChange ? "default" : "pointer",
             }}
-            height="2em"
-            width="2em"
+            height={sqSize}
+            width={sqSize}
             border={1}
             borderColor="gray"
             onClick={handleClick(i)}
@@ -45,7 +49,7 @@ export const States: React.FC<Props> = (props) => {
         ))}
       </Stack>
 
-      <Typography>{ratio} %</Typography>
+      {showInfo && <Typography>{ratio} %</Typography>}
     </Stack>
   );
 };

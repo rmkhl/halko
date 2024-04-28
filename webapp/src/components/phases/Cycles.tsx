@@ -10,16 +10,24 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { ConstantCycle } from "./ConstantCycle";
 import { Cycle, Phase } from "../../types/api";
+import { DeltaCycles } from "./DeltaCycles";
 
 interface Props {
   editing: boolean;
   phase: Phase;
   onChangeCycleMode: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onChangeConstantCycle: (cycle: Cycle) => void;
+  onChangeConstantCycle: (cycle: Phase["constantCycle"]) => void;
+  onChangeDeltaCycles: (cycles: Phase["deltaCycles"]) => void;
 }
 
 export const Cycles: React.FC<Props> = (props) => {
-  const { editing, phase, onChangeCycleMode, onChangeConstantCycle } = props;
+  const {
+    editing,
+    phase,
+    onChangeCycleMode,
+    onChangeConstantCycle,
+    onChangeDeltaCycles,
+  } = props;
 
   return (
     <Stack gap={3}>
@@ -35,6 +43,14 @@ export const Cycles: React.FC<Props> = (props) => {
           editing={editing}
           cycle={phase.constantCycle}
           onChange={onChangeConstantCycle}
+        />
+      )}
+
+      {phase.cycleMode === "delta" && (
+        <DeltaCycles
+          editing={editing}
+          deltaCycles={phase.deltaCycles}
+          onChange={onChangeDeltaCycles}
         />
       )}
     </Stack>

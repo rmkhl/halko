@@ -34,7 +34,8 @@ export const en = {
       constant: "Constant",
       delta: "Delta",
       select: "Select cycle",
-      cancel: common.cancel,
+      addDeltaCycle: "Add delta cycle",
+      range: "Range",
     },
   },
 };
