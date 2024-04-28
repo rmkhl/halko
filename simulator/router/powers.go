@@ -13,29 +13,29 @@ func statusAllPowers(powers map[string]types.PowerSensor) gin.HandlerFunc {
 		resp := make(types.PowerStatusResponse)
 		for name, power := range powers {
 			if power.IsOn() {
-				resp[name] = types.PowerResponse{Status: types.POWER_ON, Cycle: power.CurrentCycle()}
+				resp[name] = types.PowerResponse{Status: types.PowerOn, Cycle: power.CurrentCycle()}
 			} else {
-				resp[name] = types.PowerResponse{Status: types.POWER_OFF}
+				resp[name] = types.PowerResponse{Status: types.PowerOff}
 			}
 		}
-		ctx.JSON(http.StatusOK, types.ApiResponse[types.PowerStatusResponse]{Data: resp})
+		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerStatusResponse]{Data: resp})
 	}
 }
 
 func statusPower(powers map[string]types.PowerSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		power_name, _ := ctx.Params.Get("power")
-		power, known := powers[power_name]
+		powerName, _ := ctx.Params.Get("power")
+		power, known := powers[powerName]
 		if !known {
-			ctx.JSON(http.StatusNotFound, types.ApiErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", power_name)})
+			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
 			return
 		}
 		resp := make(types.PowerStatusResponse)
 		if power.IsOn() {
-			resp[power_name] = types.PowerResponse{Status: types.POWER_ON, Cycle: power.CurrentCycle()}
+			resp[powerName] = types.PowerResponse{Status: types.PowerOn, Cycle: power.CurrentCycle()}
 			return
 		}
-		resp[power_name] = types.PowerResponse{Status: types.POWER_OFF}
+		resp[powerName] = types.PowerResponse{Status: types.PowerOff}
 	}
 }
 
@@ -44,25 +44,25 @@ func operatePower(powers map[string]types.PowerManager) gin.HandlerFunc {
 		var command types.PowerCommand
 
 		if ctx.ShouldBind(&command) != nil {
-			ctx.JSON(http.StatusBadRequest, types.ApiErrorResponse{Err: "Does not compute"})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Does not compute"})
 			return
 		}
-		power_name, _ := ctx.Params.Get("power")
-		power, known := powers[power_name]
+		powerName, _ := ctx.Params.Get("power")
+		power, known := powers[powerName]
 		if !known {
-			ctx.JSON(http.StatusBadRequest, types.ApiErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", power_name)})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
 		}
 		switch command.Command {
-		case types.POWER_ON:
+		case types.PowerOn:
 			power.TurnOn(types.NewCycle(command.Cycle.Name, command.Cycle.Ticks))
-		case types.POWER_OFF:
+		case types.PowerOff:
 			power.TurnOff()
-		case types.POWER_NEXT:
+		case types.PowerNext:
 			power.SwitchTo(types.NewCycle(command.Cycle.Name, command.Cycle.Ticks))
 		default:
-			ctx.JSON(http.StatusBadRequest, types.ApiErrorResponse{Err: fmt.Sprintf("Unknown command '%s'", command.Command)})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown command '%s'", command.Command)})
 			return
 		}
-		ctx.JSON(http.StatusOK, types.ApiResponse[types.PowerOperationResponse]{Data: types.PowerOperationResponse{Message: "completed"}})
+		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{Data: types.PowerOperationResponse{Message: "completed"}})
 	}
 }

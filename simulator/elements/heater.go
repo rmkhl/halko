@@ -9,14 +9,14 @@ type (
 		*Power
 		mutex       sync.RWMutex
 		temperature float32
-		min_temp    float32
-		max_temp    float32
+		minTemp     float32
+		maxTemp     float32
 		wood        *Wood
 	}
 )
 
-func NewHeater(name string, min_temp float32, max_temp float32, material *Wood) *Heater {
-	h := Heater{Power: NewPower(name), temperature: min_temp, min_temp: min_temp, max_temp: max_temp, wood: material}
+func NewHeater(name string, minTemp, maxTemp float32, material *Wood) *Heater {
+	h := Heater{Power: NewPower(name), temperature: minTemp, minTemp: minTemp, maxTemp: maxTemp, wood: material}
 	return &h
 }
 
@@ -27,15 +27,15 @@ func (h *Heater) Tick() {
 	h.wood.AmbientTemperature(h.temperature)
 	h.power.Tick()
 
-	_, _, is_on := h.power.CycleInfo()
-	if is_on {
-		h.temperature = min(h.max_temp, h.temperature+0.1)
+	_, isOn := h.power.CycleInfo()
+	if isOn {
+		h.temperature = min(h.maxTemp, h.temperature+0.1)
 		return
 	}
-	h.temperature = max(h.min_temp, h.temperature-0.01)
+	h.temperature = max(h.minTemp, h.temperature-0.01)
 }
 
-// Implement TemperatureSensor interface
+// Implement TemperatureSensor interface.
 func (h *Heater) Temperature() float32 {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()

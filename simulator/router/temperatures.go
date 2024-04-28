@@ -14,20 +14,20 @@ func readAllTemperatureSensors(sensors map[string]types.TemperatureSensor) gin.H
 		for name, sensor := range sensors {
 			resp[name] = sensor.Temperature()
 		}
-		ctx.JSON(http.StatusOK, types.ApiResponse[types.TemperatureResponse]{Data: resp})
+		ctx.JSON(http.StatusOK, types.APIResponse[types.TemperatureResponse]{Data: resp})
 	}
 }
 
 func readTemperatureSensor(sensors map[string]types.TemperatureSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		sensor_name, _ := ctx.Params.Get("sensor")
-		sensor, known := sensors[sensor_name]
+		sensorName, _ := ctx.Params.Get("sensor")
+		sensor, known := sensors[sensorName]
 		if !known {
-			ctx.JSON(http.StatusNotFound, types.ApiErrorResponse{Err: fmt.Sprintf("Unknown temperature sensor '%s'", sensor_name)})
+			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: fmt.Sprintf("Unknown temperature sensor '%s'", sensorName)})
 			return
 		}
 		resp := make(types.TemperatureResponse)
-		resp[sensor_name] = sensor.Temperature()
-		ctx.JSON(http.StatusOK, types.ApiResponse[types.TemperatureResponse]{Data: resp})
+		resp[sensorName] = sensor.Temperature()
+		ctx.JSON(http.StatusOK, types.APIResponse[types.TemperatureResponse]{Data: resp})
 	}
 }
