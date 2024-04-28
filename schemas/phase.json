@@ -8,6 +8,29 @@
             "$comment": "ID (as unix timestamp)",
             "type": "string"
         },
+        "valid_range": {
+            "$comment": "Valid temperature range",
+            "type": "object",
+            "properties": {
+                "sensor": {
+                    "$comment": "Name of temperature sensor",
+                    "type": "string"
+                },
+                "minimum": {
+                    "$comment": "Minimum temperature in Celsius",
+                    "type": "number"
+                },
+                "maximum": {
+                    "$comment": "Minimum temperature in Celsius",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "sensor",
+                "minimum",
+                "maximum"
+            ]
+        },
         "name": {
             "$comment": "Name for program phase",
             "type": "string"
@@ -15,29 +38,6 @@
         "constant_cycle": {
             "$comment": "Constant power cycle to be applied",
             "$ref": "/schemas/cycle"
-        },
-        "valid_range": {
-            "$comment": "Valid temperature range",
-            "type": "array",
-            "items": {
-                "$comment": "Valid sensor range",
-                "type": "object",
-                "properties": {
-                    "sensor": {
-                        "$comment": "Name of temperature sensor",
-                        "type": "string"
-                    },
-                    "minimum": {
-                        "$comment": "Minimum temperature in Celsius",
-                        "type": "number"
-                    },
-                    "maximum": {
-                        "$comment": "Minimum temperature in Celsius",
-                        "type": "number"
-                    }
-                },
-                "required": ["sensor", "minimum", "maximum"]
-            }
         },
         "delta_cycles": {
             "type": "array",
@@ -91,7 +91,7 @@
     "allOf": [
         {
             "required": [
-                "name"
+                "name", "valid_range"
             ]
         },
         {
