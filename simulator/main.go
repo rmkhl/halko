@@ -17,14 +17,14 @@ func main() {
 	humidifier := elements.NewPower("Humidifier")
 	wood := elements.NewWood(20, 200)
 	heater := elements.NewHeater("oven", 20, 200, wood)
-	temperature_sensors := map[string]types.TemperatureSensor{"oven": heater, "material": wood}
-	power_sensors := map[string]types.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
-	power_controls := map[string]types.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
+	temperatureSensors := map[string]types.TemperatureSensor{"oven": heater, "material": wood}
+	powerSensors := map[string]types.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
+	powerControls := map[string]types.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
 
 	server := gin.Default()
-	router.SetupRoutes(server, temperature_sensors, power_sensors, power_controls)
+	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls)
 
 	wg.Add(1)
 	go func() {

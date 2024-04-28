@@ -16,7 +16,7 @@ func NewPower(name string) *Power {
 	return &p
 }
 
-// Implement PowerManager interface
+// Implement PowerManager interface.
 func (h *Power) TurnOn(cycle *types.Cycle) {
 	h.power.Start(cycle)
 }
@@ -29,7 +29,7 @@ func (h *Power) SwitchTo(cycle *types.Cycle) {
 	h.power.UpdateCycle(cycle)
 }
 
-// Implement PowerSensor interface
+// Implement PowerSensor interface.
 func (h *Power) IsOn() bool {
 	return h.power.IsRunning()
 }
@@ -39,7 +39,7 @@ func (h *Power) Name() string {
 }
 
 func (h *Power) CurrentCycle() string {
-	var name, _, _ = h.power.CycleInfo()
+	name, _ := h.power.CycleInfo()
 
 	return name
 }

@@ -1,10 +1,10 @@
 package types
 
-type ApiErrorResponse struct {
+type APIErrorResponse struct {
 	Err string `json:"data"`
 }
 
-type ApiResponse[T any] struct {
+type APIResponse[T any] struct {
 	Data T `json:"data"`
 }
 
@@ -13,9 +13,9 @@ type TemperatureResponse map[string]float32
 type PowerStatus string
 
 const (
-	POWER_ON   PowerStatus = "On"
-	POWER_OFF  PowerStatus = "Off"
-	POWER_NEXT PowerStatus = "Switch"
+	PowerOn   PowerStatus = "On"
+	PowerOff  PowerStatus = "Off"
+	PowerNext PowerStatus = "Switch"
 )
 
 type PowerResponse struct {
