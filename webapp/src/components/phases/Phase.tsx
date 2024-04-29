@@ -97,6 +97,7 @@ export const Phase: React.FC = () => {
         setEditPhase({
           ...editPhase,
           constantCycle,
+          deltaCycles: undefined,
         })
       );
     }
@@ -108,6 +109,7 @@ export const Phase: React.FC = () => {
         setEditPhase({
           ...editPhase,
           deltaCycles,
+          constantCycle: undefined,
         })
       );
     }
