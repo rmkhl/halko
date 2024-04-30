@@ -43,11 +43,7 @@ export const DeltaCycles: React.FC<Props> = (props) => {
 
       <Stack>
         {deltaCycles?.map((d) => (
-          <DeltaCycle
-            key={`deltaCycle-${d.delta}`}
-            deltaCycle={d}
-            editing={editing}
-          />
+          <DeltaCycle key={`deltaCycle-${d.delta}`} deltaCycle={d} />
         ))}
       </Stack>
 

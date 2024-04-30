@@ -3,8 +3,8 @@ package domain
 type Phase struct {
 	HasID
 	Name          string             `json:"name"`
-	ConstantCycle *Cycle             `json:"constant_cycle,omitempty"`
-	DeltaCycles   []DeltaCycle       `json:"delta_cycles,omitempty"`
+	ConstantCycle *Cycle             `json:"constantCycle,omitempty"`
+	DeltaCycles   []DeltaCycle       `json:"deltaCycles,omitempty"`
 	ValidRange    []ValidSensorRange `json:"validRange"`
 	CycleMode     string             `json:"cycleMode"`
 }

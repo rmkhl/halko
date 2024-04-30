@@ -9,7 +9,7 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ConstantCycle } from "./ConstantCycle";
-import { Cycle, Phase } from "../../types/api";
+import { Phase } from "../../types/api";
 import { DeltaCycles } from "./DeltaCycles";
 
 interface Props {
@@ -29,6 +29,8 @@ export const Cycles: React.FC<Props> = (props) => {
     onChangeDeltaCycles,
   } = props;
 
+  const { t } = useTranslation();
+
   return (
     <Stack gap={3}>
       {editing && (
@@ -36,6 +38,12 @@ export const Cycles: React.FC<Props> = (props) => {
           cycleMode={phase.cycleMode}
           onChangeCycleMode={onChangeCycleMode}
         />
+      )}
+
+      {!editing && (
+        <Typography variant="h5">
+          {t(`phases.cycles.${phase.cycleMode}`)}
+        </Typography>
       )}
 
       {phase.cycleMode === "constant" && (

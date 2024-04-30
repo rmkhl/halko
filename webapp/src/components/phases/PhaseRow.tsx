@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Phase } from "../../types/api";
 import { Stack, Typography, styled } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { celsiusRange } from "../../util";
+import { celsius, celsiusRange } from "../../util";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -24,7 +24,7 @@ export const PhaseRow: React.FC<Props> = (props) => {
       </Stack>
 
       <Stack flex={1}>
-        <Typography>{t(`phases.cycles.${phase.cycleMode}`)}</Typography>
+        <CycleInfo phase={phase} />
       </Stack>
 
       <Stack flex={1}>
@@ -52,3 +52,42 @@ const PhaseRowStack = styled(Stack)(() => ({
     backgroundColor: "#666",
   },
 }));
+
+interface CycleInfoProps {
+  phase: Phase;
+}
+
+const CycleInfo: React.FC<CycleInfoProps> = (props) => {
+  const { phase } = props;
+  const { cycleMode, constantCycle, deltaCycles } = phase;
+
+  const { t } = useTranslation();
+
+  const cycleModeStr = useMemo(
+    () => t(`phases.cycles.${cycleMode}`),
+    [cycleMode, t]
+  );
+
+  switch (cycleMode) {
+    case "delta":
+      return (
+        <Typography>
+          {cycleModeStr}:{" "}
+          {[...(deltaCycles || [])]
+            .sort((a, b) => a.delta - b.delta)
+            .map((d) => celsius(d.delta))
+            .join(", ")}
+        </Typography>
+      );
+
+    case "constant":
+      return (
+        <Typography>
+          {cycleModeStr}: {constantCycle?.name}
+        </Typography>
+      );
+
+    default:
+      return null;
+  }
+};

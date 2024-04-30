@@ -7,12 +7,11 @@ import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import { celsius } from "../../util";
 
 interface Props {
-  editing?: boolean;
   deltaCycle: ApiDeltaCycle;
 }
 
 export const DeltaCycle: React.FC<Props> = (props) => {
-  const { editing, deltaCycle } = props;
+  const { deltaCycle } = props;
   const { above, below, delta } = deltaCycle;
 
   return (

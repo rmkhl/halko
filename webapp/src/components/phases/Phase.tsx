@@ -70,8 +70,14 @@ export const Phase: React.FC = () => {
       return;
     }
 
+    const editId = editPhase?.id;
     dispatch(setEditPhase(undefined));
-    navigate("/phases");
+
+    if (editId === "") {
+      navigate("/phases");
+    } else {
+      setMode("view");
+    }
   }, [isSuccess]);
 
   const editingThis = useMemo(() => mode === "edit", [mode]);
@@ -134,6 +140,11 @@ export const Phase: React.FC = () => {
     }
   };
 
+  const handleEdit = () => {
+    dispatch(setEditPhase(phase));
+    setMode("edit");
+  };
+
   const handleSave = () => {
     if (editPhase) {
       savePhase(editPhase);
@@ -141,8 +152,14 @@ export const Phase: React.FC = () => {
   };
 
   const handleCancel = () => {
+    const editId = editPhase?.id;
     dispatch(setEditPhase(undefined));
-    navigate("/phases");
+
+    if (editId === "") {
+      navigate("/phases");
+    } else {
+      setMode("view");
+    }
   };
 
   if (!id) {
@@ -151,6 +168,14 @@ export const Phase: React.FC = () => {
 
   return (
     <Stack direction="column" gap={6} width="60rem">
+      {!editingThis && (
+        <Stack direction="row" justifyContent="end" gap={6}>
+          <Button color="primary" onClick={handleEdit}>
+            {t("phases.edit")}
+          </Button>
+        </Stack>
+      )}
+
       <NameComponent
         editing={editingThis}
         name={editingThis ? editPhase?.name : phase.name}
