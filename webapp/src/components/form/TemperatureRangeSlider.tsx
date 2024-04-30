@@ -1,6 +1,6 @@
 import { Slider, Typography } from "@mui/material";
 import React from "react";
-import { celsius } from "../../util";
+import { celsius, celsiusRange } from "../../util";
 
 interface Props {
   editing?: boolean;
@@ -37,7 +37,7 @@ export const TemperatureRangeSlider: React.FC<Props> = (props) => {
   return (
     <>
       <Typography>
-        {title}: {low}-{high}°C
+        {title}: {celsiusRange(low, high)}
       </Typography>
 
       <Slider

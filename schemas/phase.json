@@ -35,6 +35,10 @@
             "$comment": "Name for program phase",
             "type": "string"
         },
+        "cycleMode": {
+            "$comment": "A switch between constant and delta cycle mode",
+            "type": "string"
+        },
         "constant_cycle": {
             "$comment": "Constant power cycle to be applied",
             "$ref": "/schemas/cycle"
@@ -91,7 +95,7 @@
     "allOf": [
         {
             "required": [
-                "name", "valid_range"
+                "name", "valid_range", "cycleMode"
             ]
         },
         {

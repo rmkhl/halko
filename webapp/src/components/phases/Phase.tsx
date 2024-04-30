@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useGetPhasesQuery } from "../../store/services";
-import { Phase as ApiPhase, Cycle } from "../../types/api";
-import { Stack } from "@mui/material";
+import { useGetPhasesQuery, useSavePhaseMutation } from "../../store/services";
+import { Phase as ApiPhase } from "../../types/api";
+import { Button, Stack } from "@mui/material";
 import { FormMode } from "../../types";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
@@ -16,11 +16,6 @@ const emptyPhase: ApiPhase = {
   id: "",
   name: "",
   validRange: [
-    {
-      sensor: "oven",
-      above: 20,
-      below: 100,
-    },
     {
       sensor: "material",
       above: 20,
@@ -36,6 +31,7 @@ export const Phase: React.FC = () => {
 
   const { id } = useParams();
   const { data: phases, isFetching } = useGetPhasesQuery();
+  const [savePhase, { isLoading, error, isSuccess }] = useSavePhaseMutation();
   const editPhase = useSelector((state: RootState) => state.phases.edit);
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -69,7 +65,30 @@ export const Phase: React.FC = () => {
     setPhase(phase);
   }, [id, phases]);
 
+  useEffect(() => {
+    if (!isSuccess) {
+      return;
+    }
+
+    dispatch(setEditPhase(undefined));
+    navigate("/phases");
+  }, [isSuccess]);
+
   const editingThis = useMemo(() => mode === "edit", [mode]);
+
+  const isValid = useMemo(() => {
+    if (!editPhase) {
+      return false;
+    }
+
+    const { name, cycleMode, constantCycle, deltaCycles } = editPhase;
+
+    return (
+      !!name &&
+      ((cycleMode === "constant" && !!constantCycle) ||
+        (cycleMode === "delta" && !!deltaCycles?.length))
+    );
+  }, [editPhase]);
 
   const updateEdited =
     (field: keyof ApiPhase) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,6 +134,17 @@ export const Phase: React.FC = () => {
     }
   };
 
+  const handleSave = () => {
+    if (editPhase) {
+      savePhase(editPhase);
+    }
+  };
+
+  const handleCancel = () => {
+    dispatch(setEditPhase(undefined));
+    navigate("/phases");
+  };
+
   if (!id) {
     navigate("/phases");
   }
@@ -142,6 +172,18 @@ export const Phase: React.FC = () => {
         onChangeConstantCycle={updateConstantCycle}
         onChangeDeltaCycles={updateDeltaCycles}
       />
+
+      {editingThis && (
+        <Stack direction="row" gap="3em" justifyContent="flex-end">
+          <Button onClick={handleSave} disabled={!isValid} color="success">
+            {t("phases.save")}
+          </Button>
+
+          <Button onClick={handleCancel} color="warning">
+            {t("phases.cancel")}
+          </Button>
+        </Stack>
+      )}
     </Stack>
   );
 };

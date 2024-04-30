@@ -9,7 +9,7 @@ import {
 const editKey = "editPhase";
 
 const initialState = {
-  cycles: [] as Phase[],
+  phases: [] as Phase[],
   edit: getJSONFromSessionStorage<Phase>(editKey),
 };
 
@@ -19,11 +19,16 @@ export const phasesSlice = createSlice({
   reducers: {
     setPhases: (
       state: typeof initialState,
-      action: PayloadAction<typeof initialState.cycles>
-    ) => ({
-      ...state,
-      cycles: action.payload.sort((a, b) => a.name.localeCompare(b.name)),
-    }),
+      action: PayloadAction<typeof initialState.phases>
+    ) => {
+      const { payload: phases } = action;
+      phases.sort((a, b) => a.name.localeCompare(b.name));
+
+      return {
+        ...state,
+        phases: [...phases],
+      };
+    },
     setEditPhase: (
       state: typeof initialState,
       action: PayloadAction<typeof initialState.edit>

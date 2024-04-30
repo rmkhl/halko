@@ -18,14 +18,10 @@ export const Navigation: React.FC<Props> = (props) => {
 
   useEffect(() => {
     const newIdx = routes.findIndex(
-      (r) => r.path && location.pathname.includes(r.path)
+      (r) => r.path && location.pathname === `/${r.path}`
     );
 
-    if (newIdx > -1) {
-      setIdx(newIdx);
-    } else {
-      setIdx(0);
-    }
+    setIdx(newIdx);
   }, [location]);
 
   return (

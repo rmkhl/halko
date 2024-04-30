@@ -24,7 +24,7 @@ export const RouteTabs: React.FC<Props> = (props: Props) => {
   };
 
   return (
-    <Tabs value={idx} onChange={handleChange}>
+    <Tabs value={idx > -1 ? idx : false} onChange={handleChange}>
       {routes.map((route) => (
         <Tab key={`route-${route.name}`} label={route.name} />
       ))}

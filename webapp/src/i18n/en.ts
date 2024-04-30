@@ -24,7 +24,6 @@ export const en = {
     ...common,
     validRange: {
       title: "Valid ranges",
-      oven: "Oven",
       material: "Material",
       above: "Above",
       below: "Below",

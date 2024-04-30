@@ -1,3 +1,9 @@
+const degreesCelsius = "°C";
+
 export const celsius = (value: number) => {
-  return `${value}°C`;
+  return `${value}${degreesCelsius}`;
+};
+
+export const celsiusRange = (a: number, b: number) => {
+  return `${a}-${b}${degreesCelsius}`;
 };
