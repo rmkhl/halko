@@ -3,7 +3,9 @@ package router
 import (
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/configurator/database"
 )
@@ -15,6 +17,13 @@ type Router struct {
 
 func New(db *database.Interface) *Router {
 	ginRouter := gin.Default()
+	ginRouter.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"http://localhost:1234"},
+		AllowMethods:  []string{"GET", "POST", "PUT"},
+		AllowHeaders:  []string{"Origin", "Content-Type"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge:        12 * time.Hour,
+	}))
 
 	r := &Router{ginRouter, db}
 	setupRoutes(ginRouter, db)

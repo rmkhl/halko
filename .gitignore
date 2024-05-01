@@ -22,3 +22,5 @@ go.work*
 
 # Filesystem database docker volume.
 fsdb
+
+.DS_Store
