@@ -11,11 +11,15 @@
         "name": {
             "type": "string"
         },
-        "maximum_runtime": {
+        "default_step_runtime": {
             "$comment": "Length of time in seconds",
             "type": "integer"
         },
-        "phases": {
+        "preheat_to": {
+            "$comment": "Preheat oven to temperature in Centigrade before starting",
+            "type": "integer"
+        },
+        "steps": {
             "type": "array",
             "items": {
                 "type": "object",
@@ -31,13 +35,9 @@
                         }
                     },
                     "temperature_constraint": {
-                        "$comment": "Valid temperature range",
+                        "$comment": "Valid temperature range (material)",
                         "type": "object",
                         "properties": {
-                            "sensor": {
-                                "$comment": "Name of the sensor",
-                                "type": "string"
-                            },
                             "minimum": {
                                 "$comment": "Minimum temperature in Celsius",
                                 "type": "number"
@@ -111,7 +111,7 @@
     },
     "required": [
         "name",
-        "maximum_runtime",
-        "phases"
+        "default_step_runtime",
+        "steps"
     ]
 }

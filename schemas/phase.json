@@ -8,40 +8,13 @@
             "$comment": "ID (as unix timestamp)",
             "type": "string"
         },
-        "valid_range": {
-            "$comment": "Valid temperature range",
-            "type": "object",
-            "properties": {
-                "sensor": {
-                    "$comment": "Name of temperature sensor",
-                    "type": "string"
-                },
-                "minimum": {
-                    "$comment": "Minimum temperature in Celsius",
-                    "type": "number"
-                },
-                "maximum": {
-                    "$comment": "Minimum temperature in Celsius",
-                    "type": "number"
-                }
-            },
-            "required": [
-                "sensor",
-                "minimum",
-                "maximum"
-            ]
-        },
         "name": {
             "$comment": "Name for program phase",
             "type": "string"
         },
-        "cycleMode": {
-            "$comment": "A switch between constant and delta cycle mode",
-            "type": "string"
-        },
         "constant_cycle": {
-            "$comment": "Constant power cycle to be applied",
-            "$ref": "/schemas/cycle"
+            "$comment": "Constant power percentage to be applied",
+            "type": "number"
         },
         "delta_cycles": {
             "type": "array",
@@ -54,12 +27,12 @@
                         "type": "number"
                     },
                     "above": {
-                        "$comment": "If initial delta is above",
-                        "$ref": "/schemas/cycle"
+                        "$comment": "Power percentage if above",
+                        "type": "number"
                     },
                     "below": {
-                        "$comment": "If initial delta is below",
-                        "$ref": "/schemas/cycle"
+                        "$comment": "Power percentage if below",
+                        "type": "number"
                     }
                 },
                 "allOf": [
@@ -95,7 +68,7 @@
     "allOf": [
         {
             "required": [
-                "name", "valid_range", "cycleMode"
+                "name"
             ]
         },
         {
