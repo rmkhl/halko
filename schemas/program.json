@@ -24,6 +24,10 @@
             "items": {
                 "type": "object",
                 "properties": {
+                    "name": {
+                        "$comment": "Name of the step",
+                        "type": "string"
+                    },
                     "time_constraint": {
                         "$comment": "Valid runtime for a phase",
                         "type": "object",

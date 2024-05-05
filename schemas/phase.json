@@ -35,32 +35,10 @@
                         "type": "number"
                     }
                 },
-                "allOf": [
-                    {
-                        "required": [
-                            "delta"
-                        ]
-                    },
-                    {
-                        "oneOf": [
-                            {
-                                "required": [
-                                    "above"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "below"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "below",
-                                    "above"
-                                ]
-                            }
-                        ]
-                    }
+                "required": [
+                    "delta",
+                    "below",
+                    "above"
                 ]
             }
         }
