@@ -9,7 +9,6 @@ import {
 import { Route } from "./types";
 import { Navigation } from "./components/Navigation";
 import { theme } from "./material-ui/theme";
-import { Cycles } from "./components/cycles";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
 import { Phases } from "./components/phases/Phases";
@@ -43,11 +42,6 @@ export const App: React.FC = () => {
         name: t("tabs.phases"),
         path: "phases",
         element: <Phases />,
-      },
-      {
-        name: t("tabs.cycles"),
-        path: "cycles",
-        element: <Cycles />,
       },
     ],
     [t]

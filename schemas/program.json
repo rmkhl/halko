@@ -29,7 +29,7 @@
                         "type": "string"
                     },
                     "time_constraint": {
-                        "$comment": "Valid runtime for a phase",
+                        "$comment": "Valid runtime for a step",
                         "type": "object",
                         "properties": {
                             "runtime": {

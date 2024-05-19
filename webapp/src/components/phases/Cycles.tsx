@@ -6,7 +6,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ConstantCycle } from "./ConstantCycle";
 import { Phase } from "../../types/api";
@@ -49,7 +49,7 @@ export const Cycles: React.FC<Props> = (props) => {
       {phase.cycleMode === "constant" && (
         <ConstantCycle
           editing={editing}
-          cycle={phase.constantCycle}
+          percentage={phase.constantCycle}
           onChange={onChangeConstantCycle}
         />
       )}

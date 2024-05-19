@@ -13,7 +13,6 @@ var (
 )
 
 type Interface struct {
-	Cycles   Cycles
 	Phases   Phases
 	Programs Programs
 }
@@ -30,8 +29,4 @@ type Programs interface {
 
 type Phases interface {
 	Entity[*domain.Phase]
-}
-
-type Cycles interface {
-	Entity[*domain.Cycle]
 }

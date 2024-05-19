@@ -1,6 +1,6 @@
 const degreesCelsius = "°C";
 
-export const celsius = (value: number) => {
+export const celsius = (value?: number) => {
   return `${value}${degreesCelsius}`;
 };
 

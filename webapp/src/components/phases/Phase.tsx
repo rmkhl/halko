@@ -1,33 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetPhasesQuery, useSavePhaseMutation } from "../../store/services";
-import { Phase as ApiPhase } from "../../types/api";
+import { Phase as ApiPhase, DeltaCycle } from "../../types/api";
 import { Button, Stack } from "@mui/material";
 import { FormMode } from "../../types";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { setEditPhase } from "../../store/features/phasesSlice";
 import { NameComponent } from "../form";
-import { ValidRange } from "./ValidRange";
 import { useTranslation } from "react-i18next";
 import { Cycles } from "./Cycles";
-
-const emptyPhase: ApiPhase = {
-  id: "",
-  name: "",
-  validRange: [
-    {
-      sensor: "material",
-      above: 20,
-      below: 100,
-    },
-  ],
-  cycleMode: "constant",
-};
+import {
+  defaultConstant,
+  defaultDeltaCycles,
+  emptyConstantPhase,
+} from "./templates";
 
 export const Phase: React.FC = () => {
   const [mode, setMode] = useState<FormMode>("view");
-  const [phase, setPhase] = useState<ApiPhase>({ ...emptyPhase });
+  const [phase, setPhase] = useState<ApiPhase>(emptyConstantPhase());
 
   const { id } = useParams();
   const { data: phases, isFetching } = useGetPhasesQuery();
@@ -46,7 +37,7 @@ export const Phase: React.FC = () => {
         return;
       }
 
-      dispatch(setEditPhase(emptyPhase));
+      dispatch(setEditPhase(emptyConstantPhase()));
 
       return;
     }
@@ -80,6 +71,30 @@ export const Phase: React.FC = () => {
     }
   }, [isSuccess]);
 
+  useEffect(() => {
+    if (!editPhase) return;
+
+    let constantCycle: number | undefined;
+    let deltaCycles: DeltaCycle[] | undefined;
+
+    switch (editPhase?.cycleMode) {
+      case "constant":
+        constantCycle = defaultConstant;
+        break;
+      case "delta":
+        deltaCycles = defaultDeltaCycles();
+        break;
+    }
+
+    dispatch(
+      setEditPhase({
+        ...editPhase,
+        deltaCycles,
+        constantCycle,
+      })
+    );
+  }, [editPhase?.cycleMode]);
+
   const editingThis = useMemo(() => mode === "edit", [mode]);
 
   const isValid = useMemo(() => {
@@ -104,17 +119,6 @@ export const Phase: React.FC = () => {
         );
       }
     };
-
-  const updateValidRange = (validRange: ApiPhase["validRange"]) => {
-    if (editPhase) {
-      dispatch(
-        setEditPhase({
-          ...editPhase,
-          validRange,
-        })
-      );
-    }
-  };
 
   const updateConstantCycle = (constantCycle: ApiPhase["constantCycle"]) => {
     if (editPhase) {
@@ -180,14 +184,6 @@ export const Phase: React.FC = () => {
         editing={editingThis}
         name={editingThis ? editPhase?.name : phase.name}
         handleChange={updateEdited("name")}
-      />
-
-      <ValidRange
-        editing={editingThis}
-        validRange={
-          editingThis && editPhase ? editPhase?.validRange : phase.validRange
-        }
-        handleChange={updateValidRange}
       />
 
       <Cycles

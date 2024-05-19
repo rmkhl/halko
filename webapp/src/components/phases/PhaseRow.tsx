@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Phase } from "../../types/api";
 import { Stack, Typography, styled } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { celsius, celsiusRange } from "../../util";
+import { celsius } from "../../util";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -25,19 +25,6 @@ export const PhaseRow: React.FC<Props> = (props) => {
 
       <Stack flex={1}>
         <CycleInfo phase={phase} />
-      </Stack>
-
-      <Stack flex={1}>
-        <Typography>
-          {phase.validRange
-            .map(
-              (v) =>
-                `${
-                  t(`phases.validRange.${v.sensor}`) || v.sensor
-                }: ${celsiusRange(v.above, v.below)}`
-            )
-            .join(", ")}
-        </Typography>
       </Stack>
     </PhaseRowStack>
   );
@@ -83,7 +70,7 @@ const CycleInfo: React.FC<CycleInfoProps> = (props) => {
     case "constant":
       return (
         <Typography>
-          {cycleModeStr}: {constantCycle?.name}
+          {cycleModeStr}: {celsius(constantCycle)}
         </Typography>
       );
 
