@@ -48,15 +48,13 @@ export const Cycles: React.FC<Props> = (props) => {
 
       {phase.cycleMode === "constant" && (
         <ConstantCycle
-          editing={editing}
-          cycle={phase.constantCycle}
+          percentage={phase.constantCycle}
           onChange={onChangeConstantCycle}
         />
       )}
 
       {phase.cycleMode === "delta" && (
         <DeltaCycles
-          editing={editing}
           deltaCycles={phase.deltaCycles}
           onChange={onChangeDeltaCycles}
         />

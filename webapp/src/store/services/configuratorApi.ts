@@ -1,11 +1,9 @@
 import { FetchArgs, createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { Cycle, Phase } from "../../types/api";
+import { Phase } from "../../types/api";
 
-const cyclesTag = "cycles" as const;
 const phasesTag = "phases" as const;
 const list = "LIST";
-const cyclesEndpoint = "cycles";
 const phasesEndpoint = "phases";
 
 interface Entity {
@@ -17,28 +15,8 @@ export const configuratorApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:8080/api/v1",
   }),
-  tagTypes: [cyclesTag, phasesTag],
+  tagTypes: [phasesTag],
   endpoints: (builder) => ({
-    getCycles: builder.query<Cycle[], void>({
-      query: () => ({
-        url: cyclesEndpoint,
-        responseHandler: (response) => {
-          if (!response.ok) {
-            return response.text();
-          }
-
-          return response.json();
-        },
-      }),
-      providesTags: () => [{ type: cyclesTag, id: list }],
-    }),
-    saveCycle: builder.mutation<string, Cycle>({
-      query: (cycle) => ({
-        ...entitySaveConfigByEndpoint(cyclesEndpoint, cycle),
-      }),
-      invalidatesTags: (_, error) =>
-        error ? [] : [{ type: cyclesTag, id: list }],
-    }),
     getPhases: builder.query<Phase[], void>({
       query: () => ({
         url: phasesEndpoint,
@@ -72,9 +50,4 @@ const entitySaveConfigByEndpoint = (
   headers: { "Content-type": "application/json" },
 });
 
-export const {
-  useGetCyclesQuery,
-  useSaveCycleMutation,
-  useGetPhasesQuery,
-  useSavePhaseMutation,
-} = configuratorApi;
+export const { useGetPhasesQuery, useSavePhaseMutation } = configuratorApi;

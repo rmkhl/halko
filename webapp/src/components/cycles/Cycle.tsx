@@ -1,109 +1,54 @@
+import { Stack, Typography } from "@mui/material";
 import React, { useMemo } from "react";
-import { Cycle as ApiCycle } from "../../types/api";
-import { Stack } from "@mui/material";
-import { States } from "./States";
-import { useSaveCycleMutation } from "../../store/services";
-import { useDispatch, useSelector } from "react-redux";
-import { setEditCycle } from "../../store/features/cyclesSlice";
-import { RootState } from "../../store/store";
-import { FormButtons } from "./FormButtons";
-import { NameComponent } from "../form";
 
 interface Props {
-  canEdit?: boolean;
-  cycle: ApiCycle;
-  mode?: "view" | "edit";
+  key?: React.Key;
+  percentage?: number;
+  handleChange?: (updatedPercentage: number) => void;
   showInfo?: boolean;
-  size?: "sm" | "lg";
-
-  handleCancelEdit?: () => void;
-  handleEdit?: (c: ApiCycle) => void;
-  onSave?: () => void;
+  size?: "xs" | "sm" | "lg";
 }
 
+const colorOn = "orange";
+const colorOff = "lightblue";
+
 export const Cycle: React.FC<Props> = (props) => {
-  const {
-    canEdit,
-    cycle,
-    mode = "view",
-    handleCancelEdit,
-    handleEdit,
-    onSave,
-    showInfo = true,
-    size = "lg",
-  } = props;
+  const { key, percentage, handleChange, showInfo = true, size = "lg" } = props;
 
-  const [saveCycle, { isLoading, error, isSuccess }] = useSaveCycleMutation();
-  const editCycle = useSelector((state: RootState) => state.cycles.edit);
-  const dispatch = useDispatch();
+  if (percentage === undefined) {
+    return null;
+  }
 
-  const updateEdited =
-    (field: keyof ApiCycle) => (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (editCycle) {
-        dispatch(
-          setEditCycle({ ...editCycle, [field]: event.currentTarget.value })
-        );
-      }
-    };
-
-  const handleStatesChange = (states: boolean[]) => {
-    if (editCycle) {
-      dispatch(setEditCycle({ ...editCycle, states }));
-    }
-  };
-
-  const editingThis = useMemo(() => mode === "edit", [mode]);
-
-  const handleSave = () => {
-    if (editCycle) {
-      saveCycle(editCycle);
-    }
-
-    onSave?.();
-  };
-
-  const stackStyle = useMemo((): React.CSSProperties => {
-    const baseStyle: React.CSSProperties = {
-      padding: "1em",
-    };
-
-    return editingThis ? { ...baseStyle, ...editStyle } : baseStyle;
-  }, [editingThis]);
+  const sqSize = useMemo(
+    () => (size === "lg" ? "2em" : size === "sm" ? "1.5em" : "0.5em"),
+    [size]
+  );
 
   return (
-    <Stack style={stackStyle} alignItems="center">
-      <Stack gap={3}>
-        {showInfo && (
-          <NameComponent
-            editing={editingThis}
-            name={editingThis ? editCycle?.name : cycle.name}
-            handleChange={updateEdited("name")}
-          />
-        )}
+    <Stack direction="row" gap={3} alignItems="center">
+      <Stack direction="row">
+        {Array.from(Array(10).keys()).map((_, i) => {
+          const val = (i + 1) * 10;
+          const exact = val === percentage;
 
-        <Stack direction="row" gap={3}>
-          <States
-            cycle={editingThis ? editCycle || cycle : cycle}
-            handleChange={editingThis ? handleStatesChange : undefined}
-            showInfo={showInfo}
-            size={size}
-          />
-
-          <FormButtons
-            editing={editingThis}
-            editDisabled={!canEdit}
-            saveDisabled={!editCycle?.name}
-            handleEdit={() => handleEdit?.(cycle)}
-            handleSave={handleSave}
-            handleCancelEdit={handleCancelEdit}
-          />
-        </Stack>
+          return (
+            <Stack
+              key={`${key}-${i}`}
+              style={{
+                backgroundColor: val <= percentage ? colorOn : colorOff,
+                cursor: !handleChange ? "default" : "pointer",
+              }}
+              height={sqSize}
+              width={sqSize}
+              border={1}
+              borderColor="gray"
+              onClick={() => handleChange?.(exact ? i * 10 : val)}
+            />
+          );
+        })}
       </Stack>
+
+      {showInfo && <Typography>{percentage} %</Typography>}
     </Stack>
   );
-};
-
-const editStyle: React.CSSProperties = {
-  borderRadius: "1em",
-  backgroundColor: "#333",
 };

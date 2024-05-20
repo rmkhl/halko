@@ -30,7 +30,6 @@ const (
 
 func New() *database.Interface {
 	return &database.Interface{
-		Cycles:   &cycles{},
 		Phases:   &phases{},
 		Programs: &programs{},
 	}
@@ -139,8 +138,6 @@ func transformError(err error) error {
 
 func entityForType(t any) (entity, bool) {
 	switch t.(type) {
-	case *domain.Cycle, *cycle:
-		return eCycles, true
 	case *domain.Phase, *phase:
 		return ePhases, true
 	case *domain.Program, *program:

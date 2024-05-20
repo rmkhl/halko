@@ -13,21 +13,11 @@ export const en = {
   },
   tabs: {
     current: "Current program",
-    cycles: "Cycles",
     phases: "Phases",
     programs: "Programs",
   },
-  cycle: {
-    ...common,
-  },
   phases: {
     ...common,
-    validRange: {
-      title: "Valid ranges",
-      material: "Material",
-      above: "Above",
-      below: "Below",
-    },
     cycles: {
       title: "Cycles",
       constant: "Constant",

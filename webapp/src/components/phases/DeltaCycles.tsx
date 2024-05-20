@@ -1,62 +1,53 @@
-import React, { useMemo, useState } from "react";
+import React from "react";
 import { DeltaCycle as ApiDeltaCycle } from "../../types/api";
 import { DeltaCycle } from "./DeltaCycle";
-import { Button, Stack } from "@mui/material";
-import { useTranslation } from "react-i18next";
-import { Dialog } from "../form/Dialog";
-import { AddDeltaCycle } from "./AddDeltaCycle";
+import { Stack } from "@mui/material";
 
 interface Props {
-  editing?: boolean;
   deltaCycles?: ApiDeltaCycle[];
-  onChange: (cycles: ApiDeltaCycle[]) => void;
+  size?: "sm" | "lg";
+  onChange?: (cycles: ApiDeltaCycle[]) => void;
 }
 
 export const DeltaCycles: React.FC<Props> = (props) => {
-  const { editing, deltaCycles, onChange } = props;
-  const { t } = useTranslation();
-  const addDeltaCycleStr = useMemo(() => t("phases.cycles.addDeltaCycle"), [t]);
+  const { deltaCycles, onChange, size = "lg" } = props;
 
-  const [showAddDeltaCycleDialog, setShowAddDeltaCycleDialog] = useState(false);
-
-  const addDeltaCycle = (deltaCycle: ApiDeltaCycle) => {
-    const updatedDeltaCycles = [...(deltaCycles || []), deltaCycle].sort(
-      (a, b) => b.delta - a.delta
-    );
-
-    onChange(updatedDeltaCycles);
-    setShowAddDeltaCycleDialog(false);
-  };
+  const handleChange =
+    (idx: number, delta: "above" | "below") => (percentage: number) => {
+      onChange?.(
+        deltaCycles?.map((c, i) =>
+          i === idx
+            ? {
+                delta: c.delta,
+                above: delta === "above" ? percentage : c.above,
+                below: delta === "below" ? percentage : c.below,
+              }
+            : { ...c }
+        ) || []
+      );
+    };
 
   return (
-    <>
-      {editing && (
-        <Stack alignItems="center">
-          <Button
-            onClick={() => setShowAddDeltaCycleDialog(true)}
-            style={{ width: "fit-content" }}
-          >
-            {addDeltaCycleStr}
-          </Button>
-        </Stack>
-      )}
+    !!deltaCycles &&
+    deltaCycles.length === 13 && (
+      <Stack gap={size === "lg" ? 2 : undefined}>
+        {deltaCycles?.map((curr, i, cycles) => {
+          const prev = cycles[i - 1];
+          const next = cycles[i + 1];
 
-      <Stack>
-        {deltaCycles?.map((d) => (
-          <DeltaCycle key={`deltaCycle-${d.delta}`} deltaCycle={d} />
-        ))}
+          return (
+            <DeltaCycle
+              key={`deltaCycle-${curr.delta}`}
+              prev={prev}
+              curr={curr}
+              next={next}
+              onChangeAbove={handleChange(i + 1, "above")}
+              onChangeBelow={!!next ? handleChange(i, "below") : undefined}
+              size={size}
+            />
+          );
+        })}
       </Stack>
-
-      <Dialog
-        open={showAddDeltaCycleDialog}
-        title={addDeltaCycleStr}
-        handleClose={() => setShowAddDeltaCycleDialog(false)}
-      >
-        <AddDeltaCycle
-          existingDeltaCycles={deltaCycles}
-          onSelect={addDeltaCycle}
-        />
-      </Dialog>
-    </>
+    )
   );
 };
