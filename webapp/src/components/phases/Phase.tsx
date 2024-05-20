@@ -21,11 +21,13 @@ export const Phase: React.FC = () => {
   const [phase, setPhase] = useState<ApiPhase>(emptyConstantPhase());
 
   const { id } = useParams();
-  const { data: phases } = useGetPhasesQuery();
+  const { data } = useGetPhasesQuery();
   const [savePhase, { isSuccess }] = useSavePhaseMutation();
-  const editPhase = useSelector((state: RootState) => state.phases.edit);
+  const editPhase = useSelector((state: RootState) => state.phases.editRecord);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const phases = useMemo(() => data as ApiPhase[], [data]);
 
   const dispatch = useDispatch();
 
