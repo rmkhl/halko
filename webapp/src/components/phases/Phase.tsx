@@ -21,8 +21,8 @@ export const Phase: React.FC = () => {
   const [phase, setPhase] = useState<ApiPhase>(emptyConstantPhase());
 
   const { id } = useParams();
-  const { data: phases, isFetching } = useGetPhasesQuery();
-  const [savePhase, { isLoading, error, isSuccess }] = useSavePhaseMutation();
+  const { data: phases } = useGetPhasesQuery();
+  const [savePhase, { isSuccess }] = useSavePhaseMutation();
   const editPhase = useSelector((state: RootState) => state.phases.edit);
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -82,7 +82,7 @@ export const Phase: React.FC = () => {
         constantCycle = defaultConstant;
         break;
       case "delta":
-        deltaCycles = defaultDeltaCycles();
+        deltaCycles = editPhase.deltaCycles || defaultDeltaCycles();
         break;
     }
 

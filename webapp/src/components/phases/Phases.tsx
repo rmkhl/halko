@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useGetPhasesQuery } from "../../store/services";
 import { Button, Stack } from "@mui/material";
 import { PhaseRow } from "./PhaseRow";
@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 export const Phases: React.FC = () => {
-  const { data: phases, isFetching } = useGetPhasesQuery();
+  const { data: phases } = useGetPhasesQuery();
 
   const { t } = useTranslation();
   const navigate = useNavigate();

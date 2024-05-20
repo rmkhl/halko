@@ -39,10 +39,3 @@ export const emptyConstantPhase = (): Phase => ({
   cycleMode: "constant",
   constantCycle: defaultConstant,
 });
-
-export const emptyDeltaPhase = (): Phase => ({
-  id: "",
-  name: "",
-  cycleMode: "delta",
-  deltaCycles: defaultDeltaCycles(),
-});

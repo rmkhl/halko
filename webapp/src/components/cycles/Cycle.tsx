@@ -1,12 +1,12 @@
 import { Stack, Typography } from "@mui/material";
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 
 interface Props {
   key?: React.Key;
-  percentage: number;
+  percentage?: number;
   handleChange?: (updatedPercentage: number) => void;
   showInfo?: boolean;
-  size?: "sm" | "lg";
+  size?: "xs" | "sm" | "lg";
 }
 
 const colorOn = "orange";
@@ -15,7 +15,14 @@ const colorOff = "lightblue";
 export const Cycle: React.FC<Props> = (props) => {
   const { key, percentage, handleChange, showInfo = true, size = "lg" } = props;
 
-  const sqSize = useMemo(() => (size === "lg" ? "2em" : "1.5em"), [size]);
+  if (percentage === undefined) {
+    return null;
+  }
+
+  const sqSize = useMemo(
+    () => (size === "lg" ? "2em" : size === "sm" ? "1.5em" : "0.5em"),
+    [size]
+  );
 
   return (
     <Stack direction="row" gap={3} alignItems="center">
