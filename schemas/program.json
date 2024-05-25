@@ -13,11 +13,7 @@
         },
         "default_step_runtime": {
             "$comment": "Length of time in seconds",
-            "type": "integer"
-        },
-        "preheat_to": {
-            "$comment": "Preheat oven to temperature in Centigrade before starting",
-            "type": "integer"
+            "type": "number"
         },
         "steps": {
             "type": "array",
@@ -28,15 +24,19 @@
                         "$comment": "Name of the step",
                         "type": "string"
                     },
+                    "type": {
+                        "$comment": "Type of step",
+                        "type": "string",
+                        "enum": [
+                            "heating",
+                            "cooling",
+                            "acclimating",
+                            "waiting"
+                        ]
+                    },
                     "time_constraint": {
-                        "$comment": "Valid runtime for a step",
-                        "type": "object",
-                        "properties": {
-                            "runtime": {
-                                "$comment": "runtime in seconds",
-                                "type": "number"
-                            }
-                        }
+                        "$comment": "runtime in seconds",
+                        "type": "number"
                     },
                     "temperature_constraint": {
                         "$comment": "Valid temperature range (material)",
