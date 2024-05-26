@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,8 +56,10 @@ func operatePower(powers map[string]types.PowerManager) gin.HandlerFunc {
 
 		switch command.Command {
 		case types.PowerOn:
+			log.Printf("Powering on %s to %d%%\n", powerName, command.Percent)
 			power.TurnOn(types.NewCycle(command.Percent))
 		case types.PowerOff:
+			log.Printf("Powering off %s to %d%%\n", powerName, command.Percent)
 			power.TurnOff()
 		default:
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown command '%s'", command.Command)})
