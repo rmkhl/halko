@@ -16,7 +16,7 @@ func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {
 			ctx.JSON(http.StatusNoContent, types.APIResponse[string]{Data: "No program running"})
 			return
 		}
-		ctx.JSON(http.StatusBadRequest, types.APIResponse[types.ProgramStatus]{Data: *currentStatus})
+		ctx.JSON(http.StatusOK, types.APIResponse[types.ProgramStatus]{Data: *currentStatus})
 	}
 }
 
