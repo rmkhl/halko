@@ -11,12 +11,12 @@ import (
 
 func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		currentProgram := engine.CurrentlyRunning()
-		if currentProgram == nil {
+		currentStatus := engine.CurrentStatus()
+		if currentStatus == nil {
 			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: "No program running"})
 			return
 		}
-		ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Not implemented"})
+		ctx.JSON(http.StatusBadRequest, types.APIResponse[types.ProgramStatus]{Data: *currentStatus})
 	}
 }
 

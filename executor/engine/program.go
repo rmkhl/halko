@@ -41,6 +41,7 @@ type (
 	}
 
 	programFSMController struct {
+		mutex                       sync.RWMutex
 		step                        int
 		stepStarted                 int64
 		started                     int64
@@ -277,6 +278,9 @@ func (p *programFSMController) stateGoingUpOrDown() {
 }
 
 func (p *programFSMController) executeStep() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	switch p.state {
 	case fsmStateFailed:
 		p.stateIdleOrFailed()
@@ -299,6 +303,9 @@ func (p *programFSMController) executeStep() {
 
 // Shutdown the program. If the program has not completed normally we need to turn off all power.
 func (p *programFSMController) shutdown() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if p.stopped != 0 {
 		p.stopped = time.Now().Unix()
 		p.psuController.setPower(psuOven, 0)
@@ -322,4 +329,21 @@ func (p *programFSMController) Run(program *CurrentProgram) {
 			return
 		}
 	}
+}
+
+func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	status.StartedAt = p.started
+	status.CurrentStepStartedAt = p.stepStarted
+	p.program.mutex.RLock()
+	status.CurrentStep = p.program.program.ProgramSteps[p.step].Name
+	status.Temperatures.Material = p.program.temperatures.reading.Material
+	status.Temperatures.Oven = p.program.temperatures.reading.Oven
+	status.Temperatures.Delta = p.program.temperatures.reading.Material - p.program.temperatures.reading.Oven
+	status.PowerStatus.Heater = p.program.psuStatus.reading.Heater.Percent
+	status.PowerStatus.Fan = p.program.psuStatus.reading.Fan.Percent
+	status.PowerStatus.Humidifier = p.program.psuStatus.reading.Humidifier.Percent
+	p.program.mutex.RUnlock()
 }

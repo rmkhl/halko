@@ -26,7 +26,7 @@ type (
 	}
 
 	ProgramStatus struct {
-		Program              ProgramListing    `json:"program"`
+		Program              Program           `json:"program"`
 		StartedAt            int64             `json:"started_at,omitempty"`
 		CurrentStep          string            `json:"current_step,omitempty"`
 		CurrentStepStartedAt int64             `json:"current_step_started_at,omitempty"`

@@ -28,9 +28,11 @@ type (
 		psuSensorCommands          chan string
 		psuSensorResponses         chan psuReadings
 		psuSensorReader            *psuSensorReader
+		storage                    *storage.ProgramStorage
 		temperatureSensorCommands  chan string
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
+		programStatus              *types.ProgramStatus
 	}
 )
 
@@ -44,6 +46,8 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 		psuSensorCommands:          make(chan string),
 		psuSensorResponses:         make(chan psuReadings),
 		fsmCommands:                make(chan string),
+		storage:                    storage,
+		programStatus:              &types.ProgramStatus{Program: *program},
 	}
 
 	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURl, runner.psuSensorCommands, runner.psuSensorResponses)
@@ -72,11 +76,11 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 	return &runner, nil
 }
 
-func (runner *programRunner) getCurrentProgram() *CurrentProgram {
+func (runner *programRunner) getCurrentProgram() types.ProgramStatus {
 	runner.mutex.RLock()
 	defer runner.mutex.RUnlock()
 
-	return runner.currentProgram
+	return *runner.programStatus
 }
 
 func (runner *programRunner) Run() {
@@ -110,6 +114,10 @@ func (runner *programRunner) Run() {
 			runner.currentProgram.mutex.Unlock()
 			runner.mutex.RUnlock()
 		}
+		// Update program status
+		runner.mutex.Lock()
+		runner.fsmController.UpdateStatus(runner.programStatus)
+		runner.mutex.Unlock()
 		runner.mutex.RLock()
 	}
 	runner.fsmCommands <- programDone

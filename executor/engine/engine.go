@@ -34,14 +34,15 @@ func NewEngine(config *types.ExecutorConfig, storage *storage.ProgramStorage) *C
 	return &engine
 }
 
-func (engine *ControlEngine) CurrentlyRunning() *CurrentProgram {
+func (engine *ControlEngine) CurrentStatus() *types.ProgramStatus {
 	engine.mutex.RLock()
 	defer engine.mutex.RUnlock()
 
 	if engine.runner == nil {
 		return nil
 	}
-	return engine.runner.getCurrentProgram()
+
+	return engine.runner.programStatus
 }
 
 func (engine *ControlEngine) StartEngine(program *types.Program) error {

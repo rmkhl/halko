@@ -16,15 +16,15 @@ var (
 )
 
 type ProgramStorage struct {
-	basePath     string
-	programsPath string
+	basePath    string
+	runningPath string
 }
 
 func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 	storage := ProgramStorage{basePath: basePath}
 
-	storage.programsPath = filepath.Join(storage.basePath, "programs")
-	err := os.MkdirAll(storage.programsPath, os.ModePerm)
+	storage.runningPath = filepath.Join(storage.basePath, "programs")
+	err := os.MkdirAll(storage.runningPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 func (storage *ProgramStorage) ListPrograms() ([]string, error) {
 	programs := []string{}
 
-	files, err := filepath.Glob(filepath.Join(storage.programsPath, "*.json"))
+	files, err := filepath.Glob(filepath.Join(storage.runningPath, "*.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (storage *ProgramStorage) ListPrograms() ([]string, error) {
 }
 
 func (storage *ProgramStorage) LoadProgram(programName string) (*types.Program, error) {
-	filePath := filepath.Join(storage.programsPath, programName+".json")
+	filePath := filepath.Join(storage.runningPath, programName+".json")
 
 	jsonFile, err := os.Open(filePath)
 	if err != nil {
@@ -87,7 +87,7 @@ func (storage *ProgramStorage) saveProgram(filePath string, program *types.Progr
 }
 
 func (storage *ProgramStorage) CreateProgram(programName string, program *types.Program) error {
-	filePath := filepath.Join(storage.programsPath, programName+".json")
+	filePath := filepath.Join(storage.runningPath, programName+".json")
 
 	_, err := os.Stat(filePath)
 	if err == nil {
@@ -101,7 +101,7 @@ func (storage *ProgramStorage) CreateProgram(programName string, program *types.
 }
 
 func (storage *ProgramStorage) DeleteProgram(programName string) error {
-	filePath := filepath.Join(storage.programsPath, programName+".json")
+	filePath := filepath.Join(storage.runningPath, programName+".json")
 
 	_, err := os.Stat(filePath)
 	if err != nil {
