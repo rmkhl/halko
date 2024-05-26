@@ -15,12 +15,13 @@ import {
   defaultDeltaCycles,
   emptyConstantPhase,
 } from "./templates";
+import { validName } from "../../util";
 
 export const Phase: React.FC = () => {
   const [mode, setMode] = useState<FormMode>("view");
   const [phase, setPhase] = useState<ApiPhase>(emptyConstantPhase());
 
-  const { id } = useParams();
+  const { name } = useParams();
   const { data } = useGetPhasesQuery();
   const [savePhase, { isSuccess }] = useSavePhaseMutation();
   const editPhase = useSelector((state: RootState) => state.phases.editRecord);
@@ -32,10 +33,10 @@ export const Phase: React.FC = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (id === "new") {
+    if (name === "new") {
       setMode("edit");
 
-      if (editPhase && !editPhase.id) {
+      if (editPhase && !editPhase.name) {
         return;
       }
 
@@ -44,11 +45,11 @@ export const Phase: React.FC = () => {
       return;
     }
 
-    if (!id || !phases) {
+    if (!name || !phases) {
       return;
     }
 
-    const phase = phases.find((p) => p.id === id);
+    const phase = phases.find((p) => p.name === name);
 
     if (!phase) {
       navigate("/phases");
@@ -56,17 +57,17 @@ export const Phase: React.FC = () => {
     }
 
     setPhase(phase);
-  }, [id, phases]);
+  }, [name, phases]);
 
   useEffect(() => {
     if (!isSuccess) {
       return;
     }
 
-    const editId = editPhase?.id;
+    const editName = editPhase?.name;
     dispatch(setEditPhase(undefined));
 
-    if (editId === "") {
+    if (editName === "") {
       navigate("/phases");
     } else {
       setMode("view");
@@ -97,6 +98,24 @@ export const Phase: React.FC = () => {
     );
   }, [editPhase?.cycleMode]);
 
+  const nameUsed = useMemo(() => {
+    if (!editPhase || !phases?.length) {
+      return false;
+    }
+
+    for (const p of phases) {
+      if (p.name === phase.name) {
+        continue;
+      }
+
+      if (p.name.trim() === editPhase.name.trim()) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [phases, editPhase]);
+
   const editingThis = useMemo(() => mode === "edit", [mode]);
 
   const isValid = useMemo(() => {
@@ -107,7 +126,8 @@ export const Phase: React.FC = () => {
     const { name, cycleMode, constantCycle, deltaCycles } = editPhase;
 
     return (
-      !!name &&
+      !nameUsed &&
+      validName(name) &&
       ((cycleMode === "constant" && !!constantCycle) ||
         (cycleMode === "delta" && !!deltaCycles?.length))
     );
@@ -151,24 +171,34 @@ export const Phase: React.FC = () => {
     setMode("edit");
   };
 
+  const normalize = (phase: ApiPhase): ApiPhase => {
+    const cpy = { ...phase };
+    cpy.name = cpy.name.trim();
+
+    return cpy;
+  };
+
   const handleSave = () => {
-    if (editPhase) {
-      savePhase(editPhase);
+    if (!editPhase) {
+      return;
     }
+
+    const normalized = normalize(editPhase);
+    savePhase(normalized);
   };
 
   const handleCancel = () => {
-    const editId = editPhase?.id;
+    const editName = editPhase?.name;
     dispatch(setEditPhase(undefined));
 
-    if (editId === "") {
+    if (editName === "") {
       navigate("/phases");
     } else {
       setMode("view");
     }
   };
 
-  if (!id) {
+  if (!name) {
     navigate("/phases");
   }
 

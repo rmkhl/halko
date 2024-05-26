@@ -10,6 +10,8 @@ import (
 	"github.com/rmkhl/halko/configurator/database"
 )
 
+var ErrNoName = errors.New("no name provided")
+
 type Router struct {
 	*gin.Engine
 	db *database.Interface

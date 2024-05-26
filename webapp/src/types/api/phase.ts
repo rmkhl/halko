@@ -5,7 +5,6 @@ export interface DeltaCycle {
 }
 
 export interface Phase {
-  id: string;
   name: string;
   cycleMode: string;
   constantCycle?: number;

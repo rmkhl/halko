@@ -21,7 +21,7 @@ const getRouter = (routes: Route[]) =>
       element: <Navigation routes={routes} />,
       children: [
         ...routes,
-        { path: "phases/:id", element: <Phase /> },
+        { path: "phases/:name", element: <Phase /> },
         { path: "/", element: <Navigate to="/current" /> },
         { path: "*", element: <Navigate to="/current" /> },
       ],

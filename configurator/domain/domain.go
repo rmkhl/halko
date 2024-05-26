@@ -1,13 +1,13 @@
 package domain
 
-type ID string
+type Name string
 
-const EmptyID ID = ""
+const EmptyName Name = ""
 
-func (i ID) IsValid() bool {
-	return i != EmptyID
+func (i Name) IsValid() bool {
+	return i != EmptyName
 }
 
-type HasID struct {
-	ID ID `json:"id"`
+type HasName struct {
+	Name Name `json:"name"`
 }

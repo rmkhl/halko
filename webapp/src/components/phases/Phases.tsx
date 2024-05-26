@@ -30,7 +30,7 @@ export const Phases: React.FC = () => {
         {[...(phases || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((p) => (
-            <PhaseRow key={p.id} phase={p} />
+            <PhaseRow key={p.name} phase={p} />
           ))}
       </Stack>
     </Stack>

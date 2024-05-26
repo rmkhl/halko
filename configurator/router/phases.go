@@ -2,7 +2,6 @@ package router
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,13 +24,13 @@ func allPhases(phases database.Phases) gin.HandlerFunc {
 
 func phase(phases database.Phases) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		id, ok := ctx.Params.Get("id")
+		name, ok := ctx.Params.Get("name")
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, errors.New("no id provided"))
+			ctx.JSON(http.StatusBadRequest, ErrNoName)
 			return
 		}
 
-		phase, err := phases.ByID(id)
+		phase, err := phases.ByName(name)
 		status, err := statusAndError(err)
 		if err != nil {
 			ctx.JSON(status, errorJSON(err))
@@ -52,8 +51,6 @@ func createPhase(phases database.Phases) gin.HandlerFunc {
 			return
 		}
 
-		phase.ID = ""
-
 		created, err := phases.CreateOrUpdate(&phase)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
@@ -66,9 +63,9 @@ func createPhase(phases database.Phases) gin.HandlerFunc {
 
 func updatePhase(phases database.Phases) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		id, ok := ctx.Params.Get("id")
+		name, ok := ctx.Params.Get("name")
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, errors.New("no id provided"))
+			ctx.JSON(http.StatusBadRequest, ErrNoName)
 			return
 		}
 
@@ -80,7 +77,7 @@ func updatePhase(phases database.Phases) gin.HandlerFunc {
 			return
 		}
 
-		phase.ID = domain.ID(id)
+		phase.Name = domain.Name(name)
 
 		updated, err := phases.CreateOrUpdate(&phase)
 		if err != nil {

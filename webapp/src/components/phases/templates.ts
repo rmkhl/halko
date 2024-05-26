@@ -34,7 +34,6 @@ export const defaultDeltaCycles = (): DeltaCycle[] =>
     });
 
 export const emptyConstantPhase = (): Phase => ({
-  id: "",
   name: "",
   cycleMode: "constant",
   constantCycle: defaultConstant,

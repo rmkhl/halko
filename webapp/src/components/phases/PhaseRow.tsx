@@ -14,7 +14,7 @@ export const PhaseRow: React.FC<Props> = (props) => {
   const { phase } = props;
   const navigate = useNavigate();
 
-  const handleRowClick = () => navigate(`/phases/${phase.id}`);
+  const handleRowClick = () => navigate(`/phases/${phase.name}`);
 
   return (
     <PhaseRowStack direction="row" onClick={handleRowClick}>

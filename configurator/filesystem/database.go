@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/rmkhl/halko/configurator/database"
 	"github.com/rmkhl/halko/configurator/domain"
@@ -35,12 +33,12 @@ func New() *database.Interface {
 	}
 }
 
-func byID(id string, o Object) (any, error) {
+func byName(name string, o Object) (any, error) {
 	e, ok := entityForType(o)
 	if !ok {
 		return nil, database.ErrInvalidInput
 	}
-	return readFromFile(o, filenameByID(e, id))
+	return readFromFile(o, filenameByName(e, name))
 }
 
 func all(o Object) ([]any, error) {
@@ -77,31 +75,20 @@ func save(o Object) (any, error) {
 		return nil, database.ErrInvalidInput
 	}
 
-	id := resolveAndUpdateID(o)
-
 	data, err := json.Marshal(o)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = os.WriteFile(filenameByID(e, id), data, 0664); err != nil {
+	if err = os.WriteFile(filenameByName(e, o.name()), data, 0664); err != nil {
 		return nil, err
 	}
 
 	return o, nil
 }
 
-func resolveAndUpdateID(o Object) string {
-	id := o.id()
-	if !domain.ID(id).IsValid() {
-		id = strconv.FormatInt(time.Now().Unix(), 10)
-		o.setID(id)
-	}
-	return id
-}
-
-func filenameByID(entity entity, id string) string {
-	return fmt.Sprintf("%s/%s.json", pathByEntity(entity), id)
+func filenameByName(entity entity, name string) string {
+	return fmt.Sprintf("%s/%s.json", pathByEntity(entity), name)
 }
 
 func pathByEntity(entity entity) string {
@@ -148,8 +135,8 @@ func entityForType(t any) (entity, bool) {
 }
 
 type Object interface {
-	id() string
-	setID(id string)
+	name() string
+	setName(name string)
 	unmarshalJSON(data []byte) (any, error)
 }
 
