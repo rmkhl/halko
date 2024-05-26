@@ -6,11 +6,11 @@ import {
   FetchBaseQueryMeta,
 } from "@reduxjs/toolkit/query";
 
-export type reducerPath = "configuratorApi";
+export type reducerPath = "configuratorApi" | "executorApi";
 
 export type EntityType = "phases" | "programs";
 
-export type ConfiguratorApiBuilder = EndpointBuilder<
+export type ApiBuilder = EndpointBuilder<
   BaseQueryFn<
     string | FetchArgs,
     unknown,
@@ -22,7 +22,7 @@ export type ConfiguratorApiBuilder = EndpointBuilder<
   reducerPath
 >;
 
-export type ConfiguratorApiBaseQueryFunc = BaseQueryFn<
+export type ApiBaseQueryFunc = BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError,

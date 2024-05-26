@@ -1,4 +1,4 @@
-const common = {
+const commonTemplate = {
   edit: "Edit",
   name: "Name",
   new: "New",
@@ -6,8 +6,15 @@ const common = {
   cancel: "Cancel",
 };
 
+const common = (
+  args?: Partial<typeof commonTemplate>
+): typeof commonTemplate => ({
+  ...commonTemplate,
+  ...args,
+});
+
 export const en = {
-  common,
+  ...common(),
   header: {
     title: "Halko",
   },
@@ -17,7 +24,7 @@ export const en = {
     programs: "Programs",
   },
   phases: {
-    ...common,
+    ...common(),
     cycles: {
       title: "Cycles",
       constant: "Constant",
@@ -26,5 +33,8 @@ export const en = {
       addDeltaCycle: "Add delta cycle",
       range: "Range",
     },
+  },
+  programs: {
+    ...common(),
   },
 };

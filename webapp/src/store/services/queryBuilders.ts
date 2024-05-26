@@ -1,7 +1,7 @@
 import { MutationDefinition, QueryDefinition } from "@reduxjs/toolkit/query";
 import {
-  ConfiguratorApiBaseQueryFunc,
-  ConfiguratorApiBuilder,
+  ApiBaseQueryFunc,
+  ApiBuilder,
   Entity,
   EntityType,
   reducerPath,
@@ -10,16 +10,10 @@ import {
 const list = "LIST";
 
 export const fetchQuery = <T>(
-  builder: ConfiguratorApiBuilder,
-  endpoint: EntityType,
-  tag: EntityType
-): QueryDefinition<
-  void,
-  ConfiguratorApiBaseQueryFunc,
-  EntityType,
-  T[],
-  reducerPath
-> =>
+  builder: ApiBuilder,
+  endpoint: EntityType | string,
+  tag?: EntityType
+): QueryDefinition<void, ApiBaseQueryFunc, EntityType, T[], reducerPath> =>
   builder.query<T[], void>({
     query: () => ({
       url: endpoint,
@@ -31,20 +25,33 @@ export const fetchQuery = <T>(
         return response.json();
       },
     }),
-    providesTags: () => [{ type: tag, id: list }],
+    providesTags: () => (tag ? [{ type: tag, id: list }] : []),
+  });
+
+export const fetchSingleQuery = <T>(
+  builder: ApiBuilder,
+  endpoint: EntityType | string,
+  tag?: EntityType
+): QueryDefinition<void, ApiBaseQueryFunc, EntityType, T, reducerPath> =>
+  builder.query<T, void>({
+    query: () => ({
+      url: endpoint,
+      responseHandler: (response) => {
+        if (!response.ok) {
+          return response.text();
+        }
+
+        return response.json();
+      },
+    }),
+    providesTags: () => (tag ? [{ type: tag, id: list }] : []),
   });
 
 export const saveMutation = <T extends Entity>(
-  builder: ConfiguratorApiBuilder,
+  builder: ApiBuilder,
   endpoint: EntityType,
   tag: EntityType
-): MutationDefinition<
-  T,
-  ConfiguratorApiBaseQueryFunc,
-  EntityType,
-  string,
-  reducerPath
-> =>
+): MutationDefinition<T, ApiBaseQueryFunc, EntityType, string, reducerPath> =>
   builder.mutation<string, T>({
     query: (record) => ({
       url: !record.id ? endpoint : endpoint + `/${record.id}`,
