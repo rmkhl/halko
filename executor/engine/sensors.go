@@ -11,9 +11,8 @@ import (
 )
 
 const (
-	PowerOn   PowerStatus = "On"
-	PowerOff  PowerStatus = "Off"
-	PowerNext PowerStatus = "Switch"
+	PowerOn  PowerStatus = "On"
+	PowerOff PowerStatus = "Off"
 )
 
 type (
@@ -21,7 +20,7 @@ type (
 
 	PowerResponse struct {
 		Status PowerStatus `json:"status"`
-		Cycle  string      `json:"cycle,omitempty"`
+		Cycle  string      `json:"percentage,omitempty"`
 	}
 
 	PowerStatusResponse struct {

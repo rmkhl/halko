@@ -50,6 +50,7 @@ type (
 		previousDirection           deltaDirection
 		program                     *CurrentProgram
 		runner                      <-chan string
+		psuController               *psuController
 	}
 )
 
@@ -57,9 +58,10 @@ func newCurrentProgram(program *types.Program) *CurrentProgram {
 	return &CurrentProgram{program: program, numberOfSteps: len(program.ProgramSteps)}
 }
 
-func newProgramFSMController(runner <-chan string) *programFSMController {
+func newProgramFSMController(psuController *psuController, runner <-chan string) *programFSMController {
 	return &programFSMController{
-		runner: runner,
+		runner:        runner,
+		psuController: psuController,
 	}
 }
 
@@ -127,8 +129,8 @@ func (p *programFSMController) stateCheckPreHeat() {
 		return
 	}
 	// if the initial oven temperature is lower than the material temperature, we need to preheat.
-	ovenPower(100)
-	fanPower(100)
+	p.psuController.setPower(psuOven, 100)
+	p.psuController.setPower(psuFan, 100)
 	p.startPhase(fsmStatePreHeat, 0)
 }
 
@@ -154,9 +156,10 @@ func (p *programFSMController) stateIdleOrFailed() {
 		return
 	}
 	// If not, turn off all power.
-	ovenPower(0)
-	humidityPower(0)
-	fanPower(0)
+	p.psuController.setPower(psuOven, 0)
+	p.psuController.setPower(psuFan, 0)
+	p.psuController.setPower(psuHumidifier, 0)
+
 }
 
 // Check if the current program step has completed.
@@ -271,9 +274,9 @@ func (p *programFSMController) stateGoingUpOrDown() {
 	if p.program.program.ProgramSteps[p.step].Humidifier.DeltaCycles != nil {
 		humidityPowerSetting = findMatchingPowerSettings(p.program.program.ProgramSteps[p.step].Humidifier.DeltaCycles, delta, direction)
 	}
-	ovenPower(heaterPowerSetting)
-	fanPower(fanPowerSetting)
-	humidityPower(humidityPowerSetting)
+	p.psuController.setPower(psuOven, heaterPowerSetting)
+	p.psuController.setPower(psuFan, fanPowerSetting)
+	p.psuController.setPower(psuHumidifier, humidityPowerSetting)
 }
 
 func (p *programFSMController) executeStep() {
@@ -302,10 +305,9 @@ func (p *programFSMController) executeStep() {
 func (p *programFSMController) shutdown() {
 	if p.stopped != 0 {
 		p.stopped = time.Now().Unix()
-		ovenPower(0)
-		humidityPower(0)
-		fanPower(0)
-		return
+		p.psuController.setPower(psuOven, 0)
+		p.psuController.setPower(psuFan, 0)
+		p.psuController.setPower(psuHumidifier, 0)
 	}
 }
 

@@ -57,8 +57,12 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 		return nil, err
 	}
 	runner.temperatureSensorReader = temperatureSensorReader
+	psuController, err := newPSUController(config)
+	if err != nil {
+		return nil, err
+	}
 
-	runner.fsmController = newProgramFSMController(runner.fsmCommands)
+	runner.fsmController = newProgramFSMController(psuController, runner.fsmCommands)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = storage.CreateProgram(programName, program)
