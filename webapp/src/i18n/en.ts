@@ -36,5 +36,6 @@ export const en = {
   },
   programs: {
     ...common(),
+    noRunning: "No currently running program",
   },
 };

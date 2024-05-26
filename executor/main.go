@@ -56,7 +56,6 @@ func main() {
 
 	engine := engine.NewEngine(configuration, storage)
 	server := gin.Default()
-	router.SetupRoutes(server, storage, engine)
 	server.Use(cors.New(cors.Config{
 		AllowOrigins:  []string{"http://localhost:1234"},
 		AllowMethods:  []string{"GET", "POST", "PUT"},
@@ -64,6 +63,7 @@ func main() {
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
+	router.SetupRoutes(server, storage, engine)
 
 	err = server.Run(":8089")
 	if err != nil {
