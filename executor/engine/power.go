@@ -80,6 +80,4 @@ func (p *psuController) setPower(psu string, percentage int) {
 		}
 		log.Printf("Cannot set power %s: %s\n", psu, response.Status)
 	}
-
-	log.Printf("Set %s to %d\n", psu, percentage)
 }

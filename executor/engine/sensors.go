@@ -20,7 +20,7 @@ type (
 
 	PowerResponse struct {
 		Status  PowerStatus `json:"status"`
-		Percent int         `json:"percentage,omitempty"`
+		Percent int         `json:"percent,omitempty"`
 	}
 
 	PowerStatusResponse struct {

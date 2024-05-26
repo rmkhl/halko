@@ -205,18 +205,15 @@ func (p *programFSMController) stepCompleted(currentState fsmState) (bool, fsmSt
 		if stepTimeExceeded {
 			return true, currentState
 		}
-		return false, currentState
 	case types.StepTypeWaiting:
 		if stepTimeExceeded {
 			return true, currentState
 		}
-		return false, currentState
 	default: // Unknown step type
 		log.Printf("Unknown step type: %s\n", p.program.program.ProgramSteps[p.step].StepType)
 		return true, fsmStateFailed
 	}
-	log.Println("Step completion check failed")
-	return false, fsmStateFailed
+	return false, currentState
 }
 
 // Find the power settings that match the delta.
@@ -280,7 +277,6 @@ func (p *programFSMController) stateGoingUpOrDown() {
 }
 
 func (p *programFSMController) executeStep() {
-	log.Printf("Executing state: %s\n", p.state)
 	switch p.state {
 	case fsmStateFailed:
 		p.stateIdleOrFailed()
