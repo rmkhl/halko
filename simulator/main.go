@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -15,8 +16,8 @@ func main() {
 
 	fan := elements.NewPower("Fan")
 	humidifier := elements.NewPower("Humidifier")
-	wood := elements.NewWood(20, 200)
-	heater := elements.NewHeater("oven", 20, 200, wood)
+	wood := elements.NewWood(20)
+	heater := elements.NewHeater("oven", 20, wood)
 	temperatureSensors := map[string]types.TemperatureSensor{"oven": heater, "material": wood}
 	powerSensors := map[string]types.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
 	powerControls := map[string]types.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
@@ -38,7 +39,10 @@ func main() {
 		}
 	}()
 
-	server.Run(":8088")
+	err := server.Run(":8088")
+	if err != nil {
+		log.Println(err.Error())
+	}
 
 	wg.Wait()
 }

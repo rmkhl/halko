@@ -38,10 +38,10 @@ func (h *Power) Name() string {
 	return h.name
 }
 
-func (h *Power) CurrentCycle() string {
-	name, _ := h.power.CycleInfo()
+func (h *Power) CurrentCycle() int {
+	percentage, _ := h.power.CycleInfo()
 
-	return name
+	return percentage
 }
 
 func (h *Power) Tick() {

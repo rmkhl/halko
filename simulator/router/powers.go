@@ -13,7 +13,7 @@ func statusAllPowers(powers map[string]types.PowerSensor) gin.HandlerFunc {
 		resp := make(types.PowerStatusResponse)
 		for name, power := range powers {
 			if power.IsOn() {
-				resp[name] = types.PowerResponse{Status: types.PowerOn, Cycle: power.CurrentCycle()}
+				resp[name] = types.PowerResponse{Status: types.PowerOn, Percent: power.CurrentCycle()}
 			} else {
 				resp[name] = types.PowerResponse{Status: types.PowerOff}
 			}
@@ -32,7 +32,7 @@ func statusPower(powers map[string]types.PowerSensor) gin.HandlerFunc {
 		}
 		resp := make(types.PowerStatusResponse)
 		if power.IsOn() {
-			resp[powerName] = types.PowerResponse{Status: types.PowerOn, Cycle: power.CurrentCycle()}
+			resp[powerName] = types.PowerResponse{Status: types.PowerOn, Percent: power.CurrentCycle()}
 			return
 		}
 		resp[powerName] = types.PowerResponse{Status: types.PowerOff}
@@ -52,13 +52,12 @@ func operatePower(powers map[string]types.PowerManager) gin.HandlerFunc {
 		if !known {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
 		}
+
 		switch command.Command {
 		case types.PowerOn:
-			power.TurnOn(types.NewCycle(command.Cycle.Name, command.Cycle.Ticks))
+			power.TurnOn(types.NewCycle(command.Percent))
 		case types.PowerOff:
 			power.TurnOff()
-		case types.PowerNext:
-			power.SwitchTo(types.NewCycle(command.Cycle.Name, command.Cycle.Ticks))
 		default:
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown command '%s'", command.Command)})
 			return

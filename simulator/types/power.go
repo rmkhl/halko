@@ -77,13 +77,13 @@ func (p *Power) IsRunning() bool {
 	return p.current != nil
 }
 
-func (p *Power) CycleInfo() (name string, isCurrentlyOn bool) {
+func (p *Power) CycleInfo() (percentage int, tick bool) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
 	if p.current == nil {
-		return "Off", false
+		return 0, false
 	}
 
-	return p.current.name, p.current.ticks[p.tick]
+	return p.current.percentage, p.current.ticks[p.tick]
 }

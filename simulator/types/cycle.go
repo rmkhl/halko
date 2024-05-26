@@ -2,21 +2,16 @@ package types
 
 type (
 	Cycle struct {
-		name       string
 		percentage int
 		ticks      [10]bool
 	}
 )
 
-func NewCycle(name string, ticks [10]bool) *Cycle {
-	sc := Cycle{name: name}
+func NewCycle(percentage int) *Cycle {
+	sc := Cycle{percentage: percentage}
 
-	sc.percentage = 0
 	for i := 0; i < 10; i++ {
-		sc.ticks[i] = ticks[i]
-		if ticks[i] {
-			sc.percentage += 10
-		}
+		sc.ticks[i] = i*10 < percentage
 	}
 	return &sc
 }
