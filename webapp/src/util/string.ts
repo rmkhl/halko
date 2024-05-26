@@ -8,6 +8,6 @@ export const celsiusRange = (a: number, b: number) => {
   return `${a}-${b}${degreesCelsius}`;
 };
 
-export const validName = (name: string) => {
-  return name.match(/^[\wäöÄÖ\-, ]+$/) && name.trim() !== "new";
+export const validName = (name: string, forbiddenNames: string[] = []) => {
+  return name.match(/^[\wäöÄÖ\-, ]+$/) && !forbiddenNames.includes(name.trim());
 };

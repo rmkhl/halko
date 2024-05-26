@@ -13,8 +13,8 @@ import { Provider } from "react-redux";
 import { store } from "./store/store";
 import { Phases } from "./components/phases/Phases";
 import { Phase } from "./components/phases/Phase";
-import { Current } from "./components/programs/Current";
 import { Programs } from "./components/programs/Programs";
+import { Program } from "./components/programs/Program";
 
 const getRouter = (routes: Route[]) =>
   createBrowserRouter([
@@ -24,6 +24,7 @@ const getRouter = (routes: Route[]) =>
       children: [
         ...routes,
         { path: "phases/:name", element: <Phase /> },
+        { path: "programs/:name", element: <Program /> },
         { path: "/", element: <Navigate to="/current" /> },
         { path: "*", element: <Navigate to="/current" /> },
       ],
@@ -37,8 +38,8 @@ export const App: React.FC = () => {
     () => [
       {
         name: t("tabs.current"),
-        path: "current",
-        element: <Current />,
+        path: "programs/current",
+        element: <Program />,
       },
       {
         name: t("tabs.programs"),

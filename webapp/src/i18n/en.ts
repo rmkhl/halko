@@ -14,7 +14,7 @@ const common = (
 });
 
 export const en = {
-  ...common(),
+  common: { ...common() },
   header: {
     title: "Halko",
   },

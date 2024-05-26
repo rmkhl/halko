@@ -5,7 +5,7 @@ import { Program as ApiProgram } from "../../types/api";
 import { useNavigate } from "react-router-dom";
 import { Stack } from "@mui/system";
 import { Button } from "@mui/material";
-import { Program } from "./Program";
+import { ProgramRow } from "./ProgramRow";
 
 export const Programs: React.FC = () => {
   const { data } = useGetProgramsQuery();
@@ -31,7 +31,7 @@ export const Programs: React.FC = () => {
         {[...(programs || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((p) => (
-            <Program program={p} />
+            <ProgramRow program={p} />
           ))}
       </Stack>
     </Stack>

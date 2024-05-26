@@ -127,7 +127,7 @@ export const Phase: React.FC = () => {
 
     return (
       !nameUsed &&
-      validName(name) &&
+      validName(name, ["new"]) &&
       ((cycleMode === "constant" && !!constantCycle) ||
         (cycleMode === "delta" && !!deltaCycles?.length))
     );
