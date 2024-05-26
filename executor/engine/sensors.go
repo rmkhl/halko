@@ -19,8 +19,8 @@ type (
 	PowerStatus string
 
 	PowerResponse struct {
-		Status PowerStatus `json:"status"`
-		Cycle  string      `json:"percentage,omitempty"`
+		Status  PowerStatus `json:"status"`
+		Percent int         `json:"percentage,omitempty"`
 	}
 
 	PowerStatusResponse struct {
