@@ -9,5 +9,7 @@ export const celsiusRange = (a: number, b: number) => {
 };
 
 export const validName = (name: string, forbiddenNames: string[] = []) => {
-  return name.match(/^[\wäöÄÖ\-, ]+$/) && !forbiddenNames.includes(name.trim());
+  return (
+    !!name.match(/^[\wäöÄÖ\-, ]+$/) && !forbiddenNames.includes(name.trim())
+  );
 };
