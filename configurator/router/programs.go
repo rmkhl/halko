@@ -51,7 +51,7 @@ func createProgram(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		created, err := programs.CreateOrUpdate(&prog)
+		created, err := programs.CreateOrUpdate("", &prog)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return
@@ -77,9 +77,7 @@ func updateProgram(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		prog.Name = domain.Name(name)
-
-		updated, err := programs.CreateOrUpdate(&prog)
+		updated, err := programs.CreateOrUpdate(name, &prog)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return

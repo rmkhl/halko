@@ -20,7 +20,6 @@ const (
 type entity string
 
 const (
-	eCycles   entity = "cycles"
 	ePhases   entity = "phases"
 	ePrograms entity = "programs"
 	eError    entity = "error"
@@ -69,10 +68,16 @@ func readFromFile(o Object, filepath string) (any, error) {
 	return o.unmarshalJSON(b)
 }
 
-func save(o Object) (any, error) {
+func save(name string, o Object) (any, error) {
 	e, ok := entityForType(o)
 	if !ok {
 		return nil, database.ErrInvalidInput
+	}
+
+	if name != "" {
+		if err := deleteFile(name, e); err != nil {
+			return nil, err
+		}
 	}
 
 	data, err := json.Marshal(o)
@@ -85,6 +90,15 @@ func save(o Object) (any, error) {
 	}
 
 	return o, nil
+}
+
+func deleteFile(name string, e entity) error {
+	filename := filenameByName(e, name)
+	if err := os.Remove(filename); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
 }
 
 func filenameByName(entity entity, name string) string {

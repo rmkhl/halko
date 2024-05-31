@@ -139,8 +139,8 @@ export const Phase: React.FC = () => {
         editing={editing}
         phase={editing && editPhase ? editPhase : phase}
         onChangeCycleMode={updateEdited("cycleMode")}
-        onChangeConstantCycle={updateConstantCycle}
-        onChangeDeltaCycles={updateDeltaCycles}
+        onChangeConstantCycle={editPhase && updateConstantCycle}
+        onChangeDeltaCycles={editPhase && updateDeltaCycles}
       />
     </DataForm>
   );

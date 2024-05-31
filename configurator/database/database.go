@@ -20,7 +20,7 @@ type Interface struct {
 type Entity[T any] interface {
 	All() ([]T, error)
 	ByName(name string) (T, error)
-	CreateOrUpdate(T) (T, error)
+	CreateOrUpdate(string, T) (T, error)
 }
 
 type Programs interface {

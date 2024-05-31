@@ -16,8 +16,8 @@ interface Props {
   editing: boolean;
   phase: Phase;
   onChangeCycleMode: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onChangeConstantCycle: (cycle: Phase["constantCycle"]) => void;
-  onChangeDeltaCycles: (cycles: Phase["deltaCycles"]) => void;
+  onChangeConstantCycle?: (cycle: Phase["constantCycle"]) => void;
+  onChangeDeltaCycles?: (cycles: Phase["deltaCycles"]) => void;
 }
 
 export const Cycles: React.FC<Props> = (props) => {

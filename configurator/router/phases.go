@@ -51,7 +51,7 @@ func createPhase(phases database.Phases) gin.HandlerFunc {
 			return
 		}
 
-		created, err := phases.CreateOrUpdate(&phase)
+		created, err := phases.CreateOrUpdate("", &phase)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return
@@ -77,9 +77,7 @@ func updatePhase(phases database.Phases) gin.HandlerFunc {
 			return
 		}
 
-		phase.Name = domain.Name(name)
-
-		updated, err := phases.CreateOrUpdate(&phase)
+		updated, err := phases.CreateOrUpdate(name, &phase)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return

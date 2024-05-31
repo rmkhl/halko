@@ -30,8 +30,8 @@ func (p *phases) All() ([]*domain.Phase, error) {
 	return runtimeCastSlice[domain.Phase](phases)
 }
 
-func (p *phases) CreateOrUpdate(pp *domain.Phase) (*domain.Phase, error) {
-	ppp, err := save(&phase{pp})
+func (p *phases) CreateOrUpdate(name string, pp *domain.Phase) (*domain.Phase, error) {
+	ppp, err := save(name, &phase{pp})
 	if err != nil {
 		return nil, transformError(err)
 	}

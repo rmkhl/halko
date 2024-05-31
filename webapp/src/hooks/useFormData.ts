@@ -15,7 +15,7 @@ interface Props<T extends Named> {
   rootPath: string;
   saveSuccess: boolean;
 
-  normalizeData: (data: T) => T;
+  normalizeData?: (data: T) => T;
   saveData: (data: T) => void;
   setEditData: (editData?: T) => UnknownAction;
 }
@@ -92,19 +92,34 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
-    const normalized = normalizeData(editData);
-    saveData(normalized);
+    const normalized = normalizeData?.(editData) || editData;
+    saveData({ id: name !== "new" ? name : undefined, ...normalized });
+
+    const { name: editName } = editData;
+
+    dispatch(setEditData(undefined));
+
+    if (name === "new") {
+      navigate(`${rootPath}${editName.length ? `/${editName}` : ""}`);
+    }
+
+    setMode("view");
   };
 
   const handleCancel = () => {
-    const editName = editData?.name;
+    if (!editData) {
+      navigate(rootPath);
+      return;
+    }
+
     dispatch(setEditData(undefined));
 
-    if (editName === "") {
+    if (name === "new") {
       navigate(rootPath);
-    } else {
-      setMode("view");
+      return;
     }
+
+    setMode("view");
   };
 
   useEffect(() => {

@@ -30,8 +30,8 @@ func (p *programs) All() ([]*domain.Program, error) {
 	return runtimeCastSlice[domain.Program](progs)
 }
 
-func (p *programs) CreateOrUpdate(pp *domain.Program) (*domain.Program, error) {
-	ppp, err := save(&program{pp})
+func (p *programs) CreateOrUpdate(name string, pp *domain.Program) (*domain.Program, error) {
+	ppp, err := save(name, &program{pp})
 	if err != nil {
 		return nil, transformError(err)
 	}
