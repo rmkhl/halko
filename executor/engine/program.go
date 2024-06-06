@@ -284,10 +284,8 @@ func (p *programFSMController) executeStep() {
 	switch p.state {
 	case fsmStateFailed:
 		p.stateIdleOrFailed()
-		return
 	case fsmStateIdle:
 		p.stateIdleOrFailed()
-		return
 	case fsmStateWaiting:
 		p.stateWaiting()
 	case fsmStateCheckPreHeat:
@@ -329,6 +327,10 @@ func (p *programFSMController) Run(program *CurrentProgram) {
 			return
 		}
 	}
+}
+
+func (p *programFSMController) Completed() bool {
+	return p.state == fsmStateFailed || p.state == fsmStateIdle
 }
 
 func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {

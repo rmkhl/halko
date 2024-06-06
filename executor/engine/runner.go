@@ -96,6 +96,9 @@ func (runner *programRunner) Run() {
 			runner.temperatureSensorCommands <- sensorRead
 			runner.psuSensorCommands <- sensorRead
 			runner.fsmCommands <- programStep
+			if runner.fsmController.Completed() {
+				runner.active = false
+			}
 			runner.mutex.RUnlock()
 		case psuState := <-runner.psuSensorResponses:
 			runner.mutex.RLock()
