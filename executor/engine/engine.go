@@ -62,6 +62,7 @@ func (engine *ControlEngine) StopEngine() error {
 	if engine.runner != nil {
 		engine.runner.Stop()
 		engine.wg.Done()
+		engine.runner = nil
 		return nil
 	}
 	return ErrNoProgramRunning
