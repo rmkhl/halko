@@ -41,7 +41,6 @@ type (
 	}
 
 	programFSMController struct {
-		mutex                       sync.RWMutex
 		step                        int
 		stepStarted                 int64
 		started                     int64
@@ -69,6 +68,9 @@ func newProgramFSMController(psuController *psuController, runner <-chan string)
 // Determine the delta between the material and oven temperatures.
 // Also determine the direction of the delta.
 func (p *programFSMController) determineDelta() (float32, deltaDirection) {
+	p.program.mutex.RLock()
+	defer p.program.mutex.RUnlock()
+
 	delta := p.program.temperatures.reading.Material - p.program.temperatures.reading.Oven
 	materialDelta := p.program.temperatures.reading.Material - p.previousMaterialTemperature
 
@@ -119,9 +121,6 @@ func (p *programFSMController) stateWaiting() {
 
 // Check if preheating is needed.
 func (p *programFSMController) stateCheckPreHeat() {
-	p.program.mutex.RLock()
-	defer p.program.mutex.RUnlock()
-
 	delta, _ := p.determineDelta()
 
 	// if the initial oven temperature is higher than the material temperature, we can start the program.
@@ -148,6 +147,9 @@ func (p *programFSMController) statePreHeat() {
 
 // Regardless of end state we need keep setting the power off as long as the program is not stopped.
 func (p *programFSMController) stateIdleOrFailed() {
+	p.program.mutex.RLock()
+	defer p.program.mutex.RUnlock()
+
 	if p.stopped != 0 {
 		return
 	}
@@ -172,6 +174,9 @@ func (p *programFSMController) stateIdleOrFailed() {
 // - The material temperature has not reached the target temperature before the maximum allowed time.
 // - The material temperature is outside the valid range when acclimating.
 func (p *programFSMController) stepCompleted(currentState fsmState) (bool, fsmState) {
+	p.program.mutex.RLock()
+	defer p.program.mutex.RUnlock()
+
 	maximumRuntime := p.program.program.ProgramSteps[p.step].MaximumRuntime
 	if maximumRuntime == 0 {
 		maximumRuntime = p.program.program.DefaultStepTime
@@ -248,6 +253,9 @@ func findMatchingPowerSettings(cycles []types.DeltaCycle, delta float32, directi
 
 // Material temperature is heating or cooling
 func (p *programFSMController) stateGoingUpOrDown() {
+	p.program.mutex.RLock()
+	defer p.program.mutex.RUnlock()
+
 	completed, nextState := p.stepCompleted(p.state)
 	if completed {
 		p.startPhase(nextState, p.step+1)
@@ -278,9 +286,6 @@ func (p *programFSMController) stateGoingUpOrDown() {
 }
 
 func (p *programFSMController) executeStep() {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
 	switch p.state {
 	case fsmStateFailed:
 		p.stateIdleOrFailed()
@@ -301,9 +306,6 @@ func (p *programFSMController) executeStep() {
 
 // Shutdown the program. If the program has not completed normally we need to turn off all power.
 func (p *programFSMController) shutdown() {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
 	if p.stopped != 0 {
 		p.stopped = time.Now().Unix()
 		p.psuController.setPower(psuOven, 0)
@@ -312,7 +314,9 @@ func (p *programFSMController) shutdown() {
 	}
 }
 
-func (p *programFSMController) Run(program *CurrentProgram) {
+func (p *programFSMController) Run(wg *sync.WaitGroup, program *CurrentProgram) {
+	defer wg.Done()
+
 	p.program = program
 	p.state = fsmStateWaiting
 	p.started = time.Now().Unix()
@@ -338,12 +342,11 @@ func (p *programFSMController) Failed() bool {
 }
 
 func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
+	p.program.mutex.RLock()
+	defer p.program.mutex.RUnlock()
 
 	status.StartedAt = p.started
 	status.CurrentStepStartedAt = p.stepStarted
-	p.program.mutex.RLock()
 	status.CurrentStep = p.program.program.ProgramSteps[p.step].Name
 	status.Temperatures.Material = p.program.temperatures.reading.Material
 	status.Temperatures.Oven = p.program.temperatures.reading.Oven
@@ -351,5 +354,4 @@ func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {
 	status.PowerStatus.Heater = p.program.psuStatus.reading.Heater.Percent
 	status.PowerStatus.Fan = p.program.psuStatus.reading.Fan.Percent
 	status.PowerStatus.Humidifier = p.program.psuStatus.reading.Humidifier.Percent
-	p.program.mutex.RUnlock()
 }

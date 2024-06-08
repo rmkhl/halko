@@ -10,7 +10,6 @@ import (
 
 type (
 	ControlEngine struct {
-		mutex   sync.RWMutex
 		wg      *sync.WaitGroup
 		config  *types.ExecutorConfig
 		storage *storage.ProgramStorage
@@ -35,9 +34,6 @@ func NewEngine(config *types.ExecutorConfig, storage *storage.ProgramStorage) *C
 }
 
 func (engine *ControlEngine) CurrentStatus() *types.ProgramStatus {
-	engine.mutex.RLock()
-	defer engine.mutex.RUnlock()
-
 	if engine.runner == nil {
 		return nil
 	}
@@ -46,9 +42,6 @@ func (engine *ControlEngine) CurrentStatus() *types.ProgramStatus {
 }
 
 func (engine *ControlEngine) StartEngine(program *types.Program) error {
-	engine.mutex.Lock()
-	defer engine.mutex.Unlock()
-
 	if engine.runner != nil {
 		return ErrProgramAlreadyRunning
 	}
@@ -66,11 +59,9 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 }
 
 func (engine *ControlEngine) StopEngine() error {
-	engine.mutex.Lock()
-	defer engine.mutex.Unlock()
-
 	if engine.runner != nil {
 		engine.runner.Stop()
+		engine.wg.Done()
 		return nil
 	}
 	return ErrNoProgramRunning

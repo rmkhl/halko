@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/rmkhl/halko/executor/types"
 )
@@ -169,7 +170,8 @@ func newPSUSensorReader(url string, commands <-chan string, responses chan<- psu
 	return &controller, nil
 }
 
-func (controller *psuSensorReader) Run() {
+func (controller *psuSensorReader) Run(wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		engineMessage := <-controller.commands
 		switch engineMessage {
@@ -188,7 +190,8 @@ func (controller *psuSensorReader) Run() {
 	}
 }
 
-func (controller *temperatureSensorReader) Run() {
+func (controller *temperatureSensorReader) Run(wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		engineMessage := <-controller.commands
 		switch engineMessage {

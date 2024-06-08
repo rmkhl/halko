@@ -19,7 +19,6 @@ const (
 type (
 	programRunner struct {
 		active                     bool
-		mutex                      sync.RWMutex
 		wg                         *sync.WaitGroup
 		currentProgram             *CurrentProgram
 		fsmCommands                chan string
@@ -83,43 +82,37 @@ func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStor
 
 func (runner *programRunner) Run() {
 	ticker := time.NewTicker(6000 * time.Millisecond)
-	defer ticker.Stop()
+	defer runner.wg.Done()
 
-	runner.mutex.RLock()
 	runner.statusWriter.UpdateState(types.ProgramStateRunning)
-	for runner.active {
-		runner.mutex.RUnlock()
+	for runner.active && !runner.fsmController.Completed() {
+		defer ticker.Stop()
+		now := time.Now().Unix()
 		select {
 		case <-ticker.C:
-			runner.mutex.RLock()
-			runner.temperatureSensorCommands <- sensorRead
-			runner.psuSensorCommands <- sensorRead
-			runner.fsmCommands <- programStep
-			if runner.fsmController.Completed() {
-				runner.active = false
+			runner.currentProgram.mutex.RLock()
+			if now-runner.currentProgram.temperatures.updated > 30 {
+				runner.temperatureSensorCommands <- sensorRead
 			}
-			runner.mutex.RUnlock()
+			if now-runner.currentProgram.psuStatus.updated > 30 {
+				runner.psuSensorCommands <- sensorRead
+			}
+			runner.currentProgram.mutex.RUnlock()
+			runner.fsmCommands <- programStep
 		case psuState := <-runner.psuSensorResponses:
-			runner.mutex.RLock()
 			runner.currentProgram.mutex.Lock()
 			runner.currentProgram.psuStatus.updated = time.Now().Unix()
 			runner.currentProgram.psuStatus.reading = psuState
 			runner.currentProgram.mutex.Unlock()
-			runner.mutex.RUnlock()
 		case temperatures := <-runner.temperatureSensorResponses:
-			runner.mutex.RLock()
 			runner.currentProgram.mutex.Lock()
 			runner.currentProgram.temperatures.updated = time.Now().Unix()
 			runner.currentProgram.temperatures.reading = temperatures
 			runner.currentProgram.mutex.Unlock()
-			runner.mutex.RUnlock()
 		}
 		// Update program status
-		runner.mutex.Lock()
 		runner.fsmController.UpdateStatus(runner.programStatus)
 		runner.logWriter.AddLine(runner.programStatus)
-		runner.mutex.Unlock()
-		runner.mutex.RLock()
 	}
 	if runner.fsmController.Completed() {
 		if runner.fsmController.Failed() {
@@ -134,25 +127,19 @@ func (runner *programRunner) Run() {
 	runner.fsmCommands <- programDone
 	runner.psuSensorCommands <- controllerDone
 	runner.temperatureSensorCommands <- controllerDone
-	runner.mutex.RUnlock()
 }
 
 func (runner *programRunner) Stop() {
-	runner.mutex.Lock()
 	runner.active = false
-	runner.mutex.Unlock()
 
 	runner.wg.Wait()
 }
 
 func (runner *programRunner) Start() {
-	runner.mutex.Lock()
-	defer runner.mutex.Unlock()
-
 	runner.active = true
 	runner.wg.Add(4)
-	go runner.psuSensorReader.Run()
-	go runner.temperatureSensorReader.Run()
-	go runner.fsmController.Run(runner.currentProgram)
+	go runner.psuSensorReader.Run(runner.wg)
+	go runner.temperatureSensorReader.Run(runner.wg)
+	go runner.fsmController.Run(runner.wg, runner.currentProgram)
 	go runner.Run()
 }
