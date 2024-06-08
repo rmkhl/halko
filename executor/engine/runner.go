@@ -32,6 +32,7 @@ type (
 		temperatureSensorReader    *temperatureSensorReader
 		programStatus              *types.ProgramStatus
 		statusWriter               *storage.StateWriter
+		logWriter                  *storage.ExecutionLogWriter
 	}
 )
 
@@ -76,6 +77,7 @@ func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStor
 	if err != nil {
 		return nil, err
 	}
+	runner.logWriter = storage.NewExecutionLogWriter(programStorage, programName, 60)
 	return &runner, nil
 }
 
@@ -115,6 +117,7 @@ func (runner *programRunner) Run() {
 		// Update program status
 		runner.mutex.Lock()
 		runner.fsmController.UpdateStatus(runner.programStatus)
+		runner.logWriter.AddLine(runner.programStatus)
 		runner.mutex.Unlock()
 		runner.mutex.RLock()
 	}
@@ -127,6 +130,7 @@ func (runner *programRunner) Run() {
 	} else {
 		runner.statusWriter.UpdateState(types.ProgramStateCanceled)
 	}
+	runner.logWriter.Close()
 	runner.fsmCommands <- programDone
 	runner.psuSensorCommands <- controllerDone
 	runner.temperatureSensorCommands <- controllerDone

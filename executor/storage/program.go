@@ -32,13 +32,13 @@ func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 	}
 
 	storage.statusPath = filepath.Join(storage.runningPath, "status")
-	err = os.MkdirAll(storage.runningPath, os.ModePerm)
+	err = os.MkdirAll(storage.statusPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
 	storage.logPath = filepath.Join(storage.runningPath, "logs")
-	err = os.MkdirAll(storage.runningPath, os.ModePerm)
+	err = os.MkdirAll(storage.logPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}

@@ -70,6 +70,7 @@ func deleteProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 
 		err := storage.DeleteProgram(programName)
 		storage.MaybeDeleteState(programName)
+		storage.MaybeDeleteExecutionLog(programName)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
