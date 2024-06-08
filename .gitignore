@@ -24,3 +24,5 @@ go.work*
 fsdb
 
 .DS_Store
+
+__debug_*
