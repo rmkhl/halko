@@ -39,22 +39,25 @@ func (storage *ProgramStorage) MaybeDeleteState(name string) {
 	os.Remove(statusFilePath)
 }
 
-func (storage *ProgramStorage) LoadState(name string) (types.ProgramState, error) {
+// Retuns saved state and time it was saved.
+func (storage *ProgramStorage) LoadState(name string) (types.ProgramState, int64, error) {
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
+
+	fileStatus, err := os.Stat(statusFilePath)
+	if err != nil {
+		return types.ProgramStateUnknown, 0, err
+	}
 
 	statusFile, err := os.Open(statusFilePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return types.ProgramStateUnknown, nil
-		}
-		return types.ProgramStateUnknown, err
+		return types.ProgramStateUnknown, 0, err
 	}
 	defer statusFile.Close()
 
 	status := make([]byte, 10)
 	_, err = statusFile.Read(status)
 	if err != nil {
-		return types.ProgramStateUnknown, err
+		return types.ProgramStateUnknown, 0, err
 	}
-	return types.ProgramState(status), nil
+	return types.ProgramState(status), fileStatus.ModTime().Unix(), nil
 }

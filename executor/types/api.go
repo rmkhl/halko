@@ -9,8 +9,15 @@ type (
 		Data T `json:"data"`
 	}
 
+	SavedProgram struct {
+		Name        string       `json:"name"`
+		State       ProgramState `json:"state"`
+		StartedAt   int64        `json:"started_at"`
+		CompletedAt int64        `json:"completed_at"`
+	}
+
 	ProgramListing struct {
-		Programs []string `json:"programs"`
+		Programs []SavedProgram `json:"programs"`
 	}
 
 	TemperatureStatus struct {
@@ -35,7 +42,9 @@ type (
 	}
 
 	ExecutedProgram struct {
-		Program Program      `json:"program"`
-		State   ProgramState `json:"state"`
+		Program     Program      `json:"program"`
+		State       ProgramState `json:"state"`
+		StartedAt   int64        `json:"started_at"`
+		CompletedAt int64        `json:"completed_at"`
 	}
 )
