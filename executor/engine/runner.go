@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -76,13 +75,6 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 	return &runner, nil
 }
 
-func (runner *programRunner) getCurrentProgram() types.ProgramStatus {
-	runner.mutex.RLock()
-	defer runner.mutex.RUnlock()
-
-	return *runner.programStatus
-}
-
 func (runner *programRunner) Run() {
 	ticker := time.NewTicker(6000 * time.Millisecond)
 	defer ticker.Stop()
@@ -105,7 +97,6 @@ func (runner *programRunner) Run() {
 			runner.currentProgram.mutex.Lock()
 			runner.currentProgram.psuStatus.updated = time.Now().Unix()
 			runner.currentProgram.psuStatus.reading = psuState
-			log.Printf("PSU State: %+v", psuState)
 			runner.currentProgram.mutex.Unlock()
 			runner.mutex.RUnlock()
 		case temperatures := <-runner.temperatureSensorResponses:
@@ -113,7 +104,6 @@ func (runner *programRunner) Run() {
 			runner.currentProgram.mutex.Lock()
 			runner.currentProgram.temperatures.updated = time.Now().Unix()
 			runner.currentProgram.temperatures.reading = temperatures
-			log.Printf("Temperatures: %+v", temperatures)
 			runner.currentProgram.mutex.Unlock()
 			runner.mutex.RUnlock()
 		}
