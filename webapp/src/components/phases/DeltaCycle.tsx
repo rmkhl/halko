@@ -74,7 +74,9 @@ export const DeltaCycle: React.FC<Props> = (props) => {
         </Stack>
 
         <Stack flex={0.25} alignItems="center">
-          {size === "lg" && <Typography>{celsius(delta)}</Typography>}
+          <Typography fontSize={size === "sm" ? ".75em" : undefined}>
+            {celsius(delta)}
+          </Typography>
         </Stack>
 
         <Stack flex={1} alignItems="center">

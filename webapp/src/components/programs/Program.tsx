@@ -12,6 +12,9 @@ import { validName } from "../../util";
 import { emptyProgram } from "./templates";
 import { useFormData } from "../../hooks/useFormData";
 import { DataForm } from "../form/DataForm";
+import { useTranslation } from "react-i18next";
+import { Steps } from "./Steps";
+import { TimeComponent } from "../form/TimeComponent";
 
 const normalize = (program: ApiProgram): ApiProgram => {
   const cpy = { ...program };
@@ -26,7 +29,10 @@ export const Program: React.FC = () => {
   const editProgram = useSelector(
     (state: RootState) => state.programs.editRecord
   );
+
   const programs = useMemo(() => data as ApiProgram[], [data]);
+
+  const { t } = useTranslation();
 
   const {
     editing,
@@ -49,14 +55,15 @@ export const Program: React.FC = () => {
   const dispatch = useDispatch();
 
   const updateEdited =
-    (field: keyof ApiProgram) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    <Key extends keyof ApiProgram, Value extends ApiProgram[Key]>(field: Key) =>
+    (value: Value) => {
       if (editProgram) {
-        dispatch(
-          setEditProgram({ ...editProgram, [field]: event.currentTarget.value })
-        );
+        dispatch(setEditProgram({ ...editProgram, [field]: value }));
       }
     };
+
+  const updateName = (e: React.ChangeEvent<HTMLInputElement>) =>
+    updateEdited("name")(e.currentTarget.value);
 
   const isValid = useMemo(() => {
     if (!editProgram) {
@@ -79,7 +86,27 @@ export const Program: React.FC = () => {
       <NameComponent
         editing={editing}
         name={editing ? editProgram?.name : program.name}
-        handleChange={updateEdited("name")}
+        handleChange={updateName}
+      />
+
+      <TimeComponent
+        editing={editing}
+        title={t("programs.defaultStepRuntime")}
+        value={editProgram?.defaultStepRuntime || 0}
+        onChange={updateEdited("defaultStepRuntime")}
+      />
+
+      <TimeComponent
+        editing={editing}
+        title={t("programs.preheatTo")}
+        value={editProgram?.preheatTo || 0}
+        onChange={updateEdited("preheatTo")}
+      />
+
+      <Steps
+        editing={true}
+        steps={editProgram?.steps}
+        onChange={updateEdited("steps")}
       />
     </DataForm>
   );

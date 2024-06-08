@@ -6,7 +6,13 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Phase } from "../../types/api";
 
-export const Phases: React.FC = () => {
+interface Props {
+  canAddNew?: boolean;
+  onSelectRow?: (phase: Phase) => void;
+}
+
+export const Phases: React.FC<Props> = (props) => {
+  const { canAddNew, onSelectRow } = props;
   const { data } = useGetPhasesQuery();
 
   const { t } = useTranslation();
@@ -21,16 +27,18 @@ export const Phases: React.FC = () => {
   return (
     <Stack>
       <Stack direction="row" justifyContent="end" gap={6}>
-        <Button color="success" onClick={addNew}>
-          {t("phases.new")}
-        </Button>
+        {canAddNew && (
+          <Button color="success" onClick={addNew}>
+            {t("phases.new")}
+          </Button>
+        )}
       </Stack>
 
       <Stack direction="column" width="60rem">
         {[...(phases || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((p) => (
-            <PhaseRow key={p.name} phase={p} />
+            <PhaseRow key={p.name} phase={p} onSelectRow={onSelectRow} />
           ))}
       </Stack>
     </Stack>

@@ -2,6 +2,7 @@ import React from "react";
 import { DeltaCycle as ApiDeltaCycle } from "../../types/api";
 import { DeltaCycle } from "./DeltaCycle";
 import { Stack } from "@mui/material";
+import { nDeltaCycles } from "./templates";
 
 interface Props {
   deltaCycles?: ApiDeltaCycle[];
@@ -28,8 +29,7 @@ export const DeltaCycles: React.FC<Props> = (props) => {
     };
 
   return (
-    !!deltaCycles &&
-    deltaCycles.length === 13 && (
+    !!deltaCycles && (
       <Stack gap={size === "lg" ? 2 : undefined}>
         {deltaCycles?.map((curr, i, cycles) => {
           const prev = cycles[i - 1];

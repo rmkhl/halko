@@ -15,6 +15,9 @@ const common = (
 
 export const en = {
   common: { ...common() },
+  time: {
+    seconds: "seconds",
+  },
   header: {
     title: "Halko",
   },
@@ -37,5 +40,23 @@ export const en = {
   programs: {
     ...common(),
     noRunning: "No currently running program",
+    defaultStepRuntime: "Default step runtime",
+    preheatTo: "Preheat oven to",
+    steps: {
+      ...common(),
+      add: "Add",
+      title: "Steps",
+      timeConstraint: "Time constraint",
+      temperatureConstraint: {
+        title: "Temperature constraint",
+        minimum: "Minimum",
+        maximum: "Maximum",
+      },
+      heater: "Heater",
+      fan: "Fan",
+      humidifier: "Humidifier",
+      selectPhase: "Select",
+      noPhaseSelected: "No phase selected",
+    },
   },
 };

@@ -8,16 +8,27 @@ import { DeltaCycles } from "./DeltaCycles";
 
 interface Props {
   phase: Phase;
+  onSelectRow?: (phase: Phase) => void;
+  selectable?: boolean;
 }
 
 export const PhaseRow: React.FC<Props> = (props) => {
-  const { phase } = props;
+  const { phase, onSelectRow, selectable = true } = props;
   const navigate = useNavigate();
 
   const handleRowClick = () => navigate(`/phases/${phase.name}`);
 
   return (
-    <PhaseRowStack direction="row" onClick={handleRowClick}>
+    <PhaseRowStack
+      direction="row"
+      onClick={
+        !selectable
+          ? undefined
+          : onSelectRow
+          ? () => onSelectRow(phase)
+          : handleRowClick
+      }
+    >
       <Stack flex={1}>
         <Typography variant="h5">{phase.name}</Typography>
       </Stack>

@@ -9,9 +9,9 @@ export interface Step {
   name: string;
   timeConstraint: number;
   temperatureConstraint: TemperatureConstraint;
-  heater: Phase;
-  fan: Phase;
-  humidifier: Phase;
+  heater?: Phase;
+  fan?: Phase;
+  humidifier?: Phase;
 }
 
 export interface Program {

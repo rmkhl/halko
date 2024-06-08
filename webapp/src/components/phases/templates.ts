@@ -1,8 +1,8 @@
 import { DeltaCycle, Phase } from "../../types/api";
 
-const minDelta = -30;
-const maxDelta = 30;
-const deltaStep = 5;
+const minDelta = -20;
+const maxDelta = 20;
+const deltaStep = 10;
 
 const fullCycle = 100;
 const halfCycle = 50;
@@ -13,9 +13,10 @@ const defaultAbove = fullCycle;
 const defaultBelow = offCycle;
 
 export const defaultConstant = halfCycle;
+export const nDeltaCycles = (maxDelta - minDelta) / deltaStep + 1;
 
 export const defaultDeltaCycles = (): DeltaCycle[] =>
-  Array.from(Array((maxDelta - minDelta) / deltaStep + 1).keys())
+  Array.from(Array(nDeltaCycles).keys())
     .map((_, i) => maxDelta - i * deltaStep)
     .map((delta, i) => {
       let above = defaultAbove;
