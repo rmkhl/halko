@@ -37,6 +37,7 @@ func NewExecutionLogWriter(storage *ProgramStorage, name string, resolution int6
 		resolution:  resolution,
 		last_update: 0,
 		last_step:   "",
+		started_at:  time.Now().Unix(),
 	}
 	writer.csvWriter.Write([]string{
 		"time",
@@ -75,6 +76,7 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ProgramStatus) {
 	})
 	writer.csvWriter.Flush()
 	writer.last_update = now
+	writer.last_step = status.CurrentStep
 }
 
 func (writer *ExecutionLogWriter) Close() {
