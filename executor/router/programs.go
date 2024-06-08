@@ -27,7 +27,8 @@ func getProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
-		ctx.JSON(http.StatusOK, types.APIResponse[types.Program]{Data: *program})
+		state, err := storage.LoadState(programName)
+		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutedProgram]{Data: types.ExecutedProgram{Program: *program, State: state}})
 	}
 }
 
@@ -36,6 +37,7 @@ func deleteProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 		programName, _ := ctx.Params.Get("name")
 
 		err := storage.DeleteProgram(programName)
+		storage.MaybeDeleteState(programName)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return

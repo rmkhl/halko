@@ -27,15 +27,15 @@ type (
 		psuSensorCommands          chan string
 		psuSensorResponses         chan psuReadings
 		psuSensorReader            *psuSensorReader
-		storage                    *storage.ProgramStorage
 		temperatureSensorCommands  chan string
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
 		programStatus              *types.ProgramStatus
+		statusWriter               *storage.StateWriter
 	}
 )
 
-func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, program *types.Program) (*programRunner, error) {
+func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStorage, program *types.Program) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -45,7 +45,6 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 		psuSensorCommands:          make(chan string),
 		psuSensorResponses:         make(chan psuReadings),
 		fsmCommands:                make(chan string),
-		storage:                    storage,
 		programStatus:              &types.ProgramStatus{Program: *program},
 	}
 
@@ -68,7 +67,12 @@ func newRunner(config *types.ExecutorConfig, storage *storage.ProgramStorage, pr
 	runner.fsmController = newProgramFSMController(psuController, runner.fsmCommands)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
-	err = storage.CreateProgram(programName, program)
+	err = programStorage.CreateProgram(programName, program)
+	if err != nil {
+		return nil, err
+	}
+	runner.statusWriter = storage.NewStateWriter(programStorage, programName)
+	err = runner.statusWriter.UpdateState(types.ProgramStatePending)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +84,7 @@ func (runner *programRunner) Run() {
 	defer ticker.Stop()
 
 	runner.mutex.RLock()
+	runner.statusWriter.UpdateState(types.ProgramStateRunning)
 	for runner.active {
 		runner.mutex.RUnlock()
 		select {
@@ -112,6 +117,15 @@ func (runner *programRunner) Run() {
 		runner.fsmController.UpdateStatus(runner.programStatus)
 		runner.mutex.Unlock()
 		runner.mutex.RLock()
+	}
+	if runner.fsmController.Completed() {
+		if runner.fsmController.Failed() {
+			runner.statusWriter.UpdateState(types.ProgramStateFailed)
+		} else {
+			runner.statusWriter.UpdateState(types.ProgramStateCompleted)
+		}
+	} else {
+		runner.statusWriter.UpdateState(types.ProgramStateCanceled)
 	}
 	runner.fsmCommands <- programDone
 	runner.psuSensorCommands <- controllerDone

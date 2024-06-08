@@ -333,6 +333,10 @@ func (p *programFSMController) Completed() bool {
 	return p.state == fsmStateFailed || p.state == fsmStateIdle
 }
 
+func (p *programFSMController) Failed() bool {
+	return p.state == fsmStateFailed
+}
+
 func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()

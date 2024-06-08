@@ -33,4 +33,9 @@ type (
 		Temperatures         TemperatureStatus `json:"temperatures,omitempty"`
 		PowerStatus          PSUStatus         `json:"power_status,omitempty"`
 	}
+
+	ExecutedProgram struct {
+		Program Program      `json:"program"`
+		State   ProgramState `json:"state"`
+	}
 )

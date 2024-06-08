@@ -18,6 +18,8 @@ var (
 type ProgramStorage struct {
 	basePath    string
 	runningPath string
+	statusPath  string
+	logPath     string
 }
 
 func NewProgramStorage(basePath string) (*ProgramStorage, error) {
@@ -25,6 +27,18 @@ func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 
 	storage.runningPath = filepath.Join(storage.basePath, "programs")
 	err := os.MkdirAll(storage.runningPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	storage.statusPath = filepath.Join(storage.runningPath, "status")
+	err = os.MkdirAll(storage.runningPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	storage.logPath = filepath.Join(storage.runningPath, "logs")
+	err = os.MkdirAll(storage.runningPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
