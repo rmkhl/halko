@@ -48,14 +48,7 @@ func (storage *ProgramStorage) LoadState(name string) (types.ProgramState, int64
 		return types.ProgramStateUnknown, 0, err
 	}
 
-	statusFile, err := os.Open(statusFilePath)
-	if err != nil {
-		return types.ProgramStateUnknown, 0, err
-	}
-	defer statusFile.Close()
-
-	status := make([]byte, 10)
-	_, err = statusFile.Read(status)
+	status, err := os.ReadFile(statusFilePath)
 	if err != nil {
 		return types.ProgramStateUnknown, 0, err
 	}
