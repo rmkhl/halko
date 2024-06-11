@@ -70,9 +70,20 @@ export const Program: React.FC = () => {
       return false;
     }
 
-    const { name } = editProgram;
+    const { name, steps } = editProgram;
 
-    return !nameUsed && validName(name, ["new", "latest", "current"]);
+    if (nameUsed || !validName(name, ["new", "latest", "current"]))
+      return false;
+
+    if (!steps.length) return false;
+
+    for (const step of steps) {
+      if (!step.fan || !step.heater || !step.humidifier) {
+        return false;
+      }
+    }
+
+    return true;
   }, [editProgram]);
 
   return (
@@ -104,7 +115,7 @@ export const Program: React.FC = () => {
       />
 
       <Steps
-        editing={true}
+        editing={editing}
         steps={editProgram?.steps}
         onChange={updateEdited("steps")}
       />

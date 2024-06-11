@@ -92,7 +92,9 @@ export const Step: React.FC<Props> = (props) => {
         />
       </Stack>
 
-      <NudgeColumn pos={pos} onChange={(pos) => handleNudge(pos)} />
+      {editing && (
+        <NudgeColumn pos={pos} onChange={(pos) => handleNudge(pos)} />
+      )}
     </Stack>
   );
 };
