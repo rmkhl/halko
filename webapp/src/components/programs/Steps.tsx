@@ -27,8 +27,19 @@ export const Steps: React.FC<Props> = (props) => {
     return null;
   }
 
-  const handleChange = (i: number) => (updatedStep: ApiStep) => {
-    onChange(steps.map((step, idx) => (idx === i ? updatedStep : step)));
+  const handleChange = (i: number) => (updatedStep: ApiStep, idx: number) => {
+    let updatedSteps = steps.map((step, idx) =>
+      idx === i ? updatedStep : step
+    );
+
+    if (i !== idx) {
+      [updatedSteps[i], updatedSteps[idx]] = [
+        updatedSteps[idx],
+        updatedSteps[i],
+      ];
+    }
+
+    onChange(updatedSteps);
   };
 
   const addStep = () => {
@@ -41,7 +52,7 @@ export const Steps: React.FC<Props> = (props) => {
   return (
     <Stack gap={6}>
       <Stack alignItems="center" justifyContent="space-between" direction="row">
-        <Typography variant="h6">{t("programs.steps.title")}</Typography>
+        <Typography variant="h4">{t("programs.steps.title")}</Typography>
 
         {editing && (
           <Button color="success" onClick={addStep}>
@@ -51,12 +62,20 @@ export const Steps: React.FC<Props> = (props) => {
       </Stack>
 
       {steps.map((step, i) => (
-        <Step
-          key={`step-${i}`}
-          editing={editing}
-          step={step}
-          onChange={handleChange(i)}
-        />
+        <Stack direction="row" justifyContent="space-between">
+          <Typography variant="h4" flex={1}>
+            {i + 1}
+          </Typography>
+
+          <Step
+            flex={10}
+            key={`step-${i}`}
+            editing={editing}
+            step={step}
+            pos={{ idx: i, isLast: i === steps.length - 1 }}
+            onChange={handleChange(i)}
+          />
+        </Stack>
       ))}
     </Stack>
   );

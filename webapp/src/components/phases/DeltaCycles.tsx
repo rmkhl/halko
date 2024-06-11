@@ -2,7 +2,6 @@ import React from "react";
 import { DeltaCycle as ApiDeltaCycle } from "../../types/api";
 import { DeltaCycle } from "./DeltaCycle";
 import { Stack } from "@mui/material";
-import { nDeltaCycles } from "./templates";
 
 interface Props {
   deltaCycles?: ApiDeltaCycle[];

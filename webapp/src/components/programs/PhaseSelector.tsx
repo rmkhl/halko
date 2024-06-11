@@ -29,12 +29,12 @@ export const PhaseSelector: React.FC<Props> = (props) => {
         handleClose={() => setModalOpen(false)}
         open={modalOpen}
       >
-        <Phases canAddNew={false} onSelectRow={onChange} />
+        <Phases canAddNew={false} onSelectRow={(phase) => onChange(phase)} />
       </Dialog>
 
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack direction="row" justifyContent="space-between">
         <Stack flex={1}>
-          <Typography>{title}</Typography>
+          <Typography variant="h5">{title}</Typography>
         </Stack>
 
         <Stack flex={3}>
@@ -50,7 +50,7 @@ export const PhaseSelector: React.FC<Props> = (props) => {
             <PhaseRow phase={phase} selectable={false} />
           ) : (
             <Typography>{t("programs.steps.noPhaseSelected")}</Typography>
-          )}{" "}
+          )}
         </Stack>
       </Stack>
     </>
