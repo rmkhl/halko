@@ -103,20 +103,22 @@ export const Program: React.FC = () => {
       <TimeComponent
         editing={editing}
         title={t("programs.defaultStepRuntime")}
-        value={editProgram?.defaultStepRuntime || 0}
+        value={
+          editing ? editProgram?.defaultStepRuntime : program.defaultStepRuntime
+        }
         onChange={updateEdited("defaultStepRuntime")}
       />
 
       <TimeComponent
         editing={editing}
         title={t("programs.preheatTo")}
-        value={editProgram?.preheatTo || 0}
+        value={editing ? editProgram?.preheatTo : program.preheatTo}
         onChange={updateEdited("preheatTo")}
       />
 
       <Steps
         editing={editing}
-        steps={editProgram?.steps}
+        steps={editing ? editProgram?.steps : program.steps}
         onChange={updateEdited("steps")}
       />
     </DataForm>

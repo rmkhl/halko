@@ -12,7 +12,7 @@ export interface Props {
   min?: number;
   max?: number;
   placeholder?: string;
-  value: number;
+  value?: number;
   onChange: (value: number) => void;
 }
 

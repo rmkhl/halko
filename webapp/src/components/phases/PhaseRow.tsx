@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Cycle } from "../cycles";
 import { DeltaCycles } from "./DeltaCycles";
+import { ClickableStack } from "../ClickableStack";
 
 interface Props {
   phase: Phase;
@@ -19,7 +20,7 @@ export const PhaseRow: React.FC<Props> = (props) => {
   const handleRowClick = () => navigate(`/phases/${phase.name}`);
 
   return (
-    <PhaseRowStack
+    <ClickableStack
       direction="row"
       onClick={
         !selectable
@@ -36,19 +37,9 @@ export const PhaseRow: React.FC<Props> = (props) => {
       <Stack flex={2}>
         <CycleInfo phase={phase} />
       </Stack>
-    </PhaseRowStack>
+    </ClickableStack>
   );
 };
-
-const PhaseRowStack = styled(Stack)(() => ({
-  cursor: "pointer",
-  padding: "1em",
-  borderRadius: "1em",
-  alignItems: "start",
-  "&:hover": {
-    backgroundColor: "#666",
-  },
-}));
 
 interface CycleInfoProps {
   phase: Phase;

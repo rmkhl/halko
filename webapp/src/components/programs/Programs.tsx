@@ -31,7 +31,7 @@ export const Programs: React.FC = () => {
         {[...(programs || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((p) => (
-            <ProgramRow program={p} />
+            <ProgramRow key={`program-${p.name}`} program={p} />
           ))}
       </Stack>
     </Stack>
