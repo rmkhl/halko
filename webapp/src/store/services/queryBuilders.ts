@@ -7,7 +7,7 @@ import {
   reducerPath,
 } from "./types";
 
-const list = "LIST";
+export const list = "LIST";
 
 export const fetchQuery = <T>(
   builder: ApiBuilder,

@@ -1,17 +1,23 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { fetchSingleQuery } from "./queryBuilders";
+import { fetchSingleQuery, list } from "./queryBuilders";
 import { Program } from "../../types/api";
 
 const currentEndpoint = "";
+const runningProgramTag = "runningProgram";
 
 export const executorApi = createApi({
   reducerPath: "executorApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:8089/engine/api/v1/running",
   }),
+  tagTypes: [runningProgramTag],
   endpoints: (builder) => ({
-    getRunningProgram: fetchSingleQuery(builder, currentEndpoint),
+    getRunningProgram: fetchSingleQuery(
+      builder,
+      currentEndpoint,
+      runningProgramTag
+    ),
     startProgram: builder.mutation({
       query: (p: Program) => ({
         url: "",
@@ -36,6 +42,8 @@ export const executorApi = createApi({
         url: "",
         method: "DELETE",
       }),
+      invalidatesTags: (_, error) =>
+        error ? [] : [{ type: runningProgramTag, id: list }],
     }),
   }),
 });

@@ -45,7 +45,7 @@ export const TemperatureRangeSlider: React.FC<Props> = (props) => {
         step={1}
         getAriaValueText={celsius}
         marks={rangeMarks}
-        max={200}
+        max={180}
         min={0}
         valueLabelDisplay="auto"
         onChange={handleChange}
@@ -62,7 +62,7 @@ const rangeMarks = [
     label: "0°C",
   },
   {
-    value: 25,
+    value: 20,
     label: "25°C",
   },
   {
@@ -88,10 +88,6 @@ const rangeMarks = [
   {
     value: 175,
     label: "175°C",
-  },
-  {
-    value: 200,
-    label: "200°C",
   },
 ];
 

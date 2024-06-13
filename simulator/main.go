@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/router"
@@ -25,6 +26,13 @@ func main() {
 	ticker := time.NewTicker(6000 * time.Millisecond)
 
 	server := gin.Default()
+	server.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"http://localhost:1234"},
+		AllowMethods:  []string{"GET"},
+		AllowHeaders:  []string{"Origin", "Content-Type"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge:        12 * time.Hour,
+	}))
 	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls)
 
 	wg.Add(1)

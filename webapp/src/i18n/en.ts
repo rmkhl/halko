@@ -59,4 +59,8 @@ export const en = {
       noPhaseSelected: "No phase selected",
     },
   },
+  sensors: {
+    material: "Material",
+    oven: "Oven",
+  },
 };

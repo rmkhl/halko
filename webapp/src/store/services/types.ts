@@ -8,7 +8,7 @@ import {
 
 export type reducerPath = "configuratorApi" | "executorApi";
 
-export type EntityType = "phases" | "programs";
+export type EntityType = "phases" | "programs" | "runningProgram";
 
 export type ApiBuilder = EndpointBuilder<
   BaseQueryFn<
