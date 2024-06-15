@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
 import { useGetProgramsQuery } from "../../store/services";
 import { useTranslation } from "react-i18next";
-import { Program } from "../../types/api";
+import { Program as ApiProgram } from "../../types/api";
 import { useNavigate } from "react-router-dom";
 import { Stack } from "@mui/system";
 import { Button } from "@mui/material";
+import { ProgramRow } from "./ProgramRow";
 
 export const Programs: React.FC = () => {
   const { data } = useGetProgramsQuery();
@@ -12,7 +13,7 @@ export const Programs: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const programs = useMemo(() => data as Program[], [data]);
+  const programs = useMemo(() => data as ApiProgram[], [data]);
 
   const addNew = () => {
     navigate("/programs/new");
@@ -29,7 +30,9 @@ export const Programs: React.FC = () => {
       <Stack direction="column" width=" 60rem">
         {[...(programs || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
-          .map((p) => null)}
+          .map((p) => (
+            <ProgramRow key={`program-${p.name}`} program={p} />
+          ))}
       </Stack>
     </Stack>
   );

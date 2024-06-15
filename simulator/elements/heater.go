@@ -10,13 +10,12 @@ type (
 		mutex       sync.RWMutex
 		temperature float32
 		minTemp     float32
-		maxTemp     float32
 		wood        *Wood
 	}
 )
 
-func NewHeater(name string, minTemp, maxTemp float32, material *Wood) *Heater {
-	h := Heater{Power: NewPower(name), temperature: minTemp, minTemp: minTemp, maxTemp: maxTemp, wood: material}
+func NewHeater(name string, minTemp float32, material *Wood) *Heater {
+	h := Heater{Power: NewPower(name), temperature: minTemp, minTemp: minTemp, wood: material}
 	return &h
 }
 
@@ -29,7 +28,7 @@ func (h *Heater) Tick() {
 
 	_, isOn := h.power.CycleInfo()
 	if isOn {
-		h.temperature = min(h.maxTemp, h.temperature+0.1)
+		h.temperature = h.temperature + 0.1
 		return
 	}
 	h.temperature = max(h.minTemp, h.temperature-0.01)

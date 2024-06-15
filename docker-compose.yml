@@ -10,3 +10,30 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    working_dir: /simulator
+    volumes:
+      - ./simulator:/simulator
+      - ./fsdb:/fsdb
+    ports:
+      - "8088:8088"
+    restart: unless-stopped
+
+  executor:
+    build:
+      context: ./executor
+      dockerfile: Dockerfile
+    working_dir: /executor
+    volumes:
+      - ./executor:/executor
+      - ./fsdb:/fsdb
+    ports:
+      - "8089:8089"
+    depends_on:
+      simulator:
+        condition: service_started
+    restart: unless-stopped

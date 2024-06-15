@@ -9,20 +9,12 @@ type (
 		mutex       sync.RWMutex
 		temperature float32
 		minTemp     float32
-		maxTemp     float32
 	}
 )
 
-func NewWood(minTemp, maxTemp float32) *Wood {
-	w := Wood{minTemp: minTemp, maxTemp: maxTemp, temperature: minTemp}
+func NewWood(minTemp float32) *Wood {
+	w := Wood{minTemp: minTemp, temperature: minTemp}
 	return &w
-}
-
-func (w *Wood) TargetReached() bool {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
-
-	return w.temperature >= w.maxTemp
 }
 
 // Implement the HeatedMaterial interface.

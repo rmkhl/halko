@@ -14,10 +14,15 @@ interface Props extends DialogProps {
 }
 
 export const Dialog: React.FC<Props> = (props) => {
-  const { children, handleClose, title, fullScreen = true, ...rest } = props;
+  const { children, handleClose, title, fullScreen = false, ...rest } = props;
 
   return (
-    <MuiDialog onClose={handleClose} fullScreen={fullScreen} {...rest}>
+    <MuiDialog
+      onClose={handleClose}
+      fullScreen={fullScreen}
+      maxWidth="lg"
+      {...rest}
+    >
       <DialogTitle>{title}</DialogTitle>
 
       <IconButton

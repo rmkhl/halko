@@ -14,8 +14,8 @@ type (
 	phases struct{}
 )
 
-func (p *phases) ByID(id string) (*domain.Phase, error) {
-	phase, err := byID(id, new(phase))
+func (p *phases) ByName(name string) (*domain.Phase, error) {
+	phase, err := byName(name, new(phase))
 	if err != nil {
 		return nil, transformError(err)
 	}
@@ -30,8 +30,8 @@ func (p *phases) All() ([]*domain.Phase, error) {
 	return runtimeCastSlice[domain.Phase](phases)
 }
 
-func (p *phases) CreateOrUpdate(pp *domain.Phase) (*domain.Phase, error) {
-	ppp, err := save(&phase{pp})
+func (p *phases) CreateOrUpdate(name string, pp *domain.Phase) (*domain.Phase, error) {
+	ppp, err := save(name, &phase{pp})
 	if err != nil {
 		return nil, transformError(err)
 	}
@@ -42,12 +42,12 @@ func (p *phases) CreateOrUpdate(pp *domain.Phase) (*domain.Phase, error) {
 	return cast.Phase, nil
 }
 
-func (p *phase) id() string {
-	return string(p.ID)
+func (p *phase) name() string {
+	return string(p.Name)
 }
 
-func (p *phase) setID(id string) {
-	p.ID = domain.ID(id)
+func (p *phase) setName(name string) {
+	p.Name = domain.Name(name)
 }
 
 func (p *phase) unmarshalJSON(data []byte) (any, error) {

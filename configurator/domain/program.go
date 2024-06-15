@@ -1,25 +1,21 @@
 package domain
 
 type Program struct {
-	HasID
-	Name           string         `json:"name"`
-	MaximumRuntime uint64         `json:"maximum_runtime"`
-	Phases         []ProgramPhase `json:"phases"`
+	HasName
+	DefaultStepRuntime uint64 `json:"defaultStepRuntime"`
+	PreheatTo          uint64 `json:"preheatTo"`
+	Steps              []Step `json:"steps"`
 }
 
-type ProgramPhase struct {
-	TimeConstraint        TimeConstraint        `json:"time_constraint"`
-	TemperatureConstraint TemperatureConstraint `json:"temperature_constraint"`
+type Step struct {
+	TimeConstraint        uint64                `json:"timeConstraint"`
+	TemperatureConstraint TemperatureConstraint `json:"temperatureConstraint"`
 	Heater                Phase                 `json:"heater"`
 	Fan                   Phase                 `json:"fan"`
 	Humidifier            Phase                 `json:"humidifier"`
 }
 
-type TimeConstraint struct {
-	Runtime uint64 `json:"runtime"`
-}
-
 type TemperatureConstraint struct {
-	Minimum float64 `json:"miminum"`
+	Minimum float64 `json:"minimum"`
 	Maximum float64 `json:"maximum"`
 }

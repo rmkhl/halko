@@ -1,4 +1,4 @@
-const common = {
+const commonTemplate = {
   edit: "Edit",
   name: "Name",
   new: "New",
@@ -6,8 +6,18 @@ const common = {
   cancel: "Cancel",
 };
 
+const common = (
+  args?: Partial<typeof commonTemplate>
+): typeof commonTemplate => ({
+  ...commonTemplate,
+  ...args,
+});
+
 export const en = {
-  common,
+  common: { ...common() },
+  time: {
+    seconds: "seconds",
+  },
   header: {
     title: "Halko",
   },
@@ -17,7 +27,7 @@ export const en = {
     programs: "Programs",
   },
   phases: {
-    ...common,
+    ...common(),
     cycles: {
       title: "Cycles",
       constant: "Constant",
@@ -26,5 +36,31 @@ export const en = {
       addDeltaCycle: "Add delta cycle",
       range: "Range",
     },
+  },
+  programs: {
+    ...common(),
+    noRunning: "No currently running program",
+    defaultStepRuntime: "Default step runtime",
+    preheatTo: "Preheat oven to",
+    steps: {
+      ...common(),
+      add: "Add",
+      title: "Steps",
+      timeConstraint: "Time constraint",
+      temperatureConstraint: {
+        title: "Temperature constraint",
+        minimum: "Minimum",
+        maximum: "Maximum",
+      },
+      heater: "Heater",
+      fan: "Fan",
+      humidifier: "Humidifier",
+      selectPhase: "Select",
+      noPhaseSelected: "No phase selected",
+    },
+  },
+  sensors: {
+    material: "Material",
+    oven: "Oven",
   },
 };

@@ -7,5 +7,5 @@ type TemperatureSensor interface {
 type PowerSensor interface {
 	IsOn() bool
 	Name() string
-	CurrentCycle() string
+	CurrentCycle() int
 }

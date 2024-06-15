@@ -1,77 +1,53 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useMemo } from "react";
 import { useGetPhasesQuery, useSavePhaseMutation } from "../../store/services";
 import { Phase as ApiPhase, DeltaCycle } from "../../types/api";
-import { Button, Stack } from "@mui/material";
-import { FormMode } from "../../types";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { setEditPhase } from "../../store/features/phasesSlice";
 import { NameComponent } from "../form";
-import { useTranslation } from "react-i18next";
 import { Cycles } from "./Cycles";
 import {
   defaultConstant,
   defaultDeltaCycles,
   emptyConstantPhase,
 } from "./templates";
+import { validName } from "../../util";
+import { useFormData } from "../../hooks/useFormData";
+import { DataForm } from "../form/DataForm";
+
+const normalize = (phase: ApiPhase): ApiPhase => {
+  const cpy = { ...phase };
+  cpy.name = cpy.name.trim();
+
+  return cpy;
+};
 
 export const Phase: React.FC = () => {
-  const [mode, setMode] = useState<FormMode>("view");
-  const [phase, setPhase] = useState<ApiPhase>(emptyConstantPhase());
-
-  const { id } = useParams();
   const { data } = useGetPhasesQuery();
   const [savePhase, { isSuccess }] = useSavePhaseMutation();
   const editPhase = useSelector((state: RootState) => state.phases.editRecord);
-  const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const phases = useMemo(() => data as ApiPhase[], [data]);
 
+  const {
+    editing,
+    formData: phase,
+    nameUsed,
+    handleCancel,
+    handleEdit,
+    handleSave,
+  } = useFormData({
+    allData: phases,
+    defaultData: emptyConstantPhase(),
+    editData: editPhase,
+    rootPath: "/phases",
+    saveSuccess: isSuccess,
+    normalizeData: normalize,
+    saveData: savePhase,
+    setEditData: setEditPhase,
+  });
+
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (id === "new") {
-      setMode("edit");
-
-      if (editPhase && !editPhase.id) {
-        return;
-      }
-
-      dispatch(setEditPhase(emptyConstantPhase()));
-
-      return;
-    }
-
-    if (!id || !phases) {
-      return;
-    }
-
-    const phase = phases.find((p) => p.id === id);
-
-    if (!phase) {
-      navigate("/phases");
-      return;
-    }
-
-    setPhase(phase);
-  }, [id, phases]);
-
-  useEffect(() => {
-    if (!isSuccess) {
-      return;
-    }
-
-    const editId = editPhase?.id;
-    dispatch(setEditPhase(undefined));
-
-    if (editId === "") {
-      navigate("/phases");
-    } else {
-      setMode("view");
-    }
-  }, [isSuccess]);
 
   useEffect(() => {
     if (!editPhase) return;
@@ -97,8 +73,6 @@ export const Phase: React.FC = () => {
     );
   }, [editPhase?.cycleMode]);
 
-  const editingThis = useMemo(() => mode === "edit", [mode]);
-
   const isValid = useMemo(() => {
     if (!editPhase) {
       return false;
@@ -107,7 +81,8 @@ export const Phase: React.FC = () => {
     const { name, cycleMode, constantCycle, deltaCycles } = editPhase;
 
     return (
-      !!name &&
+      !nameUsed &&
+      validName(name, ["new"]) &&
       ((cycleMode === "constant" && !!constantCycle) ||
         (cycleMode === "delta" && !!deltaCycles?.length))
     );
@@ -146,67 +121,27 @@ export const Phase: React.FC = () => {
     }
   };
 
-  const handleEdit = () => {
-    dispatch(setEditPhase(phase));
-    setMode("edit");
-  };
-
-  const handleSave = () => {
-    if (editPhase) {
-      savePhase(editPhase);
-    }
-  };
-
-  const handleCancel = () => {
-    const editId = editPhase?.id;
-    dispatch(setEditPhase(undefined));
-
-    if (editId === "") {
-      navigate("/phases");
-    } else {
-      setMode("view");
-    }
-  };
-
-  if (!id) {
-    navigate("/phases");
-  }
-
   return (
-    <Stack direction="column" gap={6} width="60rem">
-      {!editingThis && (
-        <Stack direction="row" justifyContent="end" gap={6}>
-          <Button color="primary" onClick={handleEdit}>
-            {t("phases.edit")}
-          </Button>
-        </Stack>
-      )}
-
+    <DataForm
+      editing={editing}
+      isValid={isValid}
+      handleCancel={handleCancel}
+      handleEdit={handleEdit}
+      handleSave={handleSave}
+    >
       <NameComponent
-        editing={editingThis}
-        name={editingThis ? editPhase?.name : phase.name}
+        editing={editing}
+        name={editing ? editPhase?.name : phase.name}
         handleChange={updateEdited("name")}
       />
 
       <Cycles
-        editing={editingThis}
-        phase={editingThis && editPhase ? editPhase : phase}
+        editing={editing}
+        phase={editing && editPhase ? editPhase : phase}
         onChangeCycleMode={updateEdited("cycleMode")}
-        onChangeConstantCycle={updateConstantCycle}
-        onChangeDeltaCycles={updateDeltaCycles}
+        onChangeConstantCycle={editPhase && updateConstantCycle}
+        onChangeDeltaCycles={editPhase && updateDeltaCycles}
       />
-
-      {editingThis && (
-        <Stack direction="row" gap="3em" justifyContent="flex-end">
-          <Button onClick={handleSave} disabled={!isValid} color="success">
-            {t("phases.save")}
-          </Button>
-
-          <Button onClick={handleCancel} color="warning">
-            {t("phases.cancel")}
-          </Button>
-        </Stack>
-      )}
-    </Stack>
+    </DataForm>
   );
 };

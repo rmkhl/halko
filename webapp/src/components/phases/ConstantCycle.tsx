@@ -2,7 +2,7 @@ import React from "react";
 import { Cycle } from "../cycles/Cycle";
 
 interface Props {
-  onChange: (percentage: number) => void;
+  onChange?: (percentage: number) => void;
   percentage?: number;
 }
 

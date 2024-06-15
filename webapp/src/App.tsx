@@ -13,6 +13,8 @@ import { Provider } from "react-redux";
 import { store } from "./store/store";
 import { Phases } from "./components/phases/Phases";
 import { Phase } from "./components/phases/Phase";
+import { Programs } from "./components/programs/Programs";
+import { Program } from "./components/programs/Program";
 
 const getRouter = (routes: Route[]) =>
   createBrowserRouter([
@@ -21,7 +23,8 @@ const getRouter = (routes: Route[]) =>
       element: <Navigation routes={routes} />,
       children: [
         ...routes,
-        { path: "phases/:id", element: <Phase /> },
+        { path: "phases/:name", element: <Phase /> },
+        { path: "programs/:name", element: <Program /> },
         { path: "/", element: <Navigate to="/current" /> },
         { path: "*", element: <Navigate to="/current" /> },
       ],
@@ -34,9 +37,14 @@ export const App: React.FC = () => {
   const routes: Route[] = useMemo(
     () => [
       {
+        name: t("tabs.current"),
+        path: "programs/current",
+        element: <Program />,
+      },
+      {
         name: t("tabs.programs"),
         path: "programs",
-        element: <Typography>TODO PROGRAMS</Typography>,
+        element: <Programs />,
       },
       {
         name: t("tabs.phases"),

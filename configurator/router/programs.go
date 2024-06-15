@@ -2,7 +2,6 @@ package router
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,13 +24,13 @@ func allPrograms(programs database.Programs) gin.HandlerFunc {
 
 func program(programs database.Programs) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		id, ok := ctx.Params.Get("id")
+		name, ok := ctx.Params.Get("name")
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, errors.New("no id provided"))
+			ctx.JSON(http.StatusBadRequest, ErrNoName)
 			return
 		}
 
-		program, err := programs.ByID(id)
+		program, err := programs.ByName(name)
 		status, err := statusAndError(err)
 		if err != nil {
 			ctx.JSON(status, errorJSON(err))
@@ -52,9 +51,7 @@ func createProgram(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		prog.ID = ""
-
-		created, err := programs.CreateOrUpdate(&prog)
+		created, err := programs.CreateOrUpdate("", &prog)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return
@@ -66,9 +63,9 @@ func createProgram(programs database.Programs) gin.HandlerFunc {
 
 func updateProgram(programs database.Programs) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		id, ok := ctx.Params.Get("id")
+		name, ok := ctx.Params.Get("name")
 		if !ok {
-			ctx.JSON(http.StatusBadRequest, errors.New("no id provided"))
+			ctx.JSON(http.StatusBadRequest, ErrNoName)
 			return
 		}
 
@@ -80,9 +77,7 @@ func updateProgram(programs database.Programs) gin.HandlerFunc {
 			return
 		}
 
-		prog.ID = domain.ID(id)
-
-		updated, err := programs.CreateOrUpdate(&prog)
+		updated, err := programs.CreateOrUpdate(name, &prog)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return

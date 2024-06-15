@@ -14,8 +14,8 @@ type (
 	programs struct{}
 )
 
-func (p *programs) ByID(id string) (*domain.Program, error) {
-	prog, err := byID(id, new(program))
+func (p *programs) ByName(name string) (*domain.Program, error) {
+	prog, err := byName(name, new(program))
 	if err != nil {
 		return nil, transformError(err)
 	}
@@ -30,8 +30,8 @@ func (p *programs) All() ([]*domain.Program, error) {
 	return runtimeCastSlice[domain.Program](progs)
 }
 
-func (p *programs) CreateOrUpdate(pp *domain.Program) (*domain.Program, error) {
-	ppp, err := save(&program{pp})
+func (p *programs) CreateOrUpdate(name string, pp *domain.Program) (*domain.Program, error) {
+	ppp, err := save(name, &program{pp})
 	if err != nil {
 		return nil, transformError(err)
 	}
@@ -42,12 +42,12 @@ func (p *programs) CreateOrUpdate(pp *domain.Program) (*domain.Program, error) {
 	return cast.Program, nil
 }
 
-func (p *program) id() string {
-	return string(p.ID)
+func (p *program) name() string {
+	return string(p.Name)
 }
 
-func (p *program) setID(id string) {
-	p.ID = domain.ID(id)
+func (p *program) setName(name string) {
+	p.Name = domain.Name(name)
 }
 
 func (p *program) unmarshalJSON(data []byte) (any, error) {

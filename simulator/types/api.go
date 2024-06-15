@@ -13,14 +13,13 @@ type TemperatureResponse map[string]float32
 type PowerStatus string
 
 const (
-	PowerOn   PowerStatus = "On"
-	PowerOff  PowerStatus = "Off"
-	PowerNext PowerStatus = "Switch"
+	PowerOn  PowerStatus = "On"
+	PowerOff PowerStatus = "Off"
 )
 
 type PowerResponse struct {
-	Status PowerStatus `json:"status"`
-	Cycle  string      `json:"cycle,omitempty"`
+	Status  PowerStatus `json:"status"`
+	Percent int         `json:"percent,omitempty"`
 }
 
 type PowerStatusResponse map[string]PowerResponse
@@ -32,7 +31,7 @@ type PowerCycle struct {
 
 type PowerCommand struct {
 	Command PowerStatus `json:"command"`
-	Cycle   PowerCycle  `json:"cycle"`
+	Percent int         `json:"percent,omitempty"`
 }
 
 type PowerOperationResponse struct {

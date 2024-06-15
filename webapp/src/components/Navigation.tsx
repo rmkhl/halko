@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Stack, Typography } from "@mui/material";
 import { RouteTabs } from "./RouteTabs";
 import { useTranslation } from "react-i18next";
+import { RunningProgram } from "./programs/RunningProgram";
 
 interface Props {
   routes: Route[];
@@ -29,6 +30,8 @@ export const Navigation: React.FC<Props> = (props) => {
       <Stack flex={1} alignItems="center">
         <Typography variant="h2">{t("header.title")}</Typography>
       </Stack>
+
+      <RunningProgram />
 
       <Stack paddingBottom={3}>
         <RouteTabs routes={routes} idx={idx} />

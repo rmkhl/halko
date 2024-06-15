@@ -5,21 +5,16 @@ export interface TemperatureConstraint {
   maximum: number;
 }
 
-export interface TimeConstraint {
-  runtime: number;
-}
-
 export interface Step {
   name: string;
-  timeConstraint: TimeConstraint;
+  timeConstraint: number;
   temperatureConstraint: TemperatureConstraint;
-  heater: Phase;
-  fan: Phase;
-  humidifier: Phase;
+  heater?: Phase;
+  fan?: Phase;
+  humidifier?: Phase;
 }
 
 export interface Program {
-  id: string;
   name: string;
   defaultStepRuntime: number;
   preheatTo: number;

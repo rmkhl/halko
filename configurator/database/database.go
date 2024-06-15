@@ -19,8 +19,8 @@ type Interface struct {
 
 type Entity[T any] interface {
 	All() ([]T, error)
-	ByID(id string) (T, error)
-	CreateOrUpdate(T) (T, error)
+	ByName(name string) (T, error)
+	CreateOrUpdate(string, T) (T, error)
 }
 
 type Programs interface {

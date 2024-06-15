@@ -1,0 +1,7 @@
+{
+  "base_path": "/home/mte/tmp/halko",
+  "tick_length": 6000,
+  "temperature_sensor_url": "http://localhost:8088/sensors/api/v1/temperatures",
+  "power_sensor_url": "http://localhost:8088/sensors/api/v1/powers",
+  "power_control_url": "http://localhost:8088/controls/api/v1/powers"
+}

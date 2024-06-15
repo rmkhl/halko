@@ -35,7 +35,7 @@
                         ]
                     },
                     "time_constraint": {
-                        "$comment": "runtime in seconds",
+                        "$comment": "maximum runtime for a phase in seconds",
                         "type": "number"
                     },
                     "temperature_constraint": {
