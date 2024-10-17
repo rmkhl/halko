@@ -11,10 +11,6 @@
         "name": {
             "type": "string"
         },
-        "default_step_runtime": {
-            "$comment": "Length of time in seconds",
-            "type": "number"
-        },
         "steps": {
             "type": "array",
             "items": {
@@ -30,84 +26,82 @@
                         "enum": [
                             "heating",
                             "cooling",
-                            "acclimating",
-                            "waiting"
+                            "acclimating"
                         ]
                     },
-                    "time_constraint": {
-                        "$comment": "maximum runtime for a phase in seconds",
+                    "temperature_target": {
+                        "$comment": "Temperature target (material)",
                         "type": "number"
                     },
-                    "temperature_constraint": {
-                        "$comment": "Valid temperature range (material)",
-                        "type": "object",
-                        "properties": {
-                            "minimum": {
-                                "$comment": "Minimum temperature in Celsius",
-                                "type": "number"
+                    "heater": {
+                        "power": {
+                            "$comment": "Power level of the heater (0-100)",
+                            "type": "number"
+                        },
+                        "max_delta": {
+                            "$comment": "Maximum temperature difference allowed (Celsius)",
+                            "type": "number"
+                        },
+                        "pid": {
+                            "$comment": "PID values for the heater",
+                            "type": "object",
+                            "properties": {
+                                "kp": {
+                                    "$comment": "Proportional gain",
+                                    "type": "number"
+                                },
+                                "ki": {
+                                    "$comment": "Integral gain",
+                                    "type": "number"
+                                },
+                                "kd": {
+                                    "$comment": "Derivative gain",
+                                    "type": "number"
+                                }
                             },
-                            "maximum": {
-                                "$comment": "Maximum temperature in Celsius",
-                                "type": "number"
-                            }
+                            "required": [
+                                "kp",
+                                "ki",
+                                "kd"
+                            ]
                         },
                         "oneOf": [
                             {
                                 "required": [
-                                    "minimum"
+                                    "power"
                                 ]
                             },
                             {
                                 "required": [
-                                    "maximum"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "minimum",
-                                    "maximum"
+                                    "max_delta"
                                 ]
                             }
                         ]
-                    },
-                    "heater": {
-                        "$ref": "/schemas/phase"
                     },
                     "fan": {
-                        "$ref": "/schemas/phase"
+                        "power": {
+                            "$comment": "Power level of the fan (0-100)",
+                            "type": "number"
+                        },
+                        "required": [
+                            "power"
+                        ]
                     },
                     "humidifier": {
-                        "$ref": "/schemas/phase"
+                        "power": {
+                            "$comment": "Power level of the humidifier (0-100)",
+                            "type": "number"
+                        },
+                        "required": [
+                            "power"
+                        ]
                     }
                 },
-                "allOf": [
-                    {
-                        "required": [
-                            "heater",
-                            "fan",
-                            "humidifier"
-                        ]
-                    },
-                    {
-                        "oneOf": [
-                            {
-                                "required": [
-                                    "time_constraint"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "temperature_constraint"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "time_constraint",
-                                    "temperature_constraint"
-                                ]
-                            }
-                        ]
-                    }
+                "required": [
+                    "heater",
+                    "fan",
+                    "humidifier",
+                    "temperature_target"
                 ]
             },
             "minLength": 1
@@ -115,7 +109,6 @@
     },
     "required": [
         "name",
-        "default_step_runtime",
         "steps"
     ]
 }
