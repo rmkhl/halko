@@ -57,7 +57,7 @@ func (p *ProgramStep) Validate() error {
 	}
 	if p.StepType == StepTypeCooling {
 		if p.Heater.Power == nil {
-			return fmt.Errorf("sower must be off for cooling")
+			return fmt.Errorf("power must be off for cooling")
 		}
 		if p.Heater.MaxDelta == nil {
 			return fmt.Errorf("setting max delta value for heater in cooling is not allowed")
