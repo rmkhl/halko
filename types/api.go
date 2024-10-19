@@ -1,6 +1,8 @@
 package types
 
 type (
+	ProgramState string
+
 	APIErrorResponse struct {
 		Err string `json:"error"`
 	}
@@ -47,4 +49,13 @@ type (
 		StartedAt   int64        `json:"started_at"`
 		CompletedAt int64        `json:"completed_at"`
 	}
+)
+
+const (
+	ProgramStateCanceled  ProgramState = "canceled"
+	ProgramStateCompleted ProgramState = "completed"
+	ProgramStateFailed    ProgramState = "failed"
+	ProgramStatePending   ProgramState = "pending"
+	ProgramStateRunning   ProgramState = "running"
+	ProgramStateUnknown   ProgramState = "unknown"
 )
