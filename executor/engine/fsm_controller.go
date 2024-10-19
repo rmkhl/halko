@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
@@ -341,7 +341,7 @@ func (p *programFSMController) Failed() bool {
 	return p.state == fsmStateFailed
 }
 
-func (p *programFSMController) UpdateStatus(status *types.ProgramStatus) {
+func (p *programFSMController) UpdateStatus(status *types.ExecutionStatus) {
 	p.program.mutex.RLock()
 	defer p.program.mutex.RUnlock()
 

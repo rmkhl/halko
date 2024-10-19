@@ -33,7 +33,7 @@ func NewEngine(config *types.ExecutorConfig, storage *storage.ProgramStorage) *C
 	return &engine
 }
 
-func (engine *ControlEngine) CurrentStatus() *types.ProgramStatus {
+func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
 	if engine.runner == nil {
 		return nil
 	}

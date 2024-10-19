@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 type (
@@ -53,7 +53,7 @@ func NewExecutionLogWriter(storage *ProgramStorage, name string, resolution int6
 	return &writer
 }
 
-func (writer *ExecutionLogWriter) AddLine(status *types.ProgramStatus) {
+func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 	if writer == nil {
 		return
 	}

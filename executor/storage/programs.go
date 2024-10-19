@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 var (

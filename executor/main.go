@@ -13,7 +13,7 @@ import (
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/router"
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 func readConfiguration(fileName string) (*types.ExecutorConfig, error) {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
@@ -29,7 +29,7 @@ type (
 		temperatureSensorCommands  chan string
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
-		programStatus              *types.ProgramStatus
+		programStatus              *types.ExecutionStatus
 		statusWriter               *storage.StateWriter
 		logWriter                  *storage.ExecutionLogWriter
 	}
@@ -45,7 +45,7 @@ func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStor
 		psuSensorCommands:          make(chan string),
 		psuSensorResponses:         make(chan psuReadings),
 		fsmCommands:                make(chan string),
-		programStatus:              &types.ProgramStatus{Program: *program},
+		programStatus:              &types.ExecutionStatus{Program: *program},
 	}
 
 	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURl, runner.psuSensorCommands, runner.psuSensorResponses)

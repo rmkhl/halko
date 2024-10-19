@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
