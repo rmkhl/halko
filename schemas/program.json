@@ -33,6 +33,10 @@
                         "$comment": "Temperature target (material)",
                         "type": "number"
                     },
+                    "duration": {
+                        "$comment": "Duration of the step (e.g. 12h, 1d)",
+                        "type": "string"
+                    },
                     "heater": {
                         "power": {
                             "$comment": "Power level of the heater (0-100)",

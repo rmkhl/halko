@@ -1,6 +1,9 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	StepTypeHeating   StepType = "heating"
@@ -31,6 +34,7 @@ type (
 		Name              string           `json:"name"`
 		StepType          StepType         `json:"type"`
 		TargetTemperature uint             `json:"temperature_target"`
+		Duration          *time.Duration   `json:"duration,omitempty"`
 		Heater            PowerPidSettings `json:"heater"`
 		Fan               PowerSetting     `json:"fan"`
 		Humidifier        PowerSetting     `json:"humidifier"`
