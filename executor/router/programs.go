@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 func listAllPrograms(storage *storage.ProgramStorage) gin.HandlerFunc {

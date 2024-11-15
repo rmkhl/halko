@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/engine"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {

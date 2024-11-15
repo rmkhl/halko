@@ -1,5 +1,14 @@
 package types
 
+const (
+	ProgramStateCanceled  ProgramState = "canceled"
+	ProgramStateCompleted ProgramState = "completed"
+	ProgramStateFailed    ProgramState = "failed"
+	ProgramStatePending   ProgramState = "pending"
+	ProgramStateRunning   ProgramState = "running"
+	ProgramStateUnknown   ProgramState = "unknown"
+)
+
 type (
 	ProgramState string
 
@@ -14,27 +23,28 @@ type (
 	SavedProgram struct {
 		Name        string       `json:"name"`
 		State       ProgramState `json:"state"`
-		StartedAt   int64        `json:"started_at"`
-		CompletedAt int64        `json:"completed_at"`
+		StartedAt   int64        `json:"started_at,omitempty"`
+		CompletedAt int64        `json:"completed_at,omitempty"`
 	}
 
 	ProgramListing struct {
 		Programs []SavedProgram `json:"programs"`
 	}
 
+	// TemperatureStatus represents the current temperature of the material and oven in Celsius.
 	TemperatureStatus struct {
 		Material float32 `json:"material"`
 		Oven     float32 `json:"oven"`
-		Delta    float32 `json:"delta"`
 	}
 
+	// PSUStatus represents the power level (in percentage) of the heater, fan, and humidifier.
 	PSUStatus struct {
-		Heater     int `json:"heater"`
-		Fan        int `json:"fan"`
-		Humidifier int `json:"humidifier"`
+		Heater     int8 `json:"heater"`
+		Fan        int8 `json:"fan"`
+		Humidifier int8 `json:"humidifier"`
 	}
 
-	ProgramStatus struct {
+	ExecutionStatus struct {
 		Program              Program           `json:"program"`
 		StartedAt            int64             `json:"started_at,omitempty"`
 		CurrentStep          string            `json:"current_step,omitempty"`
@@ -42,20 +52,4 @@ type (
 		Temperatures         TemperatureStatus `json:"temperatures,omitempty"`
 		PowerStatus          PSUStatus         `json:"power_status,omitempty"`
 	}
-
-	ExecutedProgram struct {
-		Program     Program      `json:"program"`
-		State       ProgramState `json:"state"`
-		StartedAt   int64        `json:"started_at"`
-		CompletedAt int64        `json:"completed_at"`
-	}
-)
-
-const (
-	ProgramStateCanceled  ProgramState = "canceled"
-	ProgramStateCompleted ProgramState = "completed"
-	ProgramStateFailed    ProgramState = "failed"
-	ProgramStatePending   ProgramState = "pending"
-	ProgramStateRunning   ProgramState = "running"
-	ProgramStateUnknown   ProgramState = "unknown"
 )

@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 type (
