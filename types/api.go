@@ -73,7 +73,7 @@ type (
 
 	PowerCommand struct {
 		Command PowerStatus `json:"command"`
-		Percent int         `json:"percent,omitempty"`
+		Percent uint8       `json:"percent,omitempty"`
 	}
 
 	PowerOperationResponse struct {

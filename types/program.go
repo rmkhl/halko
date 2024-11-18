@@ -1,7 +1,7 @@
 package types
 
 import (
-	"fmt"
+	"errors"
 	"time"
 )
 
@@ -51,48 +51,48 @@ func (p *ProgramStep) Validate() error {
 	//
 	// For all steps the power setting for the fan and humidifier must be set between 0 and 100.
 	if p.Fan.Power < 0 || p.Fan.Power > 100 {
-		return fmt.Errorf("fan power must be between 0 and 100")
+		return errors.New("fan power must be between 0 and 100")
 	}
 	if p.Humidifier.Power < 0 || p.Humidifier.Power > 100 {
-		return fmt.Errorf("humidifier power must be between 0 and 100")
+		return errors.New("humidifier power must be between 0 and 100")
 	}
 
 	// Target temperature cannot be above 200
 	if p.TargetTemperature > 200 {
-		return fmt.Errorf("target temperature must be between 0 and 200")
+		return errors.New("target temperature must be between 0 and 200")
 	}
 
 	// For heating step the PowerPidSettings must be set and it needs to have a max delta or constant power
 	if p.StepType == StepTypeHeating {
 		if p.Heater.MaxDelta == 0 && p.Heater.Power == 0 {
-			return fmt.Errorf("max delta or constant power must be set for heating step")
+			return errors.New("max delta or constant power must be set for heating step")
 		}
 		if p.TargetTemperature == 0 {
-			return fmt.Errorf("target temperature must be set for heating step")
+			return errors.New("target temperature must be set for heating step")
 		}
 	}
 
 	// For acclimate step the duration, heater power and target temperature needs to be set
 	if p.StepType == StepTypeAcclimate {
 		if p.Duration == nil {
-			return fmt.Errorf("duration must be set for acclimate step")
+			return errors.New("duration must be set for acclimate step")
 		}
 		if p.Heater.MaxDelta == 0 && p.Heater.Power == 0 {
-			return fmt.Errorf("heater must be set for acclimate step, either max delta or power")
+			return errors.New("heater must be set for acclimate step, either max delta or power")
 		}
 		if p.TargetTemperature == 0 {
-			return fmt.Errorf("target temperature must be set for acclimate step")
+			return errors.New("target temperature must be set for acclimate step")
 		}
 	}
 
 	// For cooling step either the duration or target temperature needs to be set
 	if p.StepType == StepTypeCooling {
 		if p.Duration == nil && p.TargetTemperature == 0 {
-			return fmt.Errorf("either duration or target temperature must be set for cooling step")
+			return errors.New("either duration or target temperature must be set for cooling step")
 		}
 		// If target temperature is set, it must be below 50
 		if p.TargetTemperature > 50 {
-			return fmt.Errorf("target temperature must be below 50 for cooling step")
+			return errors.New("target temperature must be below 50 for cooling step")
 		}
 	}
 
