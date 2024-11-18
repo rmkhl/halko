@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"io"
 	"log"
-	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -16,45 +13,23 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-func readConfiguration(fileName string) (*types.ExecutorConfig, error) {
-	jsonFile, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	defer jsonFile.Close()
-
-	content, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return nil, err
-	}
-
-	var config types.ExecutorConfig
-	err = json.Unmarshal(content, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	return &config, nil
-}
-
 func main() {
 	var configFileName string
 
-	flag.StringVar(&configFileName, "c", ".halko.cfg", "Specify config file. Default is .halko.cfg")
+	flag.StringVar(&configFileName, "c", "/etc/halko.cfg", "Specify config file. Default is /etc/halko.cfg")
 	flag.Parse()
 
-	configuration, err := readConfiguration(configFileName)
+	configuration, err := types.ReadHalkoConfig(configFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	storage, err := storage.NewProgramStorage(configuration.BasePath)
+	storage, err := storage.NewProgramStorage(configuration.ExecutorConfig.BasePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	engine := engine.NewEngine(configuration, storage)
+	engine := engine.NewEngine(configuration.ExecutorConfig, storage)
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
 		AllowOrigins:  []string{"http://localhost:1234"},
