@@ -1,5 +1,6 @@
 package types
 
+// executor API
 const (
 	ProgramStateCanceled  ProgramState = "canceled"
 	ProgramStateCompleted ProgramState = "completed"
@@ -53,3 +54,32 @@ type (
 		PowerStatus          PSUStatus         `json:"power_status,omitempty"`
 	}
 )
+
+// Power controller API
+const (
+	PowerOn  PowerStatus = "On"
+	PowerOff PowerStatus = "Off"
+)
+
+type (
+	PowerStatus string
+
+	PowerResponse struct {
+		Status  PowerStatus `json:"status"`
+		Percent uint8       `json:"percent,omitempty"`
+	}
+
+	PowerStatusResponse map[string]PowerResponse
+
+	PowerCommand struct {
+		Command PowerStatus `json:"command"`
+		Percent int         `json:"percent,omitempty"`
+	}
+
+	PowerOperationResponse struct {
+		Message string `json:"message"`
+	}
+)
+
+// Temperature sensor API
+type TemperatureResponse map[string]float32

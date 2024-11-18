@@ -2,10 +2,10 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhl/halko/simulator/types"
+	"github.com/rmkhl/halko/simulator/engine"
 )
 
-func SetupRoutes(r *gin.Engine, temperatureSensors map[string]types.TemperatureSensor, powerSensors map[string]types.PowerSensor, powerControls map[string]types.PowerManager) {
+func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, powerSensors map[string]engine.PowerSensor, powerControls map[string]engine.PowerManager) {
 	sensorAPI := r.Group("sensors/api")
 	controlAPI := r.Group("controls/api")
 

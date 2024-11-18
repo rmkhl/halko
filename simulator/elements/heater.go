@@ -28,7 +28,7 @@ func (h *Heater) Tick() {
 
 	_, isOn := h.power.CycleInfo()
 	if isOn {
-		h.temperature = h.temperature + 0.1
+		h.temperature += 0.1
 		return
 	}
 	h.temperature = max(h.minTemp, h.temperature-0.01)

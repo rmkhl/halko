@@ -1,17 +1,17 @@
-package types
+package engine
 
 type (
 	Cycle struct {
-		percentage int
+		percentage uint8
 		ticks      [10]bool
 	}
 )
 
-func NewCycle(percentage int) *Cycle {
+func NewCycle(percentage uint8) *Cycle {
 	sc := Cycle{percentage: percentage}
 
 	for i := 0; i < 10; i++ {
-		sc.ticks[i] = i*10 < percentage
+		sc.ticks[i] = uint8(i*10) < percentage
 	}
 	return &sc
 }
