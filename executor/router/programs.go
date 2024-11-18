@@ -55,10 +55,8 @@ func getProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 		state, updated_at, _ := storage.LoadState(programName)
 		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutedProgram]{
 			Data: types.ExecutedProgram{
-				Program:     *program,
-				State:       state,
-				CompletedAt: updated_at,
-				StartedAt:   startTimeFromName(programName),
+				SavedProgram: types.SavedProgram{State: state, CompletedAt: updated_at, StartedAt: startTimeFromName(programName)},
+				Program:      *program,
 			},
 		})
 	}

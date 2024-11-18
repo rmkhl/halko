@@ -28,6 +28,11 @@ type (
 		CompletedAt int64        `json:"completed_at,omitempty"`
 	}
 
+	ExecutedProgram struct {
+		SavedProgram
+		Program Program `json:"program"`
+	}
+
 	ProgramListing struct {
 		Programs []SavedProgram `json:"programs"`
 	}
