@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/rmkhl/halko/types"
@@ -12,14 +13,14 @@ import (
 
 type (
 	ExecutionLogWriter struct {
-		storage     *ProgramStorage
-		name        string
-		file        *os.File
-		csvWriter   *csv.Writer
-		resolution  int64
-		started_at  int64
-		last_update int64
-		last_step   string
+		storage    *ProgramStorage
+		name       string
+		file       *os.File
+		csvWriter  *csv.Writer
+		resolution int64
+		startedAt  int64
+		lastUpdate int64
+		lastStep   string
 	}
 )
 
@@ -30,16 +31,16 @@ func NewExecutionLogWriter(storage *ProgramStorage, name string, resolution int6
 		return nil
 	}
 	writer := ExecutionLogWriter{
-		storage:     storage,
-		name:        name,
-		file:        logFile,
-		csvWriter:   csv.NewWriter(logFile),
-		resolution:  resolution,
-		last_update: 0,
-		last_step:   "",
-		started_at:  time.Now().Unix(),
+		storage:    storage,
+		name:       name,
+		file:       logFile,
+		csvWriter:  csv.NewWriter(logFile),
+		resolution: resolution,
+		lastUpdate: 0,
+		lastStep:   "",
+		startedAt:  time.Now().Unix(),
 	}
-	writer.csvWriter.Write([]string{
+	_ = writer.csvWriter.Write([]string{
 		"time",
 		"step",
 		"steptime",
@@ -61,22 +62,22 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		return
 	}
 	now := time.Now().Unix()
-	if now-writer.last_update > writer.resolution && status.CurrentStep == writer.last_step {
+	if now-writer.lastUpdate > writer.resolution && status.CurrentStep == writer.lastStep {
 		return
 	}
-	writer.csvWriter.Write([]string{
-		fmt.Sprintf("%d", now-writer.started_at),
+	_ = writer.csvWriter.Write([]string{
+		strconv.FormatInt(now-writer.startedAt, 10),
 		status.CurrentStep,
-		fmt.Sprintf("%d", now-status.CurrentStepStartedAt),
-		fmt.Sprintf("%g", status.Temperatures.Material),
-		fmt.Sprintf("%g", status.Temperatures.Oven),
-		fmt.Sprintf("%d", status.PowerStatus.Heater),
-		fmt.Sprintf("%d", status.PowerStatus.Fan),
-		fmt.Sprintf("%d", status.PowerStatus.Humidifier),
+		strconv.FormatInt(now-status.CurrentStepStartedAt, 10),
+		fmt.Sprintf("%f", float64(status.Temperatures.Material)),
+		fmt.Sprintf("%f", float64(status.Temperatures.Oven)),
+		strconv.Itoa(int(status.PowerStatus.Heater)),
+		strconv.Itoa(int(status.PowerStatus.Fan)),
+		strconv.Itoa(int(status.PowerStatus.Humidifier)),
 	})
 	writer.csvWriter.Flush()
-	writer.last_update = now
-	writer.last_step = status.CurrentStep
+	writer.lastUpdate = now
+	writer.lastStep = status.CurrentStep
 }
 
 func (writer *ExecutionLogWriter) Close() {

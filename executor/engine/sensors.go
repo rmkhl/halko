@@ -45,7 +45,7 @@ type (
 
 	sensorReader struct {
 		client    *http.Client
-		sensorURl string
+		sensorURL string
 		commands  <-chan string
 	}
 
@@ -63,7 +63,7 @@ type (
 func (controller *temperatureSensorReader) readTemperatures() (*temperatureReadings, error) {
 	var dataResponse temperatureResponse
 
-	request, err := http.NewRequest("GET", controller.sensorURl, nil)
+	request, err := http.NewRequest("GET", controller.sensorURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func newTemperatureSensorReader(url string, commands <-chan string, responses ch
 	controller := temperatureSensorReader{
 		sensorReader: sensorReader{
 			client:    &http.Client{},
-			sensorURl: url,
+			sensorURL: url,
 			commands:  commands,
 		},
 		runner: responses,
@@ -118,7 +118,7 @@ func newTemperatureSensorReader(url string, commands <-chan string, responses ch
 func (controller *psuSensorReader) readSensors() (*psuReadings, error) {
 	var dataResponse PowerStatusResponse
 
-	request, err := http.NewRequest("GET", controller.sensorURl, nil)
+	request, err := http.NewRequest("GET", controller.sensorURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func newPSUSensorReader(url string, commands <-chan string, responses chan<- psu
 	controller := psuSensorReader{
 		sensorReader: sensorReader{
 			client:    &http.Client{},
-			sensorURl: url,
+			sensorURL: url,
 			commands:  commands,
 		},
 		runner: responses,

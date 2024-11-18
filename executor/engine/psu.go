@@ -25,14 +25,14 @@ type (
 
 	psuController struct {
 		client          *http.Client
-		powerControlURl string
+		powerControlURL string
 	}
 )
 
 func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURl: config.PowerControlURl,
+		powerControlURL: config.PowerControlURL,
 	}, nil
 }
 
@@ -54,7 +54,7 @@ func (p *psuController) setPower(psu string, percentage int) {
 		log.Printf("Error marshalling power command: %v\n", err)
 		return
 	}
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/%s", p.powerControlURl, psu), bytes.NewBuffer(cmd))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/%s", p.powerControlURL, psu), bytes.NewBuffer(cmd))
 	if err != nil {
 		log.Printf("Error creating request: %v\n", err)
 		return

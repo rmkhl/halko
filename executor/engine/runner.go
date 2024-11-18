@@ -48,13 +48,13 @@ func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStor
 		programStatus:              &types.ExecutionStatus{Program: *program},
 	}
 
-	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURl, runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURL, runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(config.TemperatureSensorURl, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader(config.TemperatureSensorURL, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}
