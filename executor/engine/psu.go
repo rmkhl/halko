@@ -66,6 +66,8 @@ func (p *psuController) setPower(psu string, percentage int) {
 		return
 	}
 
+	defer response.Body.Close()
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Printf("Error reading response: %v\n", err)

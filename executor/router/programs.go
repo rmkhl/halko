@@ -21,11 +21,11 @@ func listAllPrograms(storage *storage.ProgramStorage) gin.HandlerFunc {
 		}
 
 		for _, programName := range programs {
-			state, updated_at, _ := storage.LoadState(programName)
+			state, updatedAt, _ := storage.LoadState(programName)
 			savedPrograms = append(savedPrograms, types.SavedProgram{
 				Name:        programName,
 				State:       state,
-				CompletedAt: updated_at,
+				CompletedAt: updatedAt,
 				StartedAt:   startTimeFromName(programName),
 			})
 		}
@@ -52,10 +52,10 @@ func getProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
-		state, updated_at, _ := storage.LoadState(programName)
+		state, updatedAt, _ := storage.LoadState(programName)
 		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutedProgram]{
 			Data: types.ExecutedProgram{
-				SavedProgram: types.SavedProgram{State: state, CompletedAt: updated_at, StartedAt: startTimeFromName(programName)},
+				SavedProgram: types.SavedProgram{State: state, CompletedAt: updatedAt, StartedAt: startTimeFromName(programName)},
 				Program:      *program,
 			},
 		})

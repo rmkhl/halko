@@ -46,7 +46,7 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 		return ErrProgramAlreadyRunning
 	}
 
-	runner, err := newRunner(engine.config, engine.storage, program)
+	runner, err := newProgramRunner(engine.config, engine.storage, program)
 	if err != nil {
 		return err
 	}
