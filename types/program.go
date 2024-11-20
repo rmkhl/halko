@@ -15,7 +15,7 @@ type (
 	StepType string
 
 	PowerSetting struct {
-		Power int8 `json:"power"`
+		Power uint8 `json:"power"`
 	}
 
 	PidSettings struct {
@@ -50,10 +50,10 @@ func (p *ProgramStep) Validate() error {
 	// Do some rudimentary validation for different step types, purposefully not "optimized" for code brevity
 	//
 	// For all steps the power setting for the fan and humidifier must be set between 0 and 100.
-	if p.Fan.Power < 0 || p.Fan.Power > 100 {
+	if p.Fan.Power > 100 {
 		return errors.New("fan power must be between 0 and 100")
 	}
-	if p.Humidifier.Power < 0 || p.Humidifier.Power > 100 {
+	if p.Humidifier.Power > 100 {
 		return errors.New("humidifier power must be between 0 and 100")
 	}
 

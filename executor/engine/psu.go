@@ -20,7 +20,7 @@ const (
 type (
 	PowerCommand struct {
 		Command PowerStatus `json:"command"`
-		Percent int         `json:"percent,omitempty"`
+		Percent uint8       `json:"percent,omitempty"`
 	}
 
 	psuController struct {
@@ -36,7 +36,7 @@ func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
 	}, nil
 }
 
-func newPSUCommand(percentage int) *PowerCommand {
+func newPSUCommand(percentage uint8) *PowerCommand {
 	cmd := PowerCommand{
 		Percent: percentage,
 	}
@@ -48,7 +48,7 @@ func newPSUCommand(percentage int) *PowerCommand {
 	return &cmd
 }
 
-func (p *psuController) setPower(psu string, percentage int) {
+func (p *psuController) setPower(psu string, percentage uint8) {
 	cmd, err := json.Marshal(newPSUCommand(percentage))
 	if err != nil {
 		log.Printf("Error marshalling power command: %v\n", err)

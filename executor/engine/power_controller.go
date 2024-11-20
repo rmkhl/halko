@@ -56,6 +56,13 @@ func (c *PidController) Reset() {
 	c.State = PidControllerState{}
 }
 
+// Simple constant power controller, basically used to control the fan and the humidifier.
+func newConstantPowerController(power uint8) *PowerController {
+	return &PowerController{
+		ConstantPower: power,
+	}
+}
+
 // New power controller with the given configuration and settings. If the Power is set to non zero value, the PID settings are ignored.
 func NewPowerController(targetTemperature float64, settings *types.PowerPidSettings, defaultPidSettings *types.PidSettings) *PowerController {
 	// Use default pid values is none are defined in the settings

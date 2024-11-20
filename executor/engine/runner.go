@@ -35,6 +35,8 @@ type (
 		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
 		psuStatus         fsmPSUStatus
 		temperatureStatus fsmTemperatures
+
+		pidDefaults *map[types.StepType]*types.PidSettings
 	}
 )
 
@@ -48,6 +50,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 		psuSensorResponses:         make(chan psuReadings),
 		currentProgram:             program,
 		programStatus:              &types.ExecutionStatus{Program: *program},
+		pidDefaults:                &config.PidSettings,
 	}
 
 	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURL, runner.psuSensorCommands, runner.psuSensorResponses)
@@ -66,7 +69,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 		return nil, err
 	}
 
-	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus)
+	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = programStorage.CreateProgram(programName, program)
@@ -87,6 +90,7 @@ func (runner *programRunner) Run() {
 	defer runner.wg.Done()
 
 	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
+	runner.fsmController.Start(runner.currentProgram)
 	for runner.active && !runner.fsmController.Completed() {
 		defer ticker.Stop()
 		now := time.Now().Unix()
@@ -98,7 +102,7 @@ func (runner *programRunner) Run() {
 			if now-runner.psuStatus.updated > 30 {
 				runner.psuSensorCommands <- sensorRead
 			}
-			runner.fsmController.executeStep()
+			runner.fsmController.executeTick()
 		case psuState := <-runner.psuSensorResponses:
 			runner.psuStatus.updated = time.Now().Unix()
 			runner.psuStatus.reading = psuState
@@ -136,6 +140,7 @@ func (runner *programRunner) Start() {
 	runner.wg.Add(3)
 	go runner.psuSensorReader.Run(runner.wg)
 	go runner.temperatureSensorReader.Run(runner.wg)
-	runner.fsmController.Reset(runner.currentProgram)
+
+	runner.fsmController.Start(runner.currentProgram)
 	go runner.Run()
 }
