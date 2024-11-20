@@ -1,7 +1,22 @@
 {
-  "base_path": "/home/mte/tmp/halko",
-  "tick_length": 6000,
-  "temperature_sensor_url": "http://localhost:8088/sensors/api/v1/temperatures",
-  "power_sensor_url": "http://localhost:8088/sensors/api/v1/powers",
-  "power_control_url": "http://localhost:8088/controls/api/v1/powers"
+  "executor": {
+    "base_path": "/home/mte/tmp/halko",
+    "tick_length": 6000,
+    "temperature_sensor_url": "http://localhost:8088/sensors/api/v1/temperatures",
+    "power_sensor_url": "http://localhost:8088/sensors/api/v1/powers",
+    "power_control_url": "http://localhost:8088/controls/api/v1/powers",
+    "pid_settings": {
+      "acclimate": {
+        "kp": 2.0,
+        "ki": 1.0,
+        "kd": 0.5
+      },
+      "cooling": null,
+      "heating": {
+        "kp": 2.0,
+        "ki": 1.0,
+        "kd": 0.5
+      }
+    }
+  }
 }

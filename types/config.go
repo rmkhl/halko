@@ -8,11 +8,12 @@ import (
 
 type (
 	ExecutorConfig struct {
-		BasePath             string `json:"base_path"`
-		TickLength           int    `json:"tick_length"`
-		TemperatureSensorURL string `json:"temperature_sensor_url"`
-		PowerSensorURL       string `json:"power_sensor_url"`
-		PowerControlURL      string `json:"power_control_url"`
+		BasePath             string                    `json:"base_path"`
+		TickLength           int                       `json:"tick_length"`
+		TemperatureSensorURL string                    `json:"temperature_sensor_url"`
+		PowerSensorURL       string                    `json:"power_sensor_url"`
+		PowerControlURL      string                    `json:"power_control_url"`
+		PidSettings          map[StepType]*PidSettings `json:"pid_settings"`
 	}
 
 	HalkoConfig struct {
