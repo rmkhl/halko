@@ -1,4 +1,4 @@
-package types
+package engine
 
 type PowerManager interface {
 	TurnOn(cycle *Cycle)

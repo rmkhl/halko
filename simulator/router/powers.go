@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhl/halko/simulator/types"
+	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/types"
 )
 
-func statusAllPowers(powers map[string]types.PowerSensor) gin.HandlerFunc {
+func statusAllPowers(powers map[string]engine.PowerSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		resp := make(types.PowerStatusResponse)
 		for name, power := range powers {
@@ -22,7 +23,7 @@ func statusAllPowers(powers map[string]types.PowerSensor) gin.HandlerFunc {
 	}
 }
 
-func statusPower(powers map[string]types.PowerSensor) gin.HandlerFunc {
+func statusPower(powers map[string]engine.PowerSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		powerName, _ := ctx.Params.Get("power")
 		power, known := powers[powerName]
@@ -39,7 +40,7 @@ func statusPower(powers map[string]types.PowerSensor) gin.HandlerFunc {
 	}
 }
 
-func operatePower(powers map[string]types.PowerManager) gin.HandlerFunc {
+func operatePower(powers map[string]engine.PowerManager) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var command types.PowerCommand
 
@@ -55,7 +56,7 @@ func operatePower(powers map[string]types.PowerManager) gin.HandlerFunc {
 
 		switch command.Command {
 		case types.PowerOn:
-			power.TurnOn(types.NewCycle(command.Percent))
+			power.TurnOn(engine.NewCycle(command.Percent))
 		case types.PowerOff:
 			power.TurnOff()
 		default:

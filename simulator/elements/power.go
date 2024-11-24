@@ -1,23 +1,23 @@
 package elements
 
 import (
-	"github.com/rmkhl/halko/simulator/types"
+	"github.com/rmkhl/halko/simulator/engine"
 )
 
 type (
 	Power struct {
 		name  string
-		power *types.Power
+		power *engine.Power
 	}
 )
 
 func NewPower(name string) *Power {
-	p := Power{name: name, power: new(types.Power)}
+	p := Power{name: name, power: new(engine.Power)}
 	return &p
 }
 
 // Implement PowerManager interface.
-func (h *Power) TurnOn(cycle *types.Cycle) {
+func (h *Power) TurnOn(cycle *engine.Cycle) {
 	h.power.Start(cycle)
 }
 
@@ -25,7 +25,7 @@ func (h *Power) TurnOff() {
 	h.power.Stop()
 }
 
-func (h *Power) SwitchTo(cycle *types.Cycle) {
+func (h *Power) SwitchTo(cycle *engine.Cycle) {
 	h.power.UpdateCycle(cycle)
 }
 
@@ -38,7 +38,7 @@ func (h *Power) Name() string {
 	return h.name
 }
 
-func (h *Power) CurrentCycle() int {
+func (h *Power) CurrentCycle() uint8 {
 	percentage, _ := h.power.CycleInfo()
 
 	return percentage

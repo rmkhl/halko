@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhl/halko/simulator/types"
+	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/types"
 )
 
-func readAllTemperatureSensors(sensors map[string]types.TemperatureSensor) gin.HandlerFunc {
+func readAllTemperatureSensors(sensors map[string]engine.TemperatureSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		resp := make(types.TemperatureResponse)
 		for name, sensor := range sensors {
@@ -18,7 +19,7 @@ func readAllTemperatureSensors(sensors map[string]types.TemperatureSensor) gin.H
 	}
 }
 
-func readTemperatureSensor(sensors map[string]types.TemperatureSensor) gin.HandlerFunc {
+func readTemperatureSensor(sensors map[string]engine.TemperatureSensor) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		sensorName, _ := ctx.Params.Get("sensor")
 		sensor, known := sensors[sensorName]

@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
@@ -20,23 +20,23 @@ const (
 type (
 	PowerCommand struct {
 		Command PowerStatus `json:"command"`
-		Percent int         `json:"percent,omitempty"`
+		Percent uint8       `json:"percent,omitempty"`
 	}
 
 	psuController struct {
 		client          *http.Client
-		powerControlURl string
+		powerControlURL string
 	}
 )
 
 func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURl: config.PowerControlURl,
+		powerControlURL: config.PowerControlURL,
 	}, nil
 }
 
-func newPSUCommand(percentage int) *PowerCommand {
+func newPSUCommand(percentage uint8) *PowerCommand {
 	cmd := PowerCommand{
 		Percent: percentage,
 	}
@@ -48,13 +48,13 @@ func newPSUCommand(percentage int) *PowerCommand {
 	return &cmd
 }
 
-func (p *psuController) setPower(psu string, percentage int) {
+func (p *psuController) setPower(psu string, percentage uint8) {
 	cmd, err := json.Marshal(newPSUCommand(percentage))
 	if err != nil {
 		log.Printf("Error marshalling power command: %v\n", err)
 		return
 	}
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/%s", p.powerControlURl, psu), bytes.NewBuffer(cmd))
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/%s", p.powerControlURL, psu), bytes.NewBuffer(cmd))
 	if err != nil {
 		log.Printf("Error creating request: %v\n", err)
 		return
@@ -65,6 +65,8 @@ func (p *psuController) setPower(psu string, percentage int) {
 		log.Printf("Error sending request: %v\n", err)
 		return
 	}
+
+	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {

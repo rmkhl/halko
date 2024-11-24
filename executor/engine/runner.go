@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
@@ -20,8 +20,7 @@ type (
 	programRunner struct {
 		active                     bool
 		wg                         *sync.WaitGroup
-		currentProgram             *CurrentProgram
-		fsmCommands                chan string
+		currentProgram             *types.Program
 		fsmController              *programFSMController
 		psuSensorCommands          chan string
 		psuSensorResponses         chan psuReadings
@@ -29,32 +28,38 @@ type (
 		temperatureSensorCommands  chan string
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
-		programStatus              *types.ProgramStatus
+		programStatus              *types.ExecutionStatus
 		statusWriter               *storage.StateWriter
 		logWriter                  *storage.ExecutionLogWriter
+		// Note, we rely on the fact that the runner is the only one updating these and fsmController
+		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
+		psuStatus         fsmPSUStatus
+		temperatureStatus fsmTemperatures
+
+		pidDefaults *map[types.StepType]*types.PidSettings
 	}
 )
 
-func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStorage, program *types.Program) (*programRunner, error) {
+func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStorage, program *types.Program) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
-		currentProgram:             newCurrentProgram(program),
 		temperatureSensorCommands:  make(chan string),
 		temperatureSensorResponses: make(chan temperatureReadings),
 		psuSensorCommands:          make(chan string),
 		psuSensorResponses:         make(chan psuReadings),
-		fsmCommands:                make(chan string),
-		programStatus:              &types.ProgramStatus{Program: *program},
+		currentProgram:             program,
+		programStatus:              &types.ExecutionStatus{Program: *program},
+		pidDefaults:                &config.PidSettings,
 	}
 
-	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURl, runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURL, runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(config.TemperatureSensorURl, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader(config.TemperatureSensorURL, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +69,7 @@ func newRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStor
 		return nil, err
 	}
 
-	runner.fsmController = newProgramFSMController(psuController, runner.fsmCommands)
+	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = programStorage.CreateProgram(programName, program)
@@ -84,31 +89,26 @@ func (runner *programRunner) Run() {
 	ticker := time.NewTicker(6000 * time.Millisecond)
 	defer runner.wg.Done()
 
-	runner.statusWriter.UpdateState(types.ProgramStateRunning)
+	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
+	runner.fsmController.Start(runner.currentProgram)
 	for runner.active && !runner.fsmController.Completed() {
 		defer ticker.Stop()
 		now := time.Now().Unix()
 		select {
 		case <-ticker.C:
-			runner.currentProgram.mutex.RLock()
-			if now-runner.currentProgram.temperatures.updated > 30 {
+			if now-runner.temperatureStatus.updated > 30 {
 				runner.temperatureSensorCommands <- sensorRead
 			}
-			if now-runner.currentProgram.psuStatus.updated > 30 {
+			if now-runner.psuStatus.updated > 30 {
 				runner.psuSensorCommands <- sensorRead
 			}
-			runner.currentProgram.mutex.RUnlock()
-			runner.fsmCommands <- programStep
+			runner.fsmController.executeTick()
 		case psuState := <-runner.psuSensorResponses:
-			runner.currentProgram.mutex.Lock()
-			runner.currentProgram.psuStatus.updated = time.Now().Unix()
-			runner.currentProgram.psuStatus.reading = psuState
-			runner.currentProgram.mutex.Unlock()
+			runner.psuStatus.updated = time.Now().Unix()
+			runner.psuStatus.reading = psuState
 		case temperatures := <-runner.temperatureSensorResponses:
-			runner.currentProgram.mutex.Lock()
-			runner.currentProgram.temperatures.updated = time.Now().Unix()
-			runner.currentProgram.temperatures.reading = temperatures
-			runner.currentProgram.mutex.Unlock()
+			runner.temperatureStatus.updated = time.Now().Unix()
+			runner.temperatureStatus.reading = temperatures
 		}
 		// Update program status
 		runner.fsmController.UpdateStatus(runner.programStatus)
@@ -116,15 +116,15 @@ func (runner *programRunner) Run() {
 	}
 	if runner.fsmController.Completed() {
 		if runner.fsmController.Failed() {
-			runner.statusWriter.UpdateState(types.ProgramStateFailed)
+			_ = runner.statusWriter.UpdateState(types.ProgramStateFailed)
 		} else {
-			runner.statusWriter.UpdateState(types.ProgramStateCompleted)
+			_ = runner.statusWriter.UpdateState(types.ProgramStateCompleted)
 		}
 	} else {
-		runner.statusWriter.UpdateState(types.ProgramStateCanceled)
+		_ = runner.statusWriter.UpdateState(types.ProgramStateCanceled)
 	}
 	runner.logWriter.Close()
-	runner.fsmCommands <- programDone
+	runner.fsmController.shutdown()
 	runner.psuSensorCommands <- controllerDone
 	runner.temperatureSensorCommands <- controllerDone
 }
@@ -137,9 +137,10 @@ func (runner *programRunner) Stop() {
 
 func (runner *programRunner) Start() {
 	runner.active = true
-	runner.wg.Add(4)
+	runner.wg.Add(3)
 	go runner.psuSensorReader.Run(runner.wg)
 	go runner.temperatureSensorReader.Run(runner.wg)
-	go runner.fsmController.Run(runner.wg, runner.currentProgram)
+
+	runner.fsmController.Start(runner.currentProgram)
 	go runner.Run()
 }

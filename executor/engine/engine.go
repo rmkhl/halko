@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/rmkhl/halko/executor/storage"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 type (
@@ -33,7 +33,7 @@ func NewEngine(config *types.ExecutorConfig, storage *storage.ProgramStorage) *C
 	return &engine
 }
 
-func (engine *ControlEngine) CurrentStatus() *types.ProgramStatus {
+func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
 	if engine.runner == nil {
 		return nil
 	}
@@ -46,7 +46,7 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 		return ErrProgramAlreadyRunning
 	}
 
-	runner, err := newRunner(engine.config, engine.storage, program)
+	runner, err := newProgramRunner(engine.config, engine.storage, program)
 	if err != nil {
 		return err
 	}

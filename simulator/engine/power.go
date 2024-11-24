@@ -1,4 +1,4 @@
-package types
+package engine
 
 import (
 	"sync"
@@ -77,7 +77,7 @@ func (p *Power) IsRunning() bool {
 	return p.current != nil
 }
 
-func (p *Power) CycleInfo() (percentage int, tick bool) {
+func (p *Power) CycleInfo() (percentage uint8, tick bool) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 

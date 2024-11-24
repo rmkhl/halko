@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/engine"
-	"github.com/rmkhl/halko/executor/types"
+	"github.com/rmkhl/halko/types"
 )
 
 func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {
@@ -16,7 +16,7 @@ func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {
 			ctx.JSON(http.StatusNoContent, types.APIErrorResponse{Err: "No program running"})
 			return
 		}
-		ctx.JSON(http.StatusOK, types.APIResponse[types.ProgramStatus]{Data: *currentStatus})
+		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutionStatus]{Data: *currentStatus})
 	}
 }
 

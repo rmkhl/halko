@@ -1,4 +1,4 @@
-package types
+package engine
 
 type TemperatureSensor interface {
 	Temperature() float32
@@ -7,5 +7,5 @@ type TemperatureSensor interface {
 type PowerSensor interface {
 	IsOn() bool
 	Name() string
-	CurrentCycle() int
+	CurrentCycle() uint8
 }
