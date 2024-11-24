@@ -1,52 +1,53 @@
 import { Slider, Typography } from "@mui/material";
 import React from "react";
-import { celsius, celsiusRange } from "../../util";
+import { celsius } from "../../util";
 
 interface Props {
   editing?: boolean;
   title: string;
-  low: number;
-  high: number;
-  onChange: (low: number, high: number) => void;
+  value: number;
+  onChange: (value: number) => void;
+  range?: [number, number];
 }
 
 export const TemperatureRangeSlider: React.FC<Props> = (props) => {
-  const { editing, title, low, high, onChange } = props;
+  const { editing, title, value, onChange, range = [100, 250] } = props;
+  const [min, max] = range;
+
+  const rangeMarks = new Array(Math.floor((max - min) / 25))
+    .fill(min)
+    .map((v, i) => {
+      const value = v + i * 25;
+      return { value, label: celsius(value) };
+    });
 
   const handleChange = (
     _: Event,
     newValue: number | number[],
     activeThumb: number
   ) => {
-    if (!Array.isArray(newValue)) {
+    if (Array.isArray(newValue)) {
       return;
     }
 
-    let [newLow, newHigh] = newValue as number[];
-    const aboveChanged = activeThumb === 0;
+    let newVal = newValue as number;
 
-    if (aboveChanged) {
-      newLow = Math.min(newLow, high - minDistance);
-    } else {
-      newHigh = Math.max(newHigh, low + minDistance);
-    }
-
-    onChange(newLow, newHigh);
+    onChange(newVal);
   };
 
   return (
     <>
       <Typography>
-        {title}: {celsiusRange(low, high)}
+        {title}: {celsius(value)}
       </Typography>
 
       <Slider
-        value={[low, high]}
+        value={value}
         step={1}
         getAriaValueText={celsius}
         marks={rangeMarks}
-        max={180}
-        min={0}
+        max={max}
+        min={min}
         valueLabelDisplay="auto"
         onChange={handleChange}
         disableSwap
@@ -55,40 +56,3 @@ export const TemperatureRangeSlider: React.FC<Props> = (props) => {
     </>
   );
 };
-
-const rangeMarks = [
-  {
-    value: 0,
-    label: "0°C",
-  },
-  {
-    value: 20,
-    label: "25°C",
-  },
-  {
-    value: 50,
-    label: "50°C",
-  },
-  {
-    value: 75,
-    label: "75°C",
-  },
-  {
-    value: 100,
-    label: "100°C",
-  },
-  {
-    value: 125,
-    label: "125°C",
-  },
-  {
-    value: 150,
-    label: "150°C",
-  },
-  {
-    value: 175,
-    label: "175°C",
-  },
-];
-
-const minDistance = 5;

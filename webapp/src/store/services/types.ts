@@ -8,7 +8,7 @@ import {
 
 export type reducerPath = "configuratorApi" | "executorApi";
 
-export type EntityType = "phases" | "programs" | "runningProgram";
+export type EntityType = "programs" | "runningProgram";
 
 export type ApiBuilder = EndpointBuilder<
   BaseQueryFn<
@@ -31,5 +31,5 @@ export type ApiBaseQueryFunc = BaseQueryFn<
 >;
 
 export interface Entity {
-  id: string;
+  name: string;
 }

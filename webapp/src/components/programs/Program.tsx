@@ -1,5 +1,12 @@
 import React, { useMemo } from "react";
-import { Program as ApiProgram } from "../../types/api";
+import {
+  defaultHeatingStep,
+  defaultProgram,
+  Step as ApiStep,
+  defaultAcclimateStep,
+  defaultCoolingStep,
+  UIProgram,
+} from "../../types/api";
 import { setEditProgram } from "../../store/features/programsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { NameComponent } from "../form";
@@ -9,14 +16,14 @@ import {
   useSaveProgramMutation,
 } from "../../store/services";
 import { validName } from "../../util";
-import { emptyProgram } from "./templates";
 import { useFormData } from "../../hooks/useFormData";
 import { DataForm } from "../form/DataForm";
 import { useTranslation } from "react-i18next";
-import { Steps } from "./Steps";
-import { TimeComponent } from "../form/TimeComponent";
+import { HeatingStep } from "./HeatingStep";
+import { AcclimateStep } from "./AcclimateStep";
+import { CoolingStep } from "./CoolingStep";
 
-const normalize = (program: ApiProgram): ApiProgram => {
+const normalize = (program: UIProgram): UIProgram => {
   const cpy = { ...program };
   cpy.name = cpy.name.trim();
 
@@ -26,11 +33,11 @@ const normalize = (program: ApiProgram): ApiProgram => {
 export const Program: React.FC = () => {
   const { data } = useGetProgramsQuery();
   const [saveProgram, { isSuccess }] = useSaveProgramMutation();
-  const editProgram = useSelector(
-    (state: RootState) => state.programs.editRecord
-  );
+  const editProgram =
+    useSelector((state: RootState) => state.programs.editRecord) ||
+    defaultProgram();
 
-  const programs = useMemo(() => data as ApiProgram[], [data]);
+  const programs = useMemo(() => data as UIProgram[], [data]);
 
   const { t } = useTranslation();
 
@@ -43,7 +50,7 @@ export const Program: React.FC = () => {
     handleSave,
   } = useFormData({
     allData: programs,
-    defaultData: emptyProgram(),
+    defaultData: defaultProgram(),
     editData: editProgram,
     rootPath: "/programs",
     normalizeData: normalize,
@@ -55,7 +62,7 @@ export const Program: React.FC = () => {
   const dispatch = useDispatch();
 
   const updateEdited =
-    <Key extends keyof ApiProgram, Value extends ApiProgram[Key]>(field: Key) =>
+    <Key extends keyof UIProgram, Value extends UIProgram[Key]>(field: Key) =>
     (value: Value) => {
       if (editProgram) {
         dispatch(setEditProgram({ ...editProgram, [field]: value }));
@@ -70,18 +77,10 @@ export const Program: React.FC = () => {
       return false;
     }
 
-    const { name, steps } = editProgram;
+    const { name } = editProgram;
 
     if (nameUsed || !validName(name, ["new", "latest", "current"]))
       return false;
-
-    if (!steps.length) return false;
-
-    for (const step of steps) {
-      if (!step.fan || !step.heater || !step.humidifier) {
-        return false;
-      }
-    }
 
     return true;
   }, [editProgram]);
@@ -100,26 +99,19 @@ export const Program: React.FC = () => {
         handleChange={updateName}
       />
 
-      <TimeComponent
-        editing={editing}
-        title={t("programs.defaultStepRuntime")}
-        value={
-          editing ? editProgram?.defaultStepRuntime : program.defaultStepRuntime
-        }
-        onChange={updateEdited("defaultStepRuntime")}
+      <HeatingStep
+        step={editing ? editProgram?.heatingStep : program.heatingStep}
+        onChange={updateEdited("heatingStep")}
       />
 
-      <TimeComponent
-        editing={editing}
-        title={t("programs.preheatTo")}
-        value={editing ? editProgram?.preheatTo : program.preheatTo}
-        onChange={updateEdited("preheatTo")}
+      <AcclimateStep
+        step={editing ? editProgram?.acclimateStep : program.acclimateStep}
+        onChange={updateEdited("acclimateStep")}
       />
 
-      <Steps
-        editing={editing}
-        steps={editing ? editProgram?.steps : program.steps}
-        onChange={updateEdited("steps")}
+      <CoolingStep
+        step={editing ? editProgram?.coolingStep : program.coolingStep}
+        onChange={updateEdited("coolingStep")}
       />
     </DataForm>
   );

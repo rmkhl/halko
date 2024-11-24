@@ -9,36 +9,21 @@ import { PhaseSelector } from "./PhaseSelector";
 import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 
-interface Position {
-  idx: number;
-  isLast: boolean;
-}
-
 interface Props extends Omit<StackProps, "onChange"> {
   editing?: boolean;
   step: ApiStep;
-  pos: Position;
-  onChange: (step: ApiStep, idx: number) => void;
+  onChange: (step: ApiStep) => void;
 }
 
 export const Step: React.FC<Props> = (props) => {
-  const { editing, step, onChange: updateStep, pos, ...rest } = props;
-  const {
-    name,
-    timeConstraint,
-    temperatureConstraint,
-    heater,
-    fan,
-    humidifier,
-  } = step;
+  const { editing, step, onChange: updateStep, ...rest } = props;
+  const { name, step_type, heater, fan, humidifier } = step;
   const { t } = useTranslation();
 
   const handleChange =
     <Key extends keyof ApiStep, Value extends ApiStep[Key]>(key: Key) =>
     (value: Value) =>
-      updateStep({ ...step, [key]: value }, pos.idx);
-
-  const handleNudge = (newIdx: number) => updateStep({ ...step }, newIdx);
+      updateStep({ ...step, [key]: value });
 
   return (
     <Stack gap={3} direction="row" {...rest}>

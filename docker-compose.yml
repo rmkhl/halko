@@ -3,10 +3,9 @@ services:
     build:
       context: ./configurator
       dockerfile: Dockerfile
-    working_dir: /configurator
+    working_dir: /app/configurator
     volumes:
-      - ./configurator:/configurator
-      - ./fsdb:/fsdb
+      - .:/app
     ports:
       - "8080:8080"
     restart: unless-stopped

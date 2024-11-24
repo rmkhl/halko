@@ -9,25 +9,23 @@ import (
 	"strings"
 
 	"github.com/rmkhl/halko/configurator/database"
-	"github.com/rmkhl/halko/configurator/domain"
 	"github.com/rmkhl/halko/configurator/utils"
+	"github.com/rmkhl/halko/types"
 )
 
 const (
-	basePath = "/fsdb"
+	basePath = "/app/fsdb"
 )
 
 type entity string
 
 const (
-	ePhases   entity = "phases"
 	ePrograms entity = "programs"
 	eError    entity = "error"
 )
 
 func New() *database.Interface {
 	return &database.Interface{
-		Phases:   &phases{},
 		Programs: &programs{},
 	}
 }
@@ -85,7 +83,8 @@ func save(name string, o Object) (any, error) {
 		return nil, err
 	}
 
-	if err = os.WriteFile(filenameByName(e, o.name()), data, 0664); err != nil {
+	fn := filenameByName(e, o.name())
+	if err = os.WriteFile(fn, data, 0664); err != nil {
 		return nil, err
 	}
 
@@ -139,9 +138,7 @@ func transformError(err error) error {
 
 func entityForType(t any) (entity, bool) {
 	switch t.(type) {
-	case *domain.Phase, *phase:
-		return ePhases, true
-	case *domain.Program, *program:
+	case *types.Program, *program:
 		return ePrograms, true
 	default:
 		return eError, false

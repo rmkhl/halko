@@ -3,34 +3,34 @@ package filesystem
 import (
 	"encoding/json"
 
-	"github.com/rmkhl/halko/configurator/domain"
+	"github.com/rmkhl/halko/types"
 )
 
 type (
 	program struct {
-		*domain.Program
+		*types.Program
 	}
 
 	programs struct{}
 )
 
-func (p *programs) ByName(name string) (*domain.Program, error) {
+func (p *programs) ByName(name string) (*types.Program, error) {
 	prog, err := byName(name, new(program))
 	if err != nil {
 		return nil, transformError(err)
 	}
-	return runtimeCast[domain.Program](prog)
+	return runtimeCast[types.Program](prog)
 }
 
-func (p *programs) All() ([]*domain.Program, error) {
+func (p *programs) All() ([]*types.Program, error) {
 	progs, err := all(new(program))
 	if err != nil {
 		return nil, transformError(err)
 	}
-	return runtimeCastSlice[domain.Program](progs)
+	return runtimeCastSlice[types.Program](progs)
 }
 
-func (p *programs) CreateOrUpdate(name string, pp *domain.Program) (*domain.Program, error) {
+func (p *programs) CreateOrUpdate(name string, pp *types.Program) (*types.Program, error) {
 	ppp, err := save(name, &program{pp})
 	if err != nil {
 		return nil, transformError(err)
@@ -43,15 +43,15 @@ func (p *programs) CreateOrUpdate(name string, pp *domain.Program) (*domain.Prog
 }
 
 func (p *program) name() string {
-	return string(p.Name)
+	return string(p.ProgramName)
 }
 
 func (p *program) setName(name string) {
-	p.Name = domain.Name(name)
+	p.ProgramName = name
 }
 
 func (p *program) unmarshalJSON(data []byte) (any, error) {
-	var prog domain.Program
+	var prog types.Program
 
 	if err := json.Unmarshal(data, &prog); err != nil {
 		return nil, err

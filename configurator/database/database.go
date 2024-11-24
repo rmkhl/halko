@@ -3,7 +3,7 @@ package database
 import (
 	"errors"
 
-	"github.com/rmkhl/halko/configurator/domain"
+	"github.com/rmkhl/halko/types"
 )
 
 var (
@@ -13,7 +13,6 @@ var (
 )
 
 type Interface struct {
-	Phases   Phases
 	Programs Programs
 }
 
@@ -24,9 +23,5 @@ type Entity[T any] interface {
 }
 
 type Programs interface {
-	Entity[*domain.Program]
-}
-
-type Phases interface {
-	Entity[*domain.Phase]
+	Entity[*types.Program]
 }

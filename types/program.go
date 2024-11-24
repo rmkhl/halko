@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"time"
 )
 
 const (
@@ -32,9 +31,9 @@ type (
 
 	ProgramStep struct {
 		Name              string           `json:"name"`
-		StepType          StepType         `json:"type"`
+		StepType          StepType         `json:"step_type"`
 		TargetTemperature uint             `json:"temperature_target"`
-		Duration          *time.Duration   `json:"duration,omitempty"`
+		Duration          string           `json:"duration,omitempty"`
 		Heater            PowerPidSettings `json:"heater"`
 		Fan               PowerSetting     `json:"fan"`
 		Humidifier        PowerSetting     `json:"humidifier"`

@@ -1,29 +1,58 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchQuery, saveMutation } from "./queryBuilders";
+import {
+  AcclimateStep,
+  CoolingStep,
+  HeatingStep,
+  Program,
+  UIProgram,
+  defaultAcclimateStep,
+  defaultCoolingStep,
+  defaultHeatingStep,
+} from "../../types/api";
 
-const phasesTag = "phases" as const;
 const programsTag = "programs" as const;
-const phasesEndpoint = "phases";
 const programsEndpoint = "programs";
+
+const programTransformer = (p: Program): UIProgram => ({
+  name: p.name,
+  heatingStep:
+    (p.steps.find((v) => (v.step_type = "heating")) as HeatingStep) ||
+    defaultHeatingStep(),
+  acclimateStep:
+    (p.steps.find((v) => (v.step_type = "acclimate")) as AcclimateStep) ||
+    defaultAcclimateStep(),
+  coolingStep:
+    (p.steps.find((v) => (v.step_type = "cooling")) as CoolingStep) ||
+    defaultCoolingStep(),
+});
+
+const programSaveTransformer = (p: UIProgram): Program => ({
+  name: p.name,
+  steps: [p.heatingStep, p.acclimateStep, p.coolingStep],
+});
 
 export const configuratorApi = createApi({
   reducerPath: "configuratorApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:8080/api/v1",
   }),
-  tagTypes: [phasesTag, programsTag],
+  tagTypes: [programsTag],
   endpoints: (builder) => ({
-    getPhases: fetchQuery(builder, phasesEndpoint, phasesTag),
-    savePhase: saveMutation(builder, phasesEndpoint, phasesTag),
-    getPrograms: fetchQuery(builder, programsEndpoint, programsTag),
-    saveProgram: saveMutation(builder, programsEndpoint, programsTag),
+    getPrograms: fetchQuery(
+      builder,
+      programsEndpoint,
+      programTransformer,
+      programsTag
+    ),
+    saveProgram: saveMutation(
+      builder,
+      programsEndpoint,
+      programSaveTransformer,
+      programsTag
+    ),
   }),
 });
 
-export const {
-  useGetPhasesQuery,
-  useSavePhaseMutation,
-  useGetProgramsQuery,
-  useSaveProgramMutation,
-} = configuratorApi;
+export const { useGetProgramsQuery, useSaveProgramMutation } = configuratorApi;

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/configurator/database"
-	"github.com/rmkhl/halko/configurator/domain"
+	"github.com/rmkhl/halko/types"
 )
 
 func allPrograms(programs database.Programs) gin.HandlerFunc {
@@ -44,14 +44,14 @@ func program(programs database.Programs) gin.HandlerFunc {
 func createProgram(programs database.Programs) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		defer ctx.Request.Body.Close()
-		prog := domain.Program{}
+		prog := types.Program{}
 
 		if err := json.NewDecoder(ctx.Request.Body).Decode(&prog); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorJSON(err))
 			return
 		}
 
-		created, err := programs.CreateOrUpdate("", &prog)
+		created, err := programs.CreateOrUpdate(prog.ProgramName, &prog)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorJSON(err))
 			return
@@ -70,7 +70,7 @@ func updateProgram(programs database.Programs) gin.HandlerFunc {
 		}
 
 		defer ctx.Request.Body.Close()
-		prog := domain.Program{}
+		prog := types.Program{}
 
 		if err := json.NewDecoder(ctx.Request.Body).Decode(&prog); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorJSON(err))
