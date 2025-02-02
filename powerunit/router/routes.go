@@ -14,9 +14,9 @@ func setupRoutes(r *gin.Engine, p *power.Controller) {
 	powers := v1.Group("powers")
 
 	powers.GET("", statusAllPowers(p))
-	powers.GET(":power", statusPower(p))
+	powers.GET("/:power", statusPower(p))
 
-	powers.POST(":power", operatePower(p))
-	powers.PUT(":power", operatePower(p))
-	powers.PATCH(":power", operatePower(p))
+	powers.POST("/:power", operatePower(p))
+	powers.PUT("/:power", operatePower(p))
+	powers.PATCH("/:power", operatePower(p))
 }

@@ -2,7 +2,7 @@ FROM golang:1.22
 
 WORKDIR /simulator
 
-RUN go install github.com/cosmtrek/air@latest
+RUN go install github.com/air-verse/air@v1.52.3
 RUN air init
 
 # Start the back end and listen to changes in files.

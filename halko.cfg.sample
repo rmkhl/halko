@@ -19,4 +19,7 @@
       }
     }
   }
+  "power_unit": {
+    "shelly_address": "192.168.100.91"
+  }
 }

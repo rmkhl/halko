@@ -18,6 +18,7 @@ type (
 		cancel       chan struct{}
 		currentCycle float32
 		nextCycle    float32
+		errChan      chan<- error
 	}
 )
 
@@ -26,11 +27,11 @@ const (
 	timeoutDuration = 5 * time.Minute
 )
 
-func newChannel(shelly ShellyInterface, shellyID shelly.ID) *channel {
-	return &channel{sync.RWMutex{}, shelly, shellyID, make(chan struct{}), make(chan struct{}), 0, 0}
+func newChannel(shelly ShellyInterface, shellyID shelly.ID, errChan chan<- error) *channel {
+	return &channel{sync.RWMutex{}, shelly, shellyID, make(chan struct{}), make(chan struct{}), 0, 0, errChan}
 }
 
-func (c *channel) Start() error {
+func (c *channel) Start() {
 	go c.timeoutHandler()
 
 	for {
@@ -44,7 +45,8 @@ func (c *channel) Start() error {
 			c.s.SetState(shelly.On, c.shellyID)
 			err := c.handleTimeout(on)
 			if err != nil {
-				return err
+				c.errChan <- fmt.Errorf("%s failed: %w", c.shellyID, err)
+				return
 			}
 		}
 		if offTime > 0 {
@@ -52,7 +54,8 @@ func (c *channel) Start() error {
 			c.s.SetState(shelly.Off, c.shellyID)
 			err := c.handleTimeout(off)
 			if err != nil {
-				return err
+				c.errChan <- fmt.Errorf("%s failed: %w", c.shellyID, err)
+				return
 			}
 		}
 
@@ -92,11 +95,7 @@ func (c *channel) UpdateCycle(cycle uint8) error {
 	}
 	c.m.Lock()
 	defer c.m.Unlock()
-	if c.currentCycle == 0 {
-		c.currentCycle = ratio
-	} else {
-		c.nextCycle = ratio
-	}
+	c.nextCycle = ratio
 	return nil
 }
 

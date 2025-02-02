@@ -17,7 +17,11 @@ func statusAllPowers(p *power.Controller) gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
-		ctx.JSON(http.StatusOK, types.APIResponse[power.States]{Data: resp})
+		readable := map[string]shelly.PowerState{}
+		for key, val := range resp {
+			readable[key.String()] = val
+		}
+		ctx.JSON(http.StatusOK, types.APIResponse[map[string]shelly.PowerState]{Data: readable})
 	}
 }
 
@@ -42,8 +46,8 @@ func operatePower(p *power.Controller) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var command types.PowerCommand
 
-		if ctx.ShouldBind(&command) != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Does not compute"})
+		if err := ctx.ShouldBind(&command); err != nil {
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
 		powerName, _ := ctx.Params.Get("power")
@@ -54,7 +58,7 @@ func operatePower(p *power.Controller) gin.HandlerFunc {
 		}
 		err := p.SetCycle(command.Percent, id)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting powercycle: ", err)})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting powercycle: %s", err)})
 			return
 		}
 		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{Data: types.PowerOperationResponse{Message: "completed"}})
