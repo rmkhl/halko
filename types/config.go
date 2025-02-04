@@ -16,8 +16,13 @@ type (
 		PidSettings          map[StepType]*PidSettings `json:"pid_settings"`
 	}
 
+	PowerUnit struct {
+		ShellyAddress string `json:"shelly_address"`
+	}
+
 	HalkoConfig struct {
 		ExecutorConfig *ExecutorConfig `json:"executor"`
+		PowerUnit      *PowerUnit      `json:"power_unit"`
 	}
 )
 
