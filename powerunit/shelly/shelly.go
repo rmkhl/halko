@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -159,6 +160,21 @@ func (i *Interface) switchSetURI(state PowerState, id ID) string {
 		on = true
 	}
 	return fmt.Sprintf("%s/rpc/Switch.Set?id=%d&on=%v", i.addr, id, on)
+}
+
+func (i *Interface) Shutdown() error {
+	i.m.Lock()
+	defer i.m.Unlock()
+	failed := []string{}
+	for _, id := range []ID{Fan, Heater, Humidifier} {
+		if _, err := i.SetState(Off, id); err != nil {
+			failed = append(failed, id.String())
+		}
+	}
+	if len(failed) == 0 {
+		return nil
+	}
+	return fmt.Errorf("failed to shut down Shelly power for %s", strings.Join(failed, ", "))
 }
 
 func getPowerState(powerCall powerCall) (PowerState, error) {

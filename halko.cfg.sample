@@ -20,6 +20,6 @@
     }
   }
   "power_unit": {
-    "shelly_address": "192.168.100.91"
+    "shelly_address": "http://<address>"
   }
 }

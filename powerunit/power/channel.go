@@ -42,8 +42,11 @@ func (c *channel) Start() {
 
 		if onTime > 0 {
 			on := time.NewTimer(time.Duration(onTime))
-			c.s.SetState(shelly.On, c.shellyID)
-			err := c.handleTimeout(on)
+			_, err := c.s.SetState(shelly.On, c.shellyID)
+			if err != nil {
+				c.errChan <- fmt.Errorf("%s setState on failed: %w", c.shellyID, err)
+			}
+			err = c.handleTimeout(on)
 			if err != nil {
 				c.errChan <- fmt.Errorf("%s failed: %w", c.shellyID, err)
 				return
@@ -51,8 +54,11 @@ func (c *channel) Start() {
 		}
 		if offTime > 0 {
 			off := time.NewTimer(offTime)
-			c.s.SetState(shelly.Off, c.shellyID)
-			err := c.handleTimeout(off)
+			_, err := c.s.SetState(shelly.Off, c.shellyID)
+			if err != nil {
+				c.errChan <- fmt.Errorf("%s setState off failed: %w", c.shellyID, err)
+			}
+			err = c.handleTimeout(off)
 			if err != nil {
 				c.errChan <- fmt.Errorf("%s failed: %w", c.shellyID, err)
 				return
