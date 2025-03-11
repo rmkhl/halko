@@ -27,6 +27,12 @@ func main() {
 	p := power.New(s)
 	r := router.New(p)
 
+	defer func() {
+		if err := s.Shutdown(); err != nil {
+			log.Printf("SHELLY SHUTDOWN ERROR --- %s", err)
+		}
+	}()
+
 	go p.Start()
 
 	r.Run(":8090")
