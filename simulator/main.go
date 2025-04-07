@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -14,6 +16,9 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
+
+	port := flag.String("l", "8088", "Port to listen on (Default: 8088)")
+	flag.Parse()
 
 	fan := elements.NewPower("Fan")
 	humidifier := elements.NewPower("Humidifier")
@@ -47,7 +52,7 @@ func main() {
 		}
 	}()
 
-	err := server.Run(":8088")
+	err := server.Run(fmt.Sprintf(":%s", *port))
 	if err != nil {
 		log.Println(err.Error())
 	}
