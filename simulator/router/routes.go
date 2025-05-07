@@ -13,7 +13,7 @@ func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.Temperature
 	tempSensors.GET("", readAllTemperatureSensors(temperatureSensors))
 	tempSensors.GET(":sensor", readTemperatureSensor(temperatureSensors))
 
-	shellyAPI := r.Group("rpc/Switch.GetStatus?id=%d")
+	shellyAPI := r.Group("rpc")
 	shellyRead := shellyAPI.Group("Switch.GetStatus")
 	shellyRead.GET("", readSwitchStatus())
 	shellyWrite := shellyAPI.Group("Switch.Set")
