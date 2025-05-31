@@ -16,11 +16,11 @@ type (
 	}
 
 	Controller struct {
-		s         ShellyInterface
-		fan       *channel
-		heater    *channel
-		humidifer *channel
-		errChan   chan error
+		s          ShellyInterface
+		fan        *channel
+		heater     *channel
+		humidifier *channel
+		errChan    chan error
 	}
 
 	States map[shelly.ID]shelly.PowerState
@@ -47,7 +47,7 @@ func (c *Controller) Start() error {
 
 	go worker(ctx, c.fan, &wg)
 	go worker(ctx, c.heater, &wg)
-	go worker(ctx, c.humidifer, &wg)
+	go worker(ctx, c.humidifier, &wg)
 
 	go func() {
 		err := <-c.errChan
@@ -84,7 +84,7 @@ func (c *Controller) SetCycle(percentage uint8, id shelly.ID) error {
 	case shelly.Heater:
 		ch = c.heater
 	case shelly.Humidifier:
-		ch = c.humidifer
+		ch = c.humidifier
 	default:
 		return fmt.Errorf("unknown channel id %d", id)
 	}

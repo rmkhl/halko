@@ -67,7 +67,6 @@ func (c *channel) Start() {
 
 		c.m.Lock()
 		c.currentCycle = c.nextCycle
-		c.nextCycle = 0
 		c.m.Unlock()
 	}
 }
