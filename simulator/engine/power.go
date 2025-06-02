@@ -8,22 +8,24 @@ type (
 	Power struct {
 		mutex    sync.RWMutex
 		tick     int
-		current  *Cycle
-		upcoming *Cycle
+		running  bool
+		current  bool
+		upcoming bool
 	}
 )
 
 func NewPower() *Power {
-	p := Power{tick: 0, current: nil, upcoming: nil}
+	p := Power{tick: 0, current: false, upcoming: false, running: false}
 	return &p
 }
 
-func (p *Power) Start(cycle *Cycle) {
+func (p *Power) Start(initialState bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	p.current = cycle
-	p.upcoming = nil
+	p.running = true
+	p.current = initialState
+	p.upcoming = false
 	p.tick = 0
 }
 
@@ -31,23 +33,17 @@ func (p *Power) Stop() {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	p.current = nil
-	p.upcoming = nil
+	p.running = false
+	p.current = false
+	p.upcoming = false
 	p.tick = 0
 }
 
-func (p *Power) UpdateCycle(cycle *Cycle) {
+func (p *Power) SwitchTo(upcoming bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if p.current == nil {
-		p.current = cycle
-		return
-	}
-
-	if p.upcoming == nil {
-		p.upcoming = cycle
-	}
+	p.upcoming = upcoming
 }
 
 func (p *Power) Tick() {
@@ -55,7 +51,8 @@ func (p *Power) Tick() {
 	defer p.mutex.Unlock()
 
 	// Not currently running, nothing to advance
-	if p.current == nil {
+	if !p.running {
+		p.current = false
 		p.tick = 0
 		return
 	}
@@ -63,10 +60,7 @@ func (p *Power) Tick() {
 	if p.tick < 9 {
 		p.tick++
 	} else {
-		if p.upcoming != nil {
-			p.current = p.upcoming
-			p.upcoming = nil
-		}
+		p.current = p.upcoming
 		p.tick = 0
 	}
 }
@@ -74,16 +68,12 @@ func (p *Power) Tick() {
 func (p *Power) IsRunning() bool {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
-	return p.current != nil
+	return p.running
 }
 
-func (p *Power) CycleInfo() (percentage uint8, tick bool) {
+func (p *Power) Info() (running bool, tick bool) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	if p.current == nil {
-		return 0, false
-	}
-
-	return p.current.percentage, p.current.ticks[p.tick]
+	return p.running, p.current
 }

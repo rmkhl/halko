@@ -5,7 +5,7 @@ import (
 	"github.com/rmkhl/halko/simulator/engine"
 )
 
-func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, powerSensors map[string]engine.PowerSensor, powerControls map[string]engine.PowerManager) {
+func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, powerSensors map[string]engine.PowerSensor, powerControls map[string]engine.PowerManager, shellyControls map[int8]engine.PowerManager) {
 	sensorAPI := r.Group("sensors/api")
 	sensorAPIV1 := sensorAPI.Group("v1")
 
@@ -15,7 +15,7 @@ func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.Temperature
 
 	shellyAPI := r.Group("rpc")
 	shellyRead := shellyAPI.Group("Switch.GetStatus")
-	shellyRead.GET("", readSwitchStatus())
+	shellyRead.GET("", readSwitchStatus(shellyControls))
 	shellyWrite := shellyAPI.Group("Switch.Set")
-	shellyWrite.GET("", setSwitchState())
+	shellyWrite.GET("", setSwitchState(shellyControls))
 }

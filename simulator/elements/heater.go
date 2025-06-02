@@ -26,7 +26,7 @@ func (h *Heater) Tick() {
 	h.wood.AmbientTemperature(h.temperature)
 	h.power.Tick()
 
-	_, isOn := h.power.CycleInfo()
+	_, isOn := h.power.Info()
 	if isOn {
 		h.temperature += 0.1
 		return

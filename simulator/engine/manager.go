@@ -1,7 +1,8 @@
 package engine
 
 type PowerManager interface {
-	TurnOn(cycle *Cycle)
+	TurnOn(initialState bool)
 	TurnOff()
-	SwitchTo(cycle *Cycle)
+	SwitchTo(upcoming bool)
+	Info() (bool, bool)
 }

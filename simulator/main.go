@@ -32,6 +32,7 @@ func main() {
 	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
 	powerSensors := map[string]engine.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
 	powerControls := map[string]engine.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
+	shellyControls := map[int8]engine.PowerManager{0: heater, 1: fan, 2: heater}
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
 
@@ -50,7 +51,7 @@ func main() {
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
-	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls)
+	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls, shellyControls)
 
 	// Create http server
 	srv := &http.Server{
