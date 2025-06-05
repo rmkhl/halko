@@ -29,17 +29,35 @@
                             "acclimating"
                         ]
                     },
-                    "temperature_target": {
-                        "$comment": "Temperature target (material)",
-                        "type": "number"
-                    },
-                    "duration": {
-                        "$comment": "Duration of the step (e.g. 12h, 1d)",
-                        "type": "string"
+                    "temperature_constraint": {
+                        "$comment": "Valid temperature range (material)",
+                        "type": "object",
+                        "properties": {
+                            "minimum": {
+                                "$comment": "Minimum temperature in Celsius",
+                                "type": "number"
+                            },
+                            "maximum": {
+                                "$comment": "Maximum temperature in Celsius",
+                                "type": "number"
+                            }
+                        },
+                        "oneOf": [
+                            {
+                                "required": [
+                                    "power"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "max_delta"
+                                ]
+                            }
+                        ]
                     },
                     "heater": {
                         "power": {
-                            "$comment": "Power level of the heater (0-100)",
+                            "$comment": "Power level of the fan (0-100)",
                             "type": "number"
                         },
                         "max_delta": {
@@ -86,7 +104,17 @@
                         "power": {
                             "$comment": "Power level of the fan (0-100)",
                             "type": "number"
-                        },
+                        }
+                    },
+                    "humidifier": {
+                        "power": {
+                            "$comment": "Power level of the humidifier (0-100)",
+                            "type": "number"
+                        }
+                    }
+                },
+                "allOf": [
+                    {
                         "required": [
                             "power"
                         ]
