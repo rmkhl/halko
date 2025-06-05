@@ -1,8 +1,3 @@
 package engine
 
-type PowerManager interface {
-	TurnOn(initialState bool)
-	TurnOff()
-	SwitchTo(upcoming bool)
-	Info() (bool, bool)
-}
+// No interfaces needed in this file anymore

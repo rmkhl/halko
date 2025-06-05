@@ -5,7 +5,7 @@ import (
 	"github.com/rmkhl/halko/simulator/engine"
 )
 
-func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, powerSensors map[string]engine.PowerSensor, powerControls map[string]engine.PowerManager, shellyControls map[int8]engine.PowerManager) {
+func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, shellyControls map[int8]interface{}) {
 	sensorAPI := r.Group("sensors/api")
 	sensorAPIV1 := sensorAPI.Group("v1")
 

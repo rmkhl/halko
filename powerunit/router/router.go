@@ -1,7 +1,6 @@
 package router
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -27,17 +26,4 @@ func New(p *power.Controller) *Router {
 	setupRoutes(ginRouter, p)
 
 	return r
-}
-
-func errorJSON(err error) gin.H {
-	return gin.H{"error": err.Error()}
-}
-
-func statusAndError(err error) (int, error) {
-	switch {
-	case err == nil:
-		return http.StatusOK, nil
-	default:
-		return http.StatusInternalServerError, err
-	}
 }

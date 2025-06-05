@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,9 +29,7 @@ func main() {
 	wood := elements.NewWood(20)
 	heater := elements.NewHeater("oven", 20, wood)
 	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
-	powerSensors := map[string]engine.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
-	powerControls := map[string]engine.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
-	shellyControls := map[int8]engine.PowerManager{0: heater, 1: fan, 2: heater}
+	shellyControls := map[int8]interface{}{0: heater, 1: fan, 2: heater}
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
 
@@ -51,11 +48,11 @@ func main() {
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
-	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls, shellyControls)
+	router.SetupRoutes(server, temperatureSensors, shellyControls)
 
 	// Create http server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", *port),
+		Addr:    ":" + *port,
 		Handler: server,
 	}
 
@@ -101,7 +98,7 @@ func main() {
 
 	// Shutdown the server gracefully
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
 	}
 
 	log.Println("Waiting for simulation to complete...")
