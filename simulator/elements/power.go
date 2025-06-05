@@ -16,7 +16,6 @@ func NewPower(name string) *Power {
 	return &p
 }
 
-// Implement PowerManager interface.
 func (h *Power) TurnOn(initialState bool) {
 	h.power.Start(initialState)
 }
@@ -29,7 +28,6 @@ func (h *Power) SwitchTo(upcoming bool) {
 	h.power.SwitchTo(upcoming)
 }
 
-// Implement PowerSensor interface.
 func (h *Power) IsOn() bool {
 	return h.power.IsRunning()
 }

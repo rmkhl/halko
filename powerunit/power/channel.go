@@ -41,7 +41,7 @@ func (c *channel) Start() {
 		c.m.RUnlock()
 
 		if onTime > 0 {
-			on := time.NewTimer(time.Duration(onTime))
+			on := time.NewTimer(onTime)
 			_, err := c.s.SetState(shelly.On, c.shellyID)
 			if err != nil {
 				c.errChan <- fmt.Errorf("%s setState on failed: %w", c.shellyID, err)
@@ -86,7 +86,9 @@ func (c *channel) handleTimeout(t *time.Timer) error {
 }
 
 func (c *channel) shutDown() {
-	c.s.SetState(shelly.Off, c.shellyID)
+	if _, err := c.s.SetState(shelly.Off, c.shellyID); err != nil {
+		c.errChan <- fmt.Errorf("%s setState off failed during shutdown: %w", c.shellyID, err)
+	}
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.currentCycle = 0

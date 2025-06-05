@@ -5,8 +5,6 @@ import (
 	"github.com/rmkhl/halko/powerunit/power"
 )
 
-var powers = []string{"fan", "heater", "humidifier"}
-
 func setupRoutes(r *gin.Engine, p *power.Controller) {
 	api := r.Group("api")
 	v1 := api.Group("v1")

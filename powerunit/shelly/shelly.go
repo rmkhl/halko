@@ -155,10 +155,7 @@ func (i *Interface) GetState(id ID) (PowerState, error) {
 }
 
 func (i *Interface) switchSetURI(state PowerState, id ID) string {
-	on := false
-	if state == On {
-		on = true
-	}
+	on := state == On
 	return fmt.Sprintf("%s/rpc/Switch.Set?id=%d&on=%v", i.addr, id, on)
 }
 

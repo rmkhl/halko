@@ -33,7 +33,14 @@ func main() {
 		}
 	}()
 
-	go p.Start()
+	go func() {
+		err := p.Start()
+		if err != nil {
+			log.Printf("POWERUNIT START ERROR --- %s", err)
+		}
+	}()
 
-	r.Run(":8090")
+	if err := r.Run(":8090"); err != nil {
+		log.Printf("ROUTER RUN ERROR --- %s", err)
+	}
 }
