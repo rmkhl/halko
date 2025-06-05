@@ -17,16 +17,16 @@ func NewPower(name string) *Power {
 }
 
 // Implement PowerManager interface.
-func (h *Power) TurnOn(cycle *engine.Cycle) {
-	h.power.Start(cycle)
+func (h *Power) TurnOn(initialState bool) {
+	h.power.Start(initialState)
 }
 
 func (h *Power) TurnOff() {
 	h.power.Stop()
 }
 
-func (h *Power) SwitchTo(cycle *engine.Cycle) {
-	h.power.UpdateCycle(cycle)
+func (h *Power) SwitchTo(upcoming bool) {
+	h.power.SwitchTo(upcoming)
 }
 
 // Implement PowerSensor interface.
@@ -39,9 +39,17 @@ func (h *Power) Name() string {
 }
 
 func (h *Power) CurrentCycle() uint8 {
-	percentage, _ := h.power.CycleInfo()
+	running, turnedOn := h.power.Info()
 
-	return percentage
+	if running && turnedOn {
+		return 1
+	}
+
+	return 0
+}
+
+func (h *Power) Info() (bool, bool) {
+	return h.power.Info()
 }
 
 func (h *Power) Tick() {

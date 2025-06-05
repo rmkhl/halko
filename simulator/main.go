@@ -1,8 +1,15 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -15,6 +22,9 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
+	port := flag.String("l", "8088", "Port to listen on (Default: 8088)")
+	flag.Parse()
+
 	fan := elements.NewPower("Fan")
 	humidifier := elements.NewPower("Humidifier")
 	wood := elements.NewWood(20)
@@ -22,8 +32,16 @@ func main() {
 	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
 	powerSensors := map[string]engine.PowerSensor{"heater": heater, "fan": fan, "humidifier": humidifier}
 	powerControls := map[string]engine.PowerManager{"heater": heater, "fan": fan, "humidifier": humidifier}
+	shellyControls := map[int8]engine.PowerManager{0: heater, 1: fan, 2: heater}
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
+
+	// Channel for shutdown signals
+	stop := make(chan struct{})
+
+	// Setup signal catching
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
@@ -33,24 +51,60 @@ func main() {
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
-	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls)
+	router.SetupRoutes(server, temperatureSensors, powerSensors, powerControls, shellyControls)
 
+	// Create http server
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", *port),
+		Handler: server,
+	}
+
+	// Start simulation goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		log.Println("Starting simulation loop")
+
 		// run "simulated" environment
 		for {
-			<-ticker.C
-			fan.Tick()
-			humidifier.Tick()
-			heater.Tick()
+			select {
+			case <-ticker.C:
+				fan.Tick()
+				humidifier.Tick()
+				heater.Tick()
+			case <-stop:
+				log.Println("Stopping simulation loop")
+				ticker.Stop()
+				return
+			}
 		}
 	}()
 
-	err := server.Run(":8088")
-	if err != nil {
-		log.Println(err.Error())
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Server running on port %s", *port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error starting server: %s", err)
+		}
+	}()
+
+	// Block until signal received
+	<-sigs
+	log.Println("Shutdown signal received")
+
+	// Close the stop channel to terminate the simulation loop
+	close(stop)
+
+	// Create a context with timeout for server shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Shutdown the server gracefully
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
+	log.Println("Waiting for simulation to complete...")
 	wg.Wait()
+	log.Println("Server exited gracefully")
 }

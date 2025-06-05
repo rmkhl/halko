@@ -13,7 +13,7 @@ import (
 func main() {
 	var configFileName string
 
-	flag.StringVar(&configFileName, "k", "/etc/halko.cfg", "Specify config file. Default is /etc/halko.cfg")
+	flag.StringVar(&configFileName, "c", "/etc/halko.cfg", "Specify config file. Default is /etc/halko.cfg")
 	flag.Parse()
 
 	configuration, err := types.ReadHalkoConfig(configFileName)

@@ -88,3 +88,19 @@ type (
 
 // Temperature sensor API
 type TemperatureResponse map[string]float32
+
+// Shelly API responses
+type (
+	ShellySwitchGetStatusResponse struct {
+		ID          string `json:"id"`
+		Source      string `json:"source"`
+		Output      string `json:"output"`
+		Temperature struct {
+			TC float32 `json:"tC"`
+			TF float32 `json:"tF"`
+		} `json:"temperature"`
+	}
+	ShellySwitchSetResponse struct {
+		WasOn bool `json:"was_on"`
+	}
+)
