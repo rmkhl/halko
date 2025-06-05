@@ -11,8 +11,7 @@ type (
 		BasePath             string                    `json:"base_path"`
 		TickLength           int                       `json:"tick_length"`
 		TemperatureSensorURL string                    `json:"temperature_sensor_url"`
-		PowerSensorURL       string                    `json:"power_sensor_url"`
-		PowerControlURL      string                    `json:"power_control_url"`
+		PowerUnitURL         string                    `json:"power_unit_url"`
 		PidSettings          map[StepType]*PidSettings `json:"pid_settings"`
 		MaxDeltaHeating      float32                   `json:"max_delta_heating"`
 		MinDeltaHeating      float32                   `json:"min_delta_heating"`
