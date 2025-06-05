@@ -5,7 +5,7 @@ BINDIR = bin
 all: $(MODULES:%=$(BINDIR)/%)
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
-	GO111MODULE=on go build -o $@ ./$*/
+	go build -o $@ ./$*/
 
 $(BINDIR):
 	mkdir -p $(BINDIR)
