@@ -19,9 +19,9 @@ type (
 	}
 
 	PidSettings struct {
-		Kp float64 `json:"kp"`
-		Ki float64 `json:"ki"`
-		Kd float64 `json:"kd"`
+		Kp float32 `json:"kp"`
+		Ki float32 `json:"ki"`
+		Kd float32 `json:"kd"`
 	}
 
 	PowerPidSettings struct {

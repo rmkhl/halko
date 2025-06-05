@@ -14,8 +14,8 @@ type (
 		PowerSensorURL       string                    `json:"power_sensor_url"`
 		PowerControlURL      string                    `json:"power_control_url"`
 		PidSettings          map[StepType]*PidSettings `json:"pid_settings"`
-		MaxDeltaHeating      float64                   `json:"max_delta_heating"`
-		MinDeltaHeating      float64                   `json:"min_delta_heating"`
+		MaxDeltaHeating      float32                   `json:"max_delta_heating"`
+		MinDeltaHeating      float32                   `json:"min_delta_heating"`
 	}
 
 	PowerUnit struct {
