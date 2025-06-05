@@ -26,6 +26,8 @@ fsdb
 .DS_Store
 
 __debug_*
-
-tmp
 .halko.cfg
+halko.cfg
+
+bin
+tmp
