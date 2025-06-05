@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -40,12 +45,41 @@ func main() {
 	}))
 	router.SetupRoutes(server, storage, engine)
 
-	err = server.Run(":8089")
-	if err != nil {
-		log.Println(err.Error())
+	// Create a server
+	srv := &http.Server{
+		Addr:    ":8089",
+		Handler: server,
 	}
-	err = engine.StopEngine()
-	if err != nil {
-		log.Println(err.Error())
+
+	// Start the server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Channel to listen for interrupt signals
+	quit := make(chan os.Signal, 1)
+	// Listen for SIGINT (Ctrl+C) and SIGTERM (systemctl stop)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until we receive a signal
+	sig := <-quit
+	log.Printf("Received signal %s, shutting down gracefully...", sig)
+
+	// Create a deadline for the shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown of the HTTP server
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
 	}
+
+	// Stop the engine
+	if err := engine.StopEngine(); err != nil {
+		log.Printf("Error stopping engine: %s", err.Error())
+	}
+
+	log.Println("Server shutdown complete")
 }
