@@ -69,7 +69,12 @@ systemd-units: install
 
 .PHONY: fmt-changed
 fmt-changed:
-	@git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix
+	@for mod in $(MODULES) types; do \
+		if [ -f $$mod/go.mod ]; then \
+			echo "Formatting changed files in $$mod..."; \
+			(cd $$mod && git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix -v || true); \
+		fi; \
+	done
 	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
 
 .PHONY: help
