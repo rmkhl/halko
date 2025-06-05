@@ -63,6 +63,11 @@ systemd-units: install
 	sudo systemctl daemon-reload
 	@echo "Systemd unit files installed and services enabled."
 
+.PHONY: fmt-changed
+fmt-changed:
+	@git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix
+	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
+
 .PHONY: help
 help:
 	@echo "Available targets:"
@@ -73,5 +78,6 @@ help:
 	@echo "  update-modules   Update all go.mod dependencies and tidy them."
 	@echo "  install           Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
 	@echo "  systemd-units    Create, install, and enable systemd unit files for all binaries except simulator."
+	@echo "  fmt-changed      Reformat changed Go files compared to the main branch using golangci-lint."
 
 .DEFAULT_GOAL := help
