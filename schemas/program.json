@@ -26,66 +26,52 @@
                         "enum": [
                             "heating",
                             "cooling",
-                            "acclimating"
+                            "acclimate"
                         ]
                     },
-                    "temperature_constraint": {
-                        "$comment": "Valid temperature range (material)",
-                        "type": "object",
-                        "properties": {
-                            "minimum": {
-                                "$comment": "Minimum temperature in Celsius",
-                                "type": "number"
-                            },
-                            "maximum": {
-                                "$comment": "Maximum temperature in Celsius",
-                                "type": "number"
-                            }
-                        },
-                        "oneOf": [
-                            {
-                                "required": [
-                                    "power"
-                                ]
-                            },
-                            {
-                                "required": [
-                                    "max_delta"
-                                ]
-                            }
-                        ]
+                    "temperature_target": {
+                        "$comment": "Target temperature in Celsius",
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 200
                     },
                     "heater": {
-                        "power": {
-                            "$comment": "Power level of the fan (0-100)",
-                            "type": "number"
-                        },
-                        "max_delta": {
-                            "$comment": "Maximum temperature difference allowed (Celsius)",
-                            "type": "number"
-                        },
-                        "pid": {
-                            "$comment": "PID values for the heater",
-                            "type": "object",
-                            "properties": {
-                                "kp": {
-                                    "$comment": "Proportional gain",
-                                    "type": "number"
-                                },
-                                "ki": {
-                                    "$comment": "Integral gain",
-                                    "type": "number"
-                                },
-                                "kd": {
-                                    "$comment": "Derivative gain",
-                                    "type": "number"
-                                }
+                        "type": "object",
+                        "properties": {
+                            "power": {
+                                "$comment": "Constant power level of the heater (0-100)",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
                             },
-                            "required": [
-                                "kp",
-                                "ki",
-                                "kd"
-                            ]
+                            "max_delta": {
+                                "$comment": "Maximum temperature difference allowed (Celsius)",
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "pid": {
+                                "$comment": "PID values for the heater",
+                                "type": "object",
+                                "properties": {
+                                    "kp": {
+                                        "$comment": "Proportional gain",
+                                        "type": "number"
+                                    },
+                                    "ki": {
+                                        "$comment": "Integral gain",
+                                        "type": "number"
+                                    },
+                                    "kd": {
+                                        "$comment": "Derivative gain",
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "kp",
+                                    "ki",
+                                    "kd"
+                                ]
+                            }
                         },
                         "oneOf": [
                             {
@@ -101,28 +87,28 @@
                         ]
                     },
                     "fan": {
-                        "power": {
-                            "$comment": "Power level of the fan (0-100)",
-                            "type": "number"
-                        }
-                    },
-                    "humidifier": {
-                        "power": {
-                            "$comment": "Power level of the humidifier (0-100)",
-                            "type": "number"
-                        }
-                    }
-                },
-                "allOf": [
-                    {
+                        "type": "object",
+                        "properties": {
+                            "power": {
+                                "$comment": "Power level of the fan (0-100)",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                            }
+                        },
                         "required": [
                             "power"
                         ]
                     },
                     "humidifier": {
-                        "power": {
-                            "$comment": "Power level of the humidifier (0-100)",
-                            "type": "number"
+                        "type": "object",
+                        "properties": {
+                            "power": {
+                                "$comment": "Power level of the humidifier (0-100)",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 100
+                            }
                         },
                         "required": [
                             "power"
@@ -130,13 +116,15 @@
                     }
                 },
                 "required": [
+                    "name",
+                    "type",
                     "heater",
                     "fan",
                     "humidifier",
                     "temperature_target"
                 ]
             },
-            "minLength": 1
+            "minItems": 1
         }
     },
     "required": [

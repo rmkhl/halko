@@ -69,7 +69,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 		return nil, err
 	}
 
-	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults)
+	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults, config.MaxDeltaHeating, config.MinDeltaHeating)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = programStorage.CreateProgram(programName, program)

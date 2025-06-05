@@ -102,9 +102,11 @@ type (
 		currentPSUStatus    *fsmPSUStatus
 		currentTemperatures *fsmTemperatures
 
-		stateHandlers map[fsmState]fsmStateHandler
-		stepToState   map[types.StepType]fsmState
-		defaultPids   *map[types.StepType]*types.PidSettings
+		stateHandlers   map[fsmState]fsmStateHandler
+		stepToState     map[types.StepType]fsmState
+		defaultPids     *map[types.StepType]*types.PidSettings
+		maxDeltaHeating float64
+		minDeltaHeating float64
 	}
 )
 
@@ -178,7 +180,7 @@ func (h *heatUpStateHandler) executeState() fsmState {
 
 func (h *heatUpStateHandler) enterState() {
 	h.fanPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power)
-	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeHeating])
+	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeHeating], h.fsm.maxDeltaHeating, h.fsm.minDeltaHeating)
 	h.humidifierPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power)
 }
 
@@ -198,7 +200,7 @@ func (h *acclimateStateHandler) executeState() fsmState {
 
 func (h *acclimateStateHandler) enterState() {
 	h.fanPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power)
-	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeHeating])
+	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeAcclimate], 0, 0)
 	h.humidifierPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power)
 }
 
@@ -222,7 +224,7 @@ func (h *coolDownStateHandler) executeState() fsmState {
 
 func (h *coolDownStateHandler) enterState() {
 	h.fanPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power)
-	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeHeating])
+	h.heaterPower = NewPowerController(float64(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), &h.fsm.program.ProgramSteps[h.fsm.step].Heater, (*h.fsm.defaultPids)[types.StepTypeCooling], 0, 0)
 	h.humidifierPower = newConstantPowerController(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power)
 }
 
@@ -244,7 +246,7 @@ func (h *idleStateHandler) enterState() {
 	h.fsm.shutdown()
 }
 
-func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStatus, temperatures *fsmTemperatures, defaultPids *map[types.StepType]*types.PidSettings) *programFSMController {
+func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStatus, temperatures *fsmTemperatures, defaultPids *map[types.StepType]*types.PidSettings, maxDeltaHeating float64, minDeltaHeating float64) *programFSMController {
 	controller := &programFSMController{
 		psuController:       psuController,
 		currentPSUStatus:    psuStatus,
@@ -254,7 +256,9 @@ func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStat
 			types.StepTypeAcclimate: fsmStateAcclimate,
 			types.StepTypeCooling:   fsmStateCoolDown,
 		},
-		defaultPids: defaultPids,
+		defaultPids:     defaultPids,
+		maxDeltaHeating: maxDeltaHeating,
+		minDeltaHeating: minDeltaHeating,
 	}
 	controller.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateStart:           &startStateHandler{fsm: controller},

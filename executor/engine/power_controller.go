@@ -26,6 +26,7 @@ type (
 		ConstantPower     uint8
 		TargetTemperature float64
 		MaxDelta          float64
+		MinDelta          float64
 	}
 )
 
@@ -64,24 +65,38 @@ func newConstantPowerController(power uint8) *PowerController {
 }
 
 // New power controller with the given configuration and settings. If the Power is set to non zero value, the PID settings are ignored.
-func NewPowerController(targetTemperature float64, settings *types.PowerPidSettings, defaultPidSettings *types.PidSettings) *PowerController {
+func NewPowerController(targetTemperature float64, settings *types.PowerPidSettings, defaultPidSettings *types.PidSettings, maxDeltaHeating float64, minDeltaHeating float64) *PowerController {
 	// Use default pid values is none are defined in the settings
 	var controllerConfig *types.PidSettings
 	var controller *PidController
+	var maxDelta float64
+	var minDelta float64
 
 	if settings.Pid == nil {
 		controllerConfig = defaultPidSettings
 	} else {
 		controllerConfig = settings.Pid
 	}
+
 	if controllerConfig != nil {
 		controller = NewPidController(controllerConfig)
 	}
+
+	// Use the delta values from the step settings, or fall back to heating config values
+	if settings.MaxDelta > 0 {
+		maxDelta = float64(settings.MaxDelta)
+		minDelta = 0 // Default for non-heating steps
+	} else {
+		maxDelta = maxDeltaHeating
+		minDelta = minDeltaHeating
+	}
+
 	return &PowerController{
 		PidController:     controller,
 		ConstantPower:     settings.Power,
 		TargetTemperature: targetTemperature,
-		MaxDelta:          float64(settings.MaxDelta),
+		MaxDelta:          maxDelta,
+		MinDelta:          minDelta,
 	}
 }
 
@@ -92,8 +107,21 @@ func (c *PowerController) Update(power uint8, owenTemperature float32, woodTempe
 	if c.PidController == nil {
 		return c.ConstantPower
 	}
-	// Adjust the target temperature for the owen based on the wood temperature
-	targetTemperature := min(c.TargetTemperature, float64(woodTemperature)+c.MaxDelta)
+
+	// Calculate target temperature based on wood temperature and max/min delta
+	var targetTemperature float64
+
+	if c.MinDelta > 0 {
+		// For heating with min delta (respect both max and min delta values)
+		// Don't let the oven get too far ahead or too close to the wood temperature
+		targetTemperature = min(c.TargetTemperature,
+			max(float64(woodTemperature)+c.MinDelta,
+				min(float64(woodTemperature)+c.MaxDelta, c.TargetTemperature)))
+	} else {
+		// For other step types, just use the max delta as before
+		targetTemperature = min(c.TargetTemperature, float64(woodTemperature)+c.MaxDelta)
+	}
+
 	powerDelta := c.PidController.Update(targetTemperature, float64(owenTemperature))
 	// Limit the power to be between 0 and 100
 	return uint8(min(100, max(int(float64(power)+powerDelta), 0)))
