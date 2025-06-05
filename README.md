@@ -55,38 +55,49 @@ make fmt-changed
 ### Components
 
 #### `/configurator`
+
 Storage service for program and phase configurations. Provides REST API for CRUD operations on configuration data, which is stored in the filesystem.
 
 #### `/executor`
+
 Core service that executes drying programs. It manages the state machine for program execution, controls power units, and monitors sensor data.
 
 #### `/powerunit`
+
 Interfaces with Shelly smart switches to control power to heaters, fans, and humidifiers. Provides a REST API for power control operations.
 
 #### `/simulator`
+
 Simulates the physical components of the kiln for development and testing purposes. Includes emulated temperature sensors and power controls.
 
 #### `/webapp`
+
 React-based frontend for the system. Allows users to create and modify programs, monitor active drying sessions, and control the system.
 
 ### Supporting Directories
 
 #### `/bin`
+
 Contains built executables for all components.
 
 #### `/schemas`
+
 JSON schemas for validation of program and phase data.
 
 #### `/templates`
+
 Contains systemd service templates and configuration samples.
 
 #### `/tests`
+
 Integration tests for the system components.
 
 #### `/types`
+
 Shared Go type definitions used across multiple components.
 
 #### `/sensorunit`
+
 Arduino code for the physical temperature sensor unit.
 
 ## Deployment
