@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,6 +35,18 @@ func main() {
 	p := power.New(s)
 	r := router.New(p)
 
+	// Extract port from configured power_unit_url
+	serverPort := "8090" // Default port
+	if configuration.ExecutorConfig != nil && configuration.ExecutorConfig.PowerUnitURL != "" {
+		if parsedURL, err := url.Parse(configuration.ExecutorConfig.PowerUnitURL); err == nil {
+			if parsedURL.Port() != "" {
+				serverPort = parsedURL.Port()
+			}
+		}
+	}
+	serverAddr := fmt.Sprintf(":%s", serverPort)
+	log.Printf("Starting power unit server on %s", serverAddr)
+
 	// Start the power controller in a goroutine
 	go func() {
 		err := p.Start()
@@ -43,7 +57,7 @@ func main() {
 
 	// Create a server
 	srv := &http.Server{
-		Addr:    ":8090",
+		Addr:    serverAddr,
 		Handler: r,
 	}
 

@@ -45,6 +45,8 @@ install: clean all
 			sudo install -m 755 $(BINDIR)/$$bin /opt/halko/; \
 		fi; \
 	done
+	@echo "Creating data directory at /var/opt/halko..."
+	sudo install -d -m 755 /var/opt/halko
 	@echo "Installing config to /etc/opt/halko.cfg if not present..."
 	sudo install -d /etc/opt
 	@if [ ! -f /etc/opt/halko.cfg ]; then \

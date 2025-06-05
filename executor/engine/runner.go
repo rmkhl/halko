@@ -53,7 +53,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 		pidDefaults:                &config.PidSettings,
 	}
 
-	psuSensorReader, err := newPSUSensorReader(config.PowerSensorURL, runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader(config.PowerUnitURL+"/api/v1/powers", runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
