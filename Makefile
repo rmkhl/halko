@@ -14,6 +14,10 @@ $(BINDIR):
 clean:
 	rm -rf $(BINDIR)
 
+.PHONY: rebuild
+rebuild: clean all
+	@echo "All binaries have been rebuilt."
+
 .PHONY: lint
 lint:
 	@for mod in $(MODULES) types; do \
@@ -73,10 +77,11 @@ help:
 	@echo "Available targets:"
 	@echo "  help             Show this help message. (default)"
 	@echo "  all              Build all Go executables to bin/ directory."
+	@echo "  rebuild          Clean and rebuild all executables from scratch."
 	@echo "  clean            Remove the bin/ directory and all built executables."
 	@echo "  lint             Run golangci-lint on all modules."
 	@echo "  update-modules   Update all go.mod dependencies and tidy them."
-	@echo "  install           Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
+	@echo "  install          Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
 	@echo "  systemd-units    Create, install, and enable systemd unit files for all binaries except simulator."
 	@echo "  fmt-changed      Reformat changed Go files compared to the main branch using golangci-lint."
 
