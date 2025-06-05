@@ -1,0 +1,13 @@
+[Unit]
+Description=Halko Service: %i
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/halko/%i -c /etc/opt/halko.cfg
+Restart=on-failure
+User=halko
+Group=halko
+
+[Install]
+WantedBy=multi-user.target
