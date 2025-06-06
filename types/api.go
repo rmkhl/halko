@@ -94,7 +94,7 @@ type (
 	ShellySwitchGetStatusResponse struct {
 		ID          string `json:"id"`
 		Source      string `json:"source"`
-		Output      string `json:"output"`
+		Output      bool   `json:"output"`
 		Temperature struct {
 			TC float32 `json:"tC"`
 			TF float32 `json:"tF"`

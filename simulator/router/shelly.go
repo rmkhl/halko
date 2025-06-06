@@ -34,15 +34,10 @@ func readSwitchStatus(powers map[int8]interface{}) gin.HandlerFunc {
 				// Log the switch status
 				_, turnedOn := powerInfo.Info()
 
-				output := "off"
-				if turnedOn {
-					output = "on"
-				}
-
 				ctx.JSON(http.StatusOK, types.ShellySwitchGetStatusResponse{
 					ID:     strconv.Itoa(id),
 					Source: "HTTP_in",
-					Output: output,
+					Output: turnedOn,
 					Temperature: struct {
 						TC float32 `json:"tC"`
 						TF float32 `json:"tF"`
