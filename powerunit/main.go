@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -44,7 +43,7 @@ func main() {
 			}
 		}
 	}
-	serverAddr := fmt.Sprintf(":%s", serverPort)
+	serverAddr := ":" + serverPort
 	log.Printf("Starting power unit server on %s", serverAddr)
 
 	// Start the power controller in a goroutine
