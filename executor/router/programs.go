@@ -10,11 +10,11 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-func listAllPrograms(storage *storage.ProgramStorage) gin.HandlerFunc {
+func listAllRuns(storage *storage.FileStorage) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var savedPrograms []types.SavedProgram
+		var savedPrograms []types.RunHistory
 
-		programs, err := storage.ListPrograms()
+		programs, err := storage.ListExecutedPrograms()
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
 			return
@@ -22,14 +22,14 @@ func listAllPrograms(storage *storage.ProgramStorage) gin.HandlerFunc {
 
 		for _, programName := range programs {
 			state, updatedAt, _ := storage.LoadState(programName)
-			savedPrograms = append(savedPrograms, types.SavedProgram{
+			savedPrograms = append(savedPrograms, types.RunHistory{
 				Name:        programName,
 				State:       state,
 				CompletedAt: updatedAt,
 				StartedAt:   startTimeFromName(programName),
 			})
 		}
-		ctx.JSON(http.StatusBadRequest, types.APIResponse[[]types.SavedProgram]{Data: savedPrograms})
+		ctx.JSON(http.StatusOK, types.APIResponse[[]types.RunHistory]{Data: savedPrograms})
 	}
 }
 
@@ -44,10 +44,10 @@ func startTimeFromName(name string) int64 {
 	return 0
 }
 
-func getProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
+func getRun(storage *storage.FileStorage) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		programName, _ := ctx.Params.Get("name")
-		program, err := storage.LoadProgram(programName)
+		program, err := storage.LoadExecutedProgram(programName)
 		if err != nil {
 			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
 			return
@@ -55,24 +55,119 @@ func getProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
 		state, updatedAt, _ := storage.LoadState(programName)
 		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutedProgram]{
 			Data: types.ExecutedProgram{
-				SavedProgram: types.SavedProgram{State: state, CompletedAt: updatedAt, StartedAt: startTimeFromName(programName)},
-				Program:      *program,
+				RunHistory: types.RunHistory{State: state, CompletedAt: updatedAt, StartedAt: startTimeFromName(programName)},
+				Program:    *program,
 			},
 		})
 	}
 }
 
-func deleteProgram(storage *storage.ProgramStorage) gin.HandlerFunc {
+func deleteRun(storage *storage.FileStorage) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		programName, _ := ctx.Params.Get("name")
 
-		err := storage.DeleteProgram(programName)
+		err := storage.DeleteExecutedProgram(programName)
 		storage.MaybeDeleteState(programName)
 		storage.MaybeDeleteExecutionLog(programName)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
+		ctx.JSON(http.StatusOK, types.APIResponse[string]{Data: "deleted"})
+	}
+}
+
+// Stored program template functions (storage API)
+
+func listAllPrograms(storage *storage.FileStorage) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		programs, err := storage.ListStoredPrograms()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusOK, types.APIResponse[[]string]{Data: programs})
+	}
+}
+
+func getProgram(storage *storage.FileStorage) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		programName, _ := ctx.Params.Get("name")
+		program, err := storage.LoadStoredProgram(programName)
+		if err != nil {
+			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusOK, types.APIResponse[types.Program]{Data: *program})
+	}
+}
+
+func createProgram(storage *storage.FileStorage) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var program types.Program
+
+		err := ctx.ShouldBind(&program)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Invalid JSON: " + err.Error()})
+			return
+		}
+
+		err = program.Validate()
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+
+		err = storage.CreateStoredProgram(program.ProgramName, &program)
+		if err != nil {
+			ctx.JSON(http.StatusConflict, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, types.APIResponse[types.Program]{Data: program})
+	}
+}
+
+func updateProgram(storage *storage.FileStorage) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		programName, _ := ctx.Params.Get("name")
+		var program types.Program
+
+		err := ctx.ShouldBind(&program)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Invalid JSON: " + err.Error()})
+			return
+		}
+
+		err = program.Validate()
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+
+		// Ensure the program name matches the URL parameter
+		program.ProgramName = programName
+
+		err = storage.UpdateStoredProgram(programName, &program)
+		if err != nil {
+			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, types.APIResponse[types.Program]{Data: program})
+	}
+}
+
+func deleteProgram(storage *storage.FileStorage) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		programName, _ := ctx.Params.Get("name")
+
+		err := storage.DeleteStoredProgram(programName)
+		if err != nil {
+			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
+			return
+		}
+
 		ctx.JSON(http.StatusOK, types.APIResponse[string]{Data: "deleted"})
 	}
 }

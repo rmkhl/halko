@@ -12,7 +12,7 @@ type (
 	ControlEngine struct {
 		wg      *sync.WaitGroup
 		config  *types.ExecutorConfig
-		storage *storage.ProgramStorage
+		storage *storage.FileStorage
 		runner  *programRunner
 	}
 )
@@ -22,7 +22,7 @@ var (
 	ErrNoProgramRunning      = errors.New("no program running")
 )
 
-func NewEngine(config *types.ExecutorConfig, storage *storage.ProgramStorage) *ControlEngine {
+func NewEngine(config *types.ExecutorConfig, storage *storage.FileStorage) *ControlEngine {
 	engine := ControlEngine{
 		config:  config,
 		runner:  nil,

@@ -40,7 +40,7 @@ type (
 	}
 )
 
-func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.ProgramStorage, program *types.Program) (*programRunner, error) {
+func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.FileStorage, program *types.Program) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -72,7 +72,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults, config.MaxDeltaHeating, config.MinDeltaHeating)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
-	err = programStorage.CreateProgram(programName, program)
+	err = programStorage.CreateExecutedProgram(programName, program)
 	if err != nil {
 		return nil, err
 	}

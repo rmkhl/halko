@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storage, err := storage.NewProgramStorage(configuration.ExecutorConfig.BasePath)
+	storage, err := storage.NewFileStorage(configuration.ExecutorConfig.BasePath)
 	if err != nil {
 		log.Fatal(err)
 	}
