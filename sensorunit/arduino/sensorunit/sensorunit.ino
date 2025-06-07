@@ -43,7 +43,7 @@ MAX6675 sensor[3] = {
     MAX6675(SPI_CLK, OVEN_SECONDARY_TEMPERATURE_SENSOR_CS, SPI_MISO),
     MAX6675(SPI_CLK, WOOD_TEMPERATURE_SENSOR_CS, SPI_MISO)};
 
-char *sensorName[3] = {"OvenPrimary", "OvenSecondary", "Wood"};
+const char * const sensorName[3] = {"OvenPrimary", "OvenSecondary", "Wood"};
 
 // LCD
 int LCD_RS = 14;
@@ -72,7 +72,7 @@ void displayTemperature(int sensor, float temperature)
     }
 }
 
-void displayStatus(char *status)
+void displayStatus(const char * const status)
 {
     char buffer[16];
 
@@ -81,7 +81,7 @@ void displayStatus(char *status)
     lcd.print(buffer);
 }
 
-char *ticker[] = {"*", "+"};
+const char * const ticker[] = {"*", "+"};
 
 void displayRunning()
 {
@@ -103,29 +103,31 @@ void processSerial()
 {
     static char buffer[MAX_COMMAND_LENGTH + 1];
     static int bufferIndex = 0;
+    static bool command_ready = false;
 
     while (Serial.available())
     {
         char c = Serial.read();
-        if (c == ';')
-        {
-            buffer[bufferIndex] = '\0';
-            bufferIndex = 0;
-            break;
-        }
-        if (bufferIndex < MAX_COMMAND_LENGTH)
-        {
-            if (c == '\n' || c == '\r')
-            {
-                continue;
-            }
-            buffer[bufferIndex++] = c;
+
+        switch (c) {
+          case '\n':
+          case '\r':
+              break;  // ignore end of line characters
+          case ';':
+              buffer[bufferIndex] = '\0';
+              bufferIndex = 0;
+              command_ready = true;
+              break;
+          default:
+              buffer[bufferIndex] = c;
+              if (bufferIndex < MAX_COMMAND_LENGTH)
+              {
+                  buffer[bufferIndex++] = c;
+              }
         }
     }
-    Serial.println(bufferIndex);
-    Serial.println(buffer);
-    // Command received
-    if (bufferIndex == 0)
+
+    if (command_ready)
     {
         char *command = strtok(buffer, " ");
         if (strcmp(command, "show") == 0)
@@ -161,6 +163,7 @@ void processSerial()
         {
             Serial.println("helo");
         }
+        command_ready = false;
     }
     previousCommandMillis = millis();
     displayStatus(status_text);
