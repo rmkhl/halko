@@ -100,6 +100,50 @@ Shared Go type definitions used across multiple components.
 
 Arduino code for the physical temperature sensor unit.
 
+## Sensor Unit
+
+The system includes an Arduino-based sensor unit for temperature monitoring in the kiln.
+
+### Hardware Components
+
+- **Controller**: Arduino Nano board
+- **Temperature Sensors**: 3× MAX6675 thermocouples for measuring:
+  - Primary oven temperature
+  - Secondary oven temperature
+  - Wood temperature
+- **Display**: 16×2 LCD (LCM 1602C) for local temperature readings
+
+### Functionality
+
+The sensor unit performs the following functions:
+
+- Reads temperatures from all three thermocouples every second
+- Displays current temperatures on the LCD screen
+- Provides temperature data over serial connection when requested
+- Shows connection status on the LCD
+- Accepts commands via serial port (9600 baud)
+
+### Serial Commands
+
+The unit accepts the following commands over the serial interface:
+
+- `helo;` - Initial handshake, responds with "helo"
+- `read;` - Request temperature readings, returns values in format: `OvenPrimary=XX.XC,OvenSecondary=XX.XC,Wood=XX.XC`
+- `show TEXT;` - Updates the status text on the LCD display
+
+### Connection Status
+
+The LCD displays the current connection status:
+
+- Shows custom status text when connected
+- Automatically displays "Disconnected" after 30 seconds without commands
+- Displays a visual indicator (alternating *,+) to show the unit is operational
+
+### Integration
+
+The Executor component communicates with the sensor unit to retrieve temperature data during drying programs.
+The sensor unit continues to display temperatures locally even when disconnected from the main system.
+
 ## Deployment
 
 The system components are designed to run as systemd services. After building, use `make install` to install the binaries and `make systemd-units` to set up the systemd services.
