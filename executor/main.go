@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -45,14 +46,21 @@ func main() {
 	}))
 	router.SetupRoutes(server, storage, engine)
 
+	// Determine the port to use
+	port := 8089 // Default port if not specified in config
+	if configuration.ExecutorConfig.Port > 0 {
+		port = configuration.ExecutorConfig.Port
+	}
+
 	// Create a server
 	srv := &http.Server{
-		Addr:    ":8089",
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: server,
 	}
 
 	// Start the server in a goroutine
 	go func() {
+		log.Printf("Starting executor server on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
