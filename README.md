@@ -70,8 +70,9 @@ The PowerUnit interfaces with Shelly smart switches to control power to heaters,
 #### `/sensorunit`
 
 The SensorUnit component includes:
-1.  Arduino firmware (`sensorunit/arduino/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
-2.  A Go webservice (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
+
+1. Arduino firmware (`sensorunit/arduino/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
+2. service (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
 
 #### `/simulator`
 
@@ -103,13 +104,9 @@ Integration tests for the system components.
 
 Shared Go type definitions used across multiple components.
 
-#### `/sensorunit`
-
-Contains both Arduino code for the physical temperature sensor unit and a REST API webservice that interfaces with the Arduino over USB serial connection.
-
 ## Sensor Unit
 
-The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a Go webservice that provides a REST API for integration with the executor component.
+The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a service that provides a REST API for integration with the executor component.
 
 ### Hardware Components
 
@@ -125,11 +122,11 @@ The unit accepts the following commands over the serial interface:
 
 ### Connection Status
 
-The sensor unit's webservice provides an endpoint to check the connection status and another to update the status message displayed on the LCD.
+The sensor unit's service provides an endpoint to check the connection status and another to update the status message displayed on the LCD.
 
 ### Integration
 
-The Executor component communicates with the SensorUnit's REST API to retrieve temperature data during drying programs. The SensorUnit continues to display temperatures locally even when disconnected from the main system. The Go webservice part of the SensorUnit handles the serial communication with the Arduino and exposes the data via HTTP.
+The Executor component communicates with the SensorUnit's REST API to retrieve temperature data during drying programs. The SensorUnit continues to display temperatures locally even when disconnected from the main system. The service part of the SensorUnit handles the serial communication with the Arduino and exposes the data via HTTP.
 
 #### Configuration
 
