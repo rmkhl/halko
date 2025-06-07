@@ -96,6 +96,8 @@ type (
 		Percent uint8 `json:"percent"`
 	}
 
+	PowersCommand map[string]PowerCommand
+
 	PowerOperationResponse struct {
 		Message string `json:"message"`
 	}

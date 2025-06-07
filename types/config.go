@@ -19,7 +19,10 @@ type (
 	}
 
 	PowerUnit struct {
-		ShellyAddress string `json:"shelly_address"`
+		ShellyAddress string         `json:"shelly_address"`
+		CycleLength   int            `json:"cycle_length"` // Duration of a power cycle in seconds
+		PowerMapping  map[string]int `json:"power_mapping"`
+		MaxIdleTime   int            `json:"max_idle_time"` // Maximum idle time in seconds before a executor is considered idle
 	}
 
 	SensorUnitConfig struct {

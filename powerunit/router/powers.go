@@ -1,7 +1,6 @@
 package router
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,57 +9,43 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-func statusAllPowers(p *power.Controller) gin.HandlerFunc {
+func getAllPercentages(p *power.Controller, idMapping [shelly.NumberOfDevices]string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		resp, err := p.GetAllStates()
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
-			return
+		percentages := p.GetAllPercentages()
+
+		response := make(types.PowerStatusResponse)
+		for id := range shelly.NumberOfDevices {
+			response[idMapping[id]] = types.PowerResponse{Percent: percentages[id]}
 		}
-		readable := map[string]shelly.PowerState{}
-		for key, val := range resp {
-			readable[key.String()] = val
-		}
-		ctx.JSON(http.StatusOK, types.APIResponse[map[string]shelly.PowerState]{Data: readable})
+
+		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerStatusResponse]{Data: response})
 	}
 }
 
-func statusPower(p *power.Controller) gin.HandlerFunc {
+func setAllPercentages(p *power.Controller, powerMapping map[string]int) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		powerName, _ := ctx.Params.Get("power")
-		id, known := shelly.IDString(powerName).ID()
-		if !known {
-			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
-			return
-		}
-		resp, err := p.GetState(id)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
-			return
-		}
-		ctx.JSON(http.StatusOK, types.APIResponse[shelly.PowerState]{Data: resp})
-	}
-}
+		var commands types.PowersCommand
 
-func operatePower(p *power.Controller) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var command types.PowerCommand
-
-		if err := ctx.ShouldBind(&command); err != nil {
+		if err := ctx.ShouldBind(&commands); err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
-		powerName, _ := ctx.Params.Get("power")
-		id, known := shelly.IDString(powerName).ID()
-		if !known {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
-			return
+
+		var percentages [shelly.NumberOfDevices]uint8
+
+		for powerName, command := range commands {
+			id, ok := powerMapping[powerName]
+			if !ok {
+				ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Unknown power '" + powerName + "'"})
+				return
+			}
+			percentages[id] = command.Percent
 		}
-		err := p.SetCycle(command.Percent, id)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting power cycle: %s", err)})
-			return
-		}
-		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{Data: types.PowerOperationResponse{Message: "completed"}})
+
+		p.SetAllPercentages(percentages)
+
+		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{
+			Data: types.PowerOperationResponse{Message: "completed"},
+		})
 	}
 }

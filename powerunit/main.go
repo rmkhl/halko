@@ -30,20 +30,44 @@ func main() {
 		log.Fatal("power unit configuration missing")
 	}
 
-	s := shelly.New(configuration.PowerUnit.ShellyAddress)
-	p := power.New(s)
-	r := router.New(p)
+	shellyController := shelly.New(configuration.PowerUnit.ShellyAddress)
 
+	if configuration.PowerUnit.CycleLength <= 0 {
+		log.Fatal("Invalid or missing cycle length")
+	}
+	cycleLength := configuration.PowerUnit.CycleLength
+
+	if configuration.PowerUnit.MaxIdleTime <= 0 {
+		log.Fatal("Invalid or missing max idle time")
+	}
+	maxIdleTime := configuration.PowerUnit.MaxIdleTime
+
+	powerMapping := configuration.PowerUnit.PowerMapping
+	if powerMapping == nil {
+		log.Fatal("Power mapping not found in config, using default.")
+	}
+
+	idMapping := [shelly.NumberOfDevices]string{}
+	for name, id := range powerMapping {
+		idMapping[id] = name
+	}
 	// Extract port from configured power_unit_url
-	serverPort := "8090" // Default port
-	if configuration.ExecutorConfig != nil && configuration.ExecutorConfig.PowerUnitURL != "" {
-		if parsedURL, err := url.Parse(configuration.ExecutorConfig.PowerUnitURL); err == nil {
-			if parsedURL.Port() != "" {
-				serverPort = parsedURL.Port()
-			}
+	if configuration.ExecutorConfig == nil || configuration.ExecutorConfig.PowerUnitURL == "" {
+		log.Fatal("ExecutorConfig or PowerUnitURL not found in config")
+	}
+
+	var serverPort string
+	if parsedURL, err := url.Parse(configuration.ExecutorConfig.PowerUnitURL); err == nil {
+		if parsedURL.Port() == "" {
+			log.Fatal("PowerUnitURL must include a port")
 		}
+		serverPort = parsedURL.Port()
 	}
 	serverAddr := ":" + serverPort
+
+	p := power.New(maxIdleTime, cycleLength, shellyController)
+	r := router.New(p, powerMapping, idMapping)
+
 	log.Printf("Starting power unit server on %s", serverAddr)
 
 	// Start the power controller in a goroutine
@@ -54,13 +78,12 @@ func main() {
 		}
 	}()
 
-	// Create a server
+	// Start the server in a goroutine
 	srv := &http.Server{
 		Addr:    serverAddr,
 		Handler: r,
 	}
 
-	// Start the server in a goroutine
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
