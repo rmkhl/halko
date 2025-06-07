@@ -25,7 +25,7 @@ interface Props extends Omit<StackProps, "onChange"> {
 
 export const Step: React.FC<Props> = (props) => {
   const { editing, step, onChange: updateStep, pos, ...rest } = props;
-  const { name, type, targetTemperature } = step;
+  const { name, type, targetTemperature, heater, humidifier, fan } = step;
   const { t } = useTranslation();
 
   const handleChange =
@@ -62,7 +62,42 @@ export const Step: React.FC<Props> = (props) => {
           editing={editing}
           min={0}
           max={200}
-        />
+        >
+          °C
+        </NumberComponent>
+
+        <NumberComponent
+          value={heater?.power}
+          title="Heater power"
+          onChange={(v) => handleChange("heater")({ power: v, pid: {} })}
+          editing={editing}
+          min={0}
+          max={100}
+        >
+          %
+        </NumberComponent>
+
+        <NumberComponent
+          value={humidifier?.power}
+          title="Humidifier power"
+          onChange={(v) => handleChange("humidifier")({ power: v })}
+          editing={editing}
+          min={0}
+          max={100}
+        >
+          %
+        </NumberComponent>
+
+        <NumberComponent
+          value={fan?.power}
+          title="Fan power"
+          onChange={(v) => handleChange("fan")({ power: v })}
+          editing={editing}
+          min={0}
+          max={100}
+        >
+          %
+        </NumberComponent>
       </Stack>
 
       {editing && (
