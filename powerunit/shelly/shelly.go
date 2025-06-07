@@ -4,84 +4,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
-	"sync"
+	"time"
 )
 
-type (
-	Interface struct {
-		m      sync.Mutex
-		addr   string
-		client *http.Client
-	}
-	PowerState string
-	ID         int
-	IDString   string
-	powerBool  bool
-	apiError   struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-	powerResp interface {
-		Error() error
-		PowerState() PowerState
-	}
-	setPowerStateResp struct {
-		apiError
-		WasOn powerBool `json:"was_on"`
-	}
-	getStatusResp struct {
-		apiError
-		Output powerBool `json:"output"`
-	}
-	// powerCall returns the api response, the body it should be unmarshaled into
-	// and the api error.
-	powerCall func() (resp *http.Response, body powerResp, err error)
-)
+// PowerState represents the power state of a Shelly device
+type PowerState string
 
-func (p *apiError) Error() error {
-	if p.Code != 0 || len(p.Message) != 0 {
-		return fmt.Errorf("error code '%d', message '%s'", p.Code, p.Message)
-	}
-	return nil
-}
-
-func (p *setPowerStateResp) PowerState() PowerState {
-	return p.WasOn.PowerState()
-}
-
-func (p *setPowerStateResp) Error() error {
-	return p.apiError.Error()
-}
-
-func (p *getStatusResp) PowerState() PowerState {
-	return p.Output.PowerState()
-}
-
-func (p *getStatusResp) Error() error {
-	return p.apiError.Error()
-}
+// ID represents the identifier for a specific power device
+type ID int
 
 const (
+	// Power states
 	Off     PowerState = "off"
 	On      PowerState = "on"
 	Unknown PowerState = "unknown"
-)
 
-func (p powerBool) PowerState() PowerState {
-	if p {
-		return On
-	}
-	return Off
-}
-
-const (
+	// Power device IDs
 	UnknownID ID = iota - 1
 	Fan
 	Heater
 	Humidifier
 )
 
+// Shelly represents a Shelly device controller
+type Shelly struct {
+	address string
+	client  *http.Client
+}
+
+// Response structures for API calls
+type apiError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type getStatusResponse struct {
+	apiError
+	Output bool `json:"output"`
+}
+
+// String returns the string representation of a power device ID
 func (id ID) String() string {
 	switch id {
 	case Fan:
@@ -95,93 +57,78 @@ func (id ID) String() string {
 	}
 }
 
-func (id IDString) ID() (ID, bool) {
-	switch id {
-	case "fan":
-		return Fan, true
-	case "heater":
-		return Heater, true
-	case "humidifier":
-		return Humidifier, true
-	default:
-		return UnknownID, false
+// New creates a new Shelly controller with the specified address
+func New(address string) *Shelly {
+	return &Shelly{
+		address: address,
+		client: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 	}
 }
 
-func New(addr string) *Interface {
-	return &Interface{sync.Mutex{}, addr, http.DefaultClient}
-}
-
-func (i *Interface) setStateCall(state PowerState, id ID) powerCall {
-	return func() (*http.Response, powerResp, error) {
-		body := setPowerStateResp{}
-		resp, err := i.client.Get(i.switchSetURI(state, id))
-		if err != nil {
-			return nil, &body, err
-		}
-		return resp, &body, nil
-	}
-}
-
-func (i *Interface) getStatusCall(id ID) powerCall {
-	return func() (*http.Response, powerResp, error) {
-		body := getStatusResp{}
-		apiResp, err := i.client.Get(fmt.Sprintf("%s/rpc/Switch.GetStatus?id=%d", i.addr, id))
-		if err != nil {
-			return nil, &body, err
-		}
-		return apiResp, &body, nil
-	}
-}
-
-func (i *Interface) SetState(state PowerState, id ID) (PowerState, error) {
-	i.m.Lock()
-	defer i.m.Unlock()
-	// The response contains the state before this call.
-	_, err := getPowerState(i.setStateCall(state, id))
-	// The response contains the current state.
-	pState, getStatusErr := getPowerState(i.getStatusCall(id))
-	// err = getStatusErr || err || nil
-	if getStatusErr != nil {
-		err = getStatusErr
-	}
-	return pState, err
-}
-
-func (i *Interface) GetState(id ID) (PowerState, error) {
-	i.m.Lock()
-	defer i.m.Unlock()
-	return getPowerState(i.getStatusCall(id))
-}
-
-func (i *Interface) switchSetURI(state PowerState, id ID) string {
-	on := state == On
-	return fmt.Sprintf("%s/rpc/Switch.Set?id=%d&on=%v", i.addr, id, on)
-}
-
-func (i *Interface) Shutdown() error {
-	i.m.Lock()
-	defer i.m.Unlock()
-	failed := []string{}
-	for _, id := range []ID{Fan, Heater, Humidifier} {
-		if _, err := i.SetState(Off, id); err != nil {
-			failed = append(failed, id.String())
-		}
-	}
-	if len(failed) == 0 {
-		return nil
-	}
-	return fmt.Errorf("failed to shut down Shelly power for %s", strings.Join(failed, ", "))
-}
-
-func getPowerState(powerCall powerCall) (PowerState, error) {
-	resp, body, err := powerCall()
+// GetState retrieves the current power state of a specified device
+func (s *Shelly) GetState(id ID) (PowerState, error) {
+	// Make API request
+	url := fmt.Sprintf("%s/rpc/Switch.GetStatus?id=%d", s.address, id)
+	resp, err := s.client.Get(url)
 	if err != nil {
 		return Unknown, err
 	}
 	defer resp.Body.Close()
-	if err = json.NewDecoder(resp.Body).Decode(body); err != nil {
+
+	// Parse response
+	var statusResp getStatusResponse
+	if err = json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
 		return Unknown, err
 	}
-	return body.PowerState(), body.Error()
+
+	// Check for API error
+	if statusResp.Code != 0 || len(statusResp.Message) != 0 {
+		return Unknown, fmt.Errorf("API error: code '%d', message '%s'", statusResp.Code, statusResp.Message)
+	}
+
+	// Return power state
+	if statusResp.Output {
+		return On, nil
+	}
+	return Off, nil
+}
+
+// SetState sets the power state of a specified device
+func (s *Shelly) SetState(state PowerState, id ID) (PowerState, error) {
+	// Convert state to boolean for API request
+	on := state == On
+
+	// Make API request to set state
+	url := fmt.Sprintf("%s/rpc/Switch.Set?id=%d&on=%v", s.address, id, on)
+	resp, err := s.client.Get(url)
+	if err != nil {
+		return Unknown, err
+	}
+	defer resp.Body.Close()
+
+	// Parse response
+	var statusResp getStatusResponse
+	if err = json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
+		return Unknown, err
+	}
+
+	// Check for API error
+	if statusResp.Code != 0 || len(statusResp.Message) != 0 {
+		return Unknown, fmt.Errorf("API error: code '%d', message '%s'", statusResp.Code, statusResp.Message)
+	}
+
+	// Return the new state
+	return state, nil
+}
+
+// Shutdown turns off all devices
+func (s *Shelly) Shutdown() error {
+	for _, id := range []ID{Fan, Heater, Humidifier} {
+		if _, err := s.SetState(Off, id); err != nil {
+			return fmt.Errorf("failed to shut down %s: %w", id.String(), err)
+		}
+	}
+	return nil
 }

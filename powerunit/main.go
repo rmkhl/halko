@@ -30,8 +30,16 @@ func main() {
 		log.Fatal("power unit configuration missing")
 	}
 
-	s := shelly.New(configuration.PowerUnit.ShellyAddress)
-	p := power.New(s)
+	// Create a new Shelly controller with the configured address
+	shellyController := shelly.New(configuration.PowerUnit.ShellyAddress)
+
+	// Get cycle length from config or use default
+	cycleLength := 60000 // Default to 60 seconds (60000 ms)
+	if configuration.PowerUnit.CycleLength > 0 {
+		cycleLength = configuration.PowerUnit.CycleLength
+	}
+
+	p := power.New(cycleLength, shellyController)
 	r := router.New(p)
 
 	// Extract port from configured power_unit_url

@@ -20,6 +20,7 @@ type (
 
 	PowerUnit struct {
 		ShellyAddress string `json:"shelly_address"`
+		CycleLength   int    `json:"cycle_length"` // Duration of a power cycle in milliseconds
 	}
 
 	SensorUnitConfig struct {
