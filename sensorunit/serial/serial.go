@@ -23,7 +23,7 @@ type SensorUnit struct {
 // Temperature represents a temperature reading from a sensor
 type Temperature struct {
 	Name  string  `json:"name"`
-	Value float64 `json:"value"`
+	Value float32 `json:"value"`
 	Unit  string  `json:"unit"`
 }
 
@@ -118,7 +118,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 		name := parts[0]
 		valueStr := parts[1]
 
-		var value float64
+		var value float32
 		var unit string
 
 		if valueStr == "NaN" {
