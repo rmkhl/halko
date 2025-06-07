@@ -39,7 +39,21 @@ func main() {
 		cycleLength = configuration.PowerUnit.CycleLength
 	}
 
-	p := power.New(cycleLength, shellyController)
+	// Get power mapping from config
+	powerMapping := configuration.PowerUnit.PowerMapping
+	if powerMapping == nil {
+		// Provide a default mapping if not in config
+		powerMapping = map[string]int{
+			"fan":        0,
+			"heater":     1,
+			"humidifier": 2,
+		}
+		log.Println("Power mapping not found in config, using default.")
+	}
+
+	p := power.New(cycleLength, shellyController, powerMapping)
+	// Inject the powerMapping into the router package
+	router.SetPowerMapping(powerMapping)
 	r := router.New(p)
 
 	// Extract port from configured power_unit_url

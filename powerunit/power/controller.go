@@ -17,8 +17,8 @@ type (
 	}
 
 	Controller struct {
-		powerStates  map[shelly.ID]*powerTracker
-		mu           sync.RWMutex // mutex for thread-safe access to the powerStates map
+		powerStates  map[int]*powerTracker // Changed shelly.ID to int
+		mu           sync.RWMutex          // mutex for thread-safe access to the powerStates map
 		ctx          context.Context
 		cancel       context.CancelFunc
 		cycleLength  time.Duration  // Total duration of a power cycle
@@ -29,7 +29,7 @@ type (
 )
 
 // New creates a new power controller with the specified cycle length in milliseconds
-func New(cycleLengthMs int, shellyCtrl *shelly.Shelly) *Controller {
+func New(cycleLengthMs int, shellyCtrl *shelly.Shelly, powerMapping map[string]int) *Controller {
 	if cycleLengthMs <= 0 {
 		cycleLengthMs = 60000 // Default to 1 minute if not specified
 	}
@@ -39,10 +39,11 @@ func New(cycleLengthMs int, shellyCtrl *shelly.Shelly) *Controller {
 	cycleLength := time.Duration(cycleLengthMs) * time.Millisecond
 	tickDuration := cycleLength / 100 // Divide cycle into 100 ticks
 
-	powerStates := make(map[shelly.ID]*powerTracker)
-	powerStates[shelly.Fan] = &powerTracker{percentage: 0, currentState: shelly.Off}
-	powerStates[shelly.Heater] = &powerTracker{percentage: 0, currentState: shelly.Off}
-	powerStates[shelly.Humidifier] = &powerTracker{percentage: 0, currentState: shelly.Off}
+	powerStates := make(map[int]*powerTracker) // Changed shelly.ID to int
+	// Initialize powerStates from powerMapping
+	for _, id := range powerMapping {
+		powerStates[id] = &powerTracker{percentage: 0, currentState: shelly.Off} // No need to cast to shelly.ID
+	}
 
 	return &Controller{
 		powerStates:  powerStates,
@@ -95,14 +96,14 @@ func (c *Controller) processTick() error {
 			if tracker.percentage == 0 && tracker.currentState == shelly.On {
 				// Turn off if percentage is 0
 				if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-					log.Printf("Error turning off %s: %v", id, err)
+					log.Printf("Error turning off %d: %v", id, err)
 					continue
 				}
 				tracker.currentState = shelly.Off
 			} else if tracker.percentage > 0 && tracker.currentState == shelly.Off {
 				// Turn on if percentage > 0
 				if _, err := c.shelly.SetState(shelly.On, id); err != nil {
-					log.Printf("Error turning on %s: %v", id, err)
+					log.Printf("Error turning on %d: %v", id, err)
 					continue
 				}
 				tracker.currentState = shelly.On
@@ -115,7 +116,7 @@ func (c *Controller) processTick() error {
 				// If the tick count exceeds the percentage, turn off the power
 				if c.tickCount >= int(tracker.percentage) {
 					if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-						log.Printf("Error turning off %s at tick %d: %v", id, c.tickCount, err)
+						log.Printf("Error turning off %d at tick %d: %v", id, c.tickCount, err)
 						continue
 					}
 					tracker.currentState = shelly.Off
@@ -138,7 +139,7 @@ func (c *Controller) updateAllPowerStates() error {
 	for id, tracker := range c.powerStates {
 		state, err := c.shelly.GetState(id)
 		if err != nil {
-			return fmt.Errorf("failed to get state for %s: %w", id, err)
+			return fmt.Errorf("failed to get state for %d: %w", id, err)
 		}
 		tracker.currentState = state
 	}
@@ -152,19 +153,21 @@ func (c *Controller) Stop() {
 	c.cancel()
 
 	// Ensure all powers are turned off
+	deviceIDs := make([]int, 0, len(c.powerStates)) // Changed shelly.ID to int
 	for id := range c.powerStates {
-		if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-			log.Printf("Error turning off %s during shutdown: %v", id, err)
-		}
+		deviceIDs = append(deviceIDs, id)
+	}
+	if err := c.shelly.Shutdown(deviceIDs); err != nil {
+		log.Printf("Error shutting down devices: %v", err)
 	}
 }
 
 // GetAllCycles returns the current power cycle percentages of all devices
-func (c *Controller) GetAllCycles() (map[shelly.ID]uint8, error) {
+func (c *Controller) GetAllCycles() (map[int]uint8, error) { // Changed shelly.ID to int
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	cycles := make(map[shelly.ID]uint8)
+	cycles := make(map[int]uint8) // Changed shelly.ID to int
 	for id, tracker := range c.powerStates {
 		cycles[id] = tracker.percentage
 	}
@@ -173,11 +176,11 @@ func (c *Controller) GetAllCycles() (map[shelly.ID]uint8, error) {
 }
 
 // SetAllCycles updates all power cycle percentages at once
-func (c *Controller) SetAllCycles(cycles map[shelly.ID]uint8) error {
+func (c *Controller) SetAllCycles(cycles map[int]uint8) error { // Changed shelly.ID to int
 	// Validate all percentages first
 	for id, percentage := range cycles {
 		if percentage > 100 {
-			return fmt.Errorf("percentage for %s must be between 0 and 100", id.String())
+			return fmt.Errorf("percentage for device %d must be between 0 and 100", id)
 		}
 		if _, exists := c.powerStates[id]; !exists {
 			return fmt.Errorf("unknown power ID: %d", id)
@@ -196,7 +199,7 @@ func (c *Controller) SetAllCycles(cycles map[shelly.ID]uint8) error {
 		// would make it on, turn it on immediately
 		if tracker.currentState == shelly.Off && percentage > 0 && c.tickCount < int(percentage) {
 			if _, err := c.shelly.SetState(shelly.On, id); err != nil {
-				return fmt.Errorf("error turning on %s after setting cycle: %w", id, err)
+				return fmt.Errorf("error turning on device %d after setting cycle: %w", id, err)
 			}
 			tracker.currentState = shelly.On
 		}
@@ -205,7 +208,7 @@ func (c *Controller) SetAllCycles(cycles map[shelly.ID]uint8) error {
 		// would make it off, turn it off immediately
 		if tracker.currentState == shelly.On && (percentage == 0 || c.tickCount >= int(percentage)) {
 			if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-				return fmt.Errorf("error turning off %s after setting cycle: %w", id, err)
+				return fmt.Errorf("error turning off device %d after setting cycle: %w", id, err)
 			}
 			tracker.currentState = shelly.Off
 		}
