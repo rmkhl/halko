@@ -2,7 +2,7 @@ MODULES = configurator executor powerunit simulator sensorunit
 BINDIR = bin
 
 .PHONY: all
-all: prepare $(MODULES:%=$(BINDIR)/%)
+all: prepare 
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
 	go build -o $@ ./$*/
@@ -47,7 +47,7 @@ prepare:
 	@echo "Updated go.work file to include all modules."
 
 .PHONY: rebuild
-rebuild: clean all
+rebuild: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All binaries have been rebuilt."
 
 .PHONY: lint
