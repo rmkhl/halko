@@ -174,16 +174,16 @@ Base Path: `/engine/api/v1`
 
 ### PowerUnit (`/powerunit`)
 
-Base Path: `/api/v1`
+Base Path: `/powers/api/v1`
 
 - **Powers:**
-  - `GET /powers`: Get the status of all power channels.
-  - `GET /powers/:power`: Get the status of a specific power channel (e.g., `heater`, `fan`, `humidifier`).
-  - `POST /powers/:power`: Operate a specific power channel (turn on/off, set percentage). Also supports `PUT` and `PATCH` methods for the same operation.
+  - `GET /`: Get the status of all power channels.
+  - `GET /:power`: Get the status of a specific power channel (e.g., `heater`, `fan`, `humidifier`).
+  - `POST /:power`: Operate a specific power channel (turn on/off, set percentage). Also supports `PUT` and `PATCH` methods for the same operation.
 
 ### SensorUnit (`/sensorunit`)
 
-Base Path: `/api/v1` (Now consistent with other module APIs)
+Base Path: `/sensors/api/v1`
 
 - **Temperature:**
   - `GET /temperature`: Fetch current temperature readings from all sensors.
