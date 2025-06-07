@@ -85,24 +85,15 @@ type (
 )
 
 // Power controller API
-const (
-	PowerOn  PowerStatus = "On"
-	PowerOff PowerStatus = "Off"
-)
-
 type (
-	PowerStatus string
-
 	PowerResponse struct {
-		Status  PowerStatus `json:"status"`
-		Percent uint8       `json:"percent,omitempty"`
+		Percent uint8 `json:"percent"`
 	}
 
 	PowerStatusResponse map[string]PowerResponse
 
 	PowerCommand struct {
-		Command PowerStatus `json:"command"`
-		Percent uint8       `json:"percent,omitempty"`
+		Percent uint8 `json:"percent"`
 	}
 
 	PowerOperationResponse struct {
