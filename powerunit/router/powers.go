@@ -58,7 +58,7 @@ func operatePower(p *power.Controller) gin.HandlerFunc {
 		}
 		err := p.SetCycle(command.Percent, id)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting powercycle: %s", err)})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting power cycle: %s", err)})
 			return
 		}
 		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{Data: types.PowerOperationResponse{Message: "completed"}})

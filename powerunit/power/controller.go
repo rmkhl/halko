@@ -38,6 +38,10 @@ func worker(ctx context.Context, channel *channel, wg *sync.WaitGroup) {
 	channel.Stop()
 }
 
+func (c *Controller) Stop() {
+	c.errChan <- fmt.Errorf("controller stopped")
+}
+
 func (c *Controller) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -51,7 +55,7 @@ func (c *Controller) Start() error {
 
 	go func() {
 		err := <-c.errChan
-		log.Printf("error occurred: %s", err)
+		log.Printf("%s", err)
 		cancel()
 	}()
 
