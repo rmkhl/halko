@@ -16,6 +16,16 @@ const emptyStep = (): ApiStep => ({
   name: "",
   type: "heating",
   targetTemperature: 30,
+  heater: {
+    pid: {},
+    power: 0,
+  },
+  humidifier: {
+    power: 0,
+  },
+  fan: {
+    power: 0,
+  },
 });
 
 export const Steps: React.FC<Props> = (props) => {
@@ -82,7 +92,7 @@ export const Steps: React.FC<Props> = (props) => {
               <Button
                 color="success"
                 onClick={addStep(i + 1)}
-                style={{ width: "2em" }}
+                style={{ width: "10em" }}
               >
                 {t("programs.steps.add")}
               </Button>

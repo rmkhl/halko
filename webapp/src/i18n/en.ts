@@ -44,7 +44,7 @@ export const en = {
     preheatTo: "Preheat oven to",
     steps: {
       ...common(),
-      add: "Add",
+      add: "Add step",
       title: "Steps",
       timeConstraint: "Time constraint",
       temperatureConstraint: {
