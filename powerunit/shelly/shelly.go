@@ -15,9 +15,6 @@ const (
 	Off     PowerState = "off"
 	On      PowerState = "on"
 	Unknown PowerState = "unknown"
-
-	// Power device IDs
-	UnknownID = -1 // Now an int
 )
 
 // Shelly represents a Shelly device controller

@@ -44,9 +44,9 @@ func main() {
 	if powerMapping == nil {
 		// Provide a default mapping if not in config
 		powerMapping = map[string]int{
-			"fan":        0,
-			"heater":     1,
-			"humidifier": 2,
+			"fan":        2,
+			"heater":     0,
+			"humidifier": 1,
 		}
 		log.Println("Power mapping not found in config, using default.")
 	}
