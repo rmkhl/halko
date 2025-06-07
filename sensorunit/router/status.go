@@ -8,11 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Status represents a status message for the display
-type Status struct {
-	Message string `json:"message"`
-}
-
 // setupStatusRoutes configures the status API routes
 func setupStatusRoutes(router *gin.Engine, api *API) {
 	router.POST("/api/status", api.setStatus)
@@ -21,15 +16,15 @@ func setupStatusRoutes(router *gin.Engine, api *API) {
 
 // setStatus handles POST requests to update the status text on the LCD
 func (api *API) setStatus(c *gin.Context) {
-	var status Status
-	if err := c.ShouldBindJSON(&status); err != nil {
+	var payload types.StatusRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, types.APIErrorResponse{
 			Err: "Invalid request format",
 		})
 		return
 	}
 
-	err := api.sensorUnit.SetStatusText(status.Message)
+	err := api.sensorUnit.SetStatusText(payload.Message)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, types.APIErrorResponse{
 			Err: err.Error(),
@@ -37,8 +32,10 @@ func (api *API) setStatus(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
+		Data: types.StatusResponse{
+			Status: types.SensorStatusOK,
+		},
 	})
 }
 
@@ -46,12 +43,14 @@ func (api *API) setStatus(c *gin.Context) {
 func (api *API) getStatus(c *gin.Context) {
 	isConnected := api.sensorUnit.IsConnected()
 
-	status := "connected"
+	status := types.SensorStatusConnected
 	if !isConnected {
-		status = "disconnected"
+		status = types.SensorStatusDisconnected
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": status,
+	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
+		Data: types.StatusResponse{
+			Status: status,
+		},
 	})
 }

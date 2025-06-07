@@ -10,11 +10,30 @@ const (
 	ProgramStateUnknown   ProgramState = "unknown"
 )
 
+// SensorStatus values
+const (
+	SensorStatusConnected    SensorStatus = "connected"
+	SensorStatusDisconnected SensorStatus = "disconnected"
+	SensorStatusOK           SensorStatus = "ok"
+)
+
+// StatusRequest defines the structure for a set status request body
+type StatusRequest struct {
+	Message string `json:"message"`
+}
+
 type (
 	ProgramState string
+	SensorStatus string
 
+	// APIErrorResponse is a generic error response
 	APIErrorResponse struct {
 		Err string `json:"error"`
+	}
+
+	// StatusResponse defines the structure for a status API response
+	StatusResponse struct {
+		Status SensorStatus `json:"status"`
 	}
 
 	APIResponse[T any] struct {
