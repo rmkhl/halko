@@ -4,10 +4,14 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/halko/%i -c /etc/opt/halko.cfg
+ExecStart=/opt/halko/%i -c /etc/opt/halko/halko.cfg
 Restart=on-failure
 User=halko
 Group=halko
+# Graceful termination settings
+TimeoutStopSec=10s
+KillMode=mixed
+KillSignal=SIGTERM
 
 [Install]
 WantedBy=multi-user.target

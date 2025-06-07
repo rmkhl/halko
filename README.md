@@ -6,11 +6,12 @@ Halko is a distributed system for controlling and monitoring wood drying kilns. 
 
 The system is built with a microservices architecture with these main components:
 
-- **Configurator**: Manages program and phase configurations
-- **Executor**: Runs drying programs and controls the kiln
-- **PowerUnit**: Interfaces with Shelly devices to control power
-- **Simulator**: Provides a simulated environment for testing
-- **WebApp**: User interface for controlling and monitoring the system
+- **Configurator**: Manages program and phase configurations.
+- **Executor**: Runs drying programs and controls the kiln.
+- **PowerUnit**: Interfaces with Shelly devices to control power.
+- **SensorUnit**: Reads temperature data from physical sensors and provides an API.
+- **Simulator**: Provides a simulated environment for testing.
+- **WebApp**: User interface for controlling and monitoring the system.
 
 ## Building the Project
 
@@ -56,23 +57,29 @@ make fmt-changed
 
 #### `/configurator`
 
-Storage service for program and phase configurations. Provides REST API for CRUD operations on configuration data, which is stored in the filesystem.
+The Configurator is a storage service for program and phase configurations. It allows for CRUD operations on this data, which is stored in the filesystem. It exposes a REST API for these operations.
 
 #### `/executor`
 
-Core service that executes drying programs. It manages the state machine for program execution, controls power units, and monitors sensor data.
+The Executor is the core service that executes drying programs. It manages the state machine for program execution, interacts with the PowerUnit to control heating elements, and with the SensorUnit (or Simulator) to monitor temperatures. It also provides a REST API to manage and monitor program execution.
 
 #### `/powerunit`
 
-Interfaces with Shelly smart switches to control power to heaters, fans, and humidifiers. Provides a REST API for power control operations.
+The PowerUnit interfaces with Shelly smart switches to control power to heaters, fans, and humidifiers. It provides a REST API for direct power control operations.
+
+#### `/sensorunit`
+
+The SensorUnit component includes:
+1.  Arduino firmware (`sensorunit/arduino/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
+2.  A Go webservice (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
 
 #### `/simulator`
 
-Simulates the physical components of the kiln for development and testing purposes. Includes emulated temperature sensors and power controls.
+The Simulator emulates the physical components of the kiln, such as temperature sensors and Shelly power controls. This is useful for development and testing without requiring actual hardware. It mimics the REST APIs of the SensorUnit and parts of the PowerUnit (Shelly devices).
 
 #### `/webapp`
 
-React-based frontend for the system. Allows users to create and modify programs, monitor active drying sessions, and control the system.
+A React-based frontend application that serves as the user interface for the Halko system. It allows users to create and modify drying programs, monitor active drying sessions, and control the overall system.
 
 ### Supporting Directories
 
@@ -98,30 +105,15 @@ Shared Go type definitions used across multiple components.
 
 #### `/sensorunit`
 
-Arduino code for the physical temperature sensor unit.
+Contains both Arduino code for the physical temperature sensor unit and a REST API webservice that interfaces with the Arduino over USB serial connection.
 
 ## Sensor Unit
 
-The system includes an Arduino-based sensor unit for temperature monitoring in the kiln.
+The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a Go webservice that provides a REST API for integration with the executor component.
 
 ### Hardware Components
 
-- **Controller**: Arduino Nano board
-- **Temperature Sensors**: 3× MAX6675 thermocouples for measuring:
-  - Primary oven temperature
-  - Secondary oven temperature
-  - Wood temperature
-- **Display**: 16×2 LCD (LCM 1602C) for local temperature readings
-
-### Functionality
-
-The sensor unit performs the following functions:
-
-- Reads temperatures from all three thermocouples every second
-- Displays current temperatures on the LCD screen
-- Provides temperature data over serial connection when requested
-- Shows connection status on the LCD
-- Accepts commands via serial port (9600 baud)
+The sensor unit is based on an Arduino and uses MAX6675 thermocouple sensors to measure temperatures. It can display status messages on an LCD.
 
 ### Serial Commands
 
@@ -133,16 +125,96 @@ The unit accepts the following commands over the serial interface:
 
 ### Connection Status
 
-The LCD displays the current connection status:
-
-- Shows custom status text when connected
-- Automatically displays "Disconnected" after 30 seconds without commands
-- Displays a visual indicator (alternating *,+) to show the unit is operational
+The sensor unit's webservice provides an endpoint to check the connection status and another to update the status message displayed on the LCD.
 
 ### Integration
 
-The Executor component communicates with the sensor unit to retrieve temperature data during drying programs.
-The sensor unit continues to display temperatures locally even when disconnected from the main system.
+The Executor component communicates with the SensorUnit's REST API to retrieve temperature data during drying programs. The SensorUnit continues to display temperatures locally even when disconnected from the main system. The Go webservice part of the SensorUnit handles the serial communication with the Arduino and exposes the data via HTTP.
+
+#### Configuration
+
+The SensorUnit configuration is stored in a JSON file (`/etc/opt/halko/sensorunit.json`) and includes parameters like `SerialPort` and `BaudRate`.
+
+#### Systemd Service
+
+The SensorUnit service file (`sensorunit.service`) is located in the `templates` directory and installed to `/etc/systemd/system/`. It can be enabled and started with:
+
+```bash
+sudo systemctl enable --now sensorunit
+```
+
+## API Endpoints
+
+This section outlines the REST API endpoints provided by each module.
+
+### Configurator (`/configurator`)
+
+Base Path: `/api/v1`
+
+- **Programs:**
+  - `GET /programs`: List all programs.
+  - `POST /programs`: Create a new program.
+  - `GET /programs/:name`: Get a specific program by name.
+  - `PUT /programs/:name`: Update a specific program by name.
+- **Phases:**
+  - `GET /phases`: List all phases.
+  - `POST /phases`: Create a new phase.
+  - `GET /phases/:name`: Get a specific phase by name.
+  - `PUT /phases/:name`: Update a specific phase by name.
+
+### Executor (`/executor`)
+
+Base Path: `/engine/api/v1`
+
+- **Program Storage:**
+  - `GET /programs`: List all available programs (definitions loaded by executor).
+  - `GET /programs/:name`: Get a specific program definition by name.
+  - `DELETE /programs/:name`: Delete/unload a specific program definition.
+- **Engine Control:**
+  - `GET /running`: Get the status of the currently running program.
+  - `POST /running`: Start a new program (by providing its definition or name).
+  - `DELETE /running`: Cancel the currently running program.
+
+### PowerUnit (`/powerunit`)
+
+Base Path: `/api/v1`
+
+- **Powers:**
+  - `GET /powers`: Get the status of all power channels.
+  - `GET /powers/:power`: Get the status of a specific power channel (e.g., `heater`, `fan`, `humidifier`).
+  - `POST /powers/:power`: Operate a specific power channel (turn on/off, set percentage). Also supports `PUT` and `PATCH` methods for the same operation.
+
+### SensorUnit (`/sensorunit`)
+
+Base Path: `/api/v1` (Now consistent with other module APIs)
+
+- **Temperature:**
+  - `GET /temperature`: Fetch current temperature readings from all sensors.
+- **Status:**
+  - `GET /status`: Check the connection status of the sensor unit.
+  - `POST /status`: Update the status text displayed on the sensor unit's LCD.
+    - Body: `{"message": "your status text"}`
+
+### Simulator (`/simulator`)
+
+The simulator mimics endpoints from other services for testing purposes.
+
+- **Simulated SensorUnit API:**
+  Base Path: `/sensors/api/v1`
+  - **Temperature:**
+    - `GET /temperatures`: Get readings from all simulated temperature sensors.
+    - `GET /temperatures/:sensor`: Get reading from a specific simulated sensor.
+  - **Status:**
+    - `GET /status`: Get the simulated connection status (always returns "connected").
+    - `POST /status`: Log a status message (simulates updating an LCD).
+      - Body: `{"message": "your status text"}`
+
+- **Simulated Shelly Switch Control (RPC style):**
+  Base Path: `/rpc`
+  - `GET /Switch.GetStatus`: Get the status of simulated Shelly switches.
+    - Query Params: `id=<switch_id>` (e.g., `id=0`)
+  - `GET /Switch.Set`: Set the state of simulated Shelly switches.
+    - Query Params: `id=<switch_id>&on=<true|false>`
 
 ## Deployment
 

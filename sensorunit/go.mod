@@ -1,16 +1,14 @@
-module github.com/rmkhl/halko/simulator
+module github.com/rmkhl/halko/sensorunit
 
 go 1.23.0
 
 toolchain go1.24.3
 
 require (
-	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.1
 	github.com/rmkhl/halko/types v0.0.0-20250607062522-bc4262653186
+	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 )
-
-replace github.com/rmkhl/halko/types => ../types
 
 require (
 	github.com/bytedance/sonic v1.13.3 // indirect
@@ -24,7 +22,6 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -40,3 +37,5 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/rmkhl/halko/types => ../types

@@ -59,7 +59,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.Prog
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(config.TemperatureSensorURL, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader(config.SensorUnitURL+"/api/temperature", runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}
