@@ -35,6 +35,11 @@
                         "minimum": 0,
                         "maximum": 200
                     },
+                    "runtime": {
+                        "$comment": "Runtime in seconds",
+                        "type": "number",
+                        "minimum": 0
+                    },
                     "heater": {
                         "type": "object",
                         "properties": {
@@ -57,7 +62,7 @@
                                 "maximum": 40
                             },
                             "pid": {
-                                "$comment": "PID values for the heater",
+                                "$comment": "PID values for the heater, can be empty to use defaults",
                                 "type": "object",
                                 "properties": {
                                     "kp": {
@@ -73,10 +78,15 @@
                                         "type": "number"
                                     }
                                 },
-                                "required": [
-                                    "kp",
-                                    "ki",
-                                    "kd"
+                                "allOf": [
+                                    {
+                                        "if": {
+                                            "minProperties": 1
+                                        },
+                                        "then": {
+                                            "required": ["kp", "ki", "kd"]
+                                        }
+                                    }
                                 ]
                             }
                         },
@@ -87,8 +97,20 @@
                                 ]
                             },
                             {
-                                "required": [
-                                    "max_delta"
+                                "allOf": [
+                                    {
+                                        "required": ["pid"]
+                                    },
+                                    {
+                                        "not": {
+                                            "required": ["min_delta"]
+                                        }
+                                    },
+                                    {
+                                        "not": {
+                                            "required": ["max_delta"]
+                                        }
+                                    }
                                 ]
                             }
                         ]
@@ -127,8 +149,53 @@
                     "type",
                     "heater",
                     "fan",
-                    "humidifier",
-                    "temperature_target"
+                    "humidifier"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "type": { "enum": ["heating"] }
+                            }
+                        },
+                        "then": {
+                            "required": ["temperature_target"],
+                            "not": { "required": ["runtime"] },
+                            "properties": {
+                                "heater": {
+                                    "required": ["power"],
+                                    "not": { "required": ["pid"] }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "type": { "enum": ["acclimate"] }
+                            }
+                        },
+                        "then": {
+                            "required": ["temperature_target", "runtime"]
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "type": { "enum": ["cooling"] }
+                            }
+                        },
+                        "then": {
+                            "oneOf": [
+                                {
+                                    "required": ["temperature_target"]
+                                },
+                                {
+                                    "required": ["runtime"]
+                                }
+                            ]
+                        }
+                    }
                 ]
             },
             "minItems": 1

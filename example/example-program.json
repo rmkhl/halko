@@ -1,0 +1,62 @@
+{
+  "name": "Four-Stage Kiln Drying Program",
+  "steps": [
+    {
+      "name": "Initial Heating",
+      "type": "heating",
+      "temperature_target": 100,
+      "heater": {
+        "power": 80
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 100
+      }
+    },
+    {
+      "name": "Secondary Heating",
+      "type": "heating",
+      "temperature_target": 150,
+      "heater": {
+        "power": 100
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 50
+      }
+    },
+    {
+      "name": "Acclimation Phase",
+      "type": "acclimate",
+      "temperature_target": 160,
+      "runtime": 21600,
+      "heater": {
+        "pid": {}
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 25
+      }
+    },
+    {
+      "name": "Cooling Phase",
+      "type": "cooling",
+      "temperature_target": 30,
+      "heater": {
+        "power": 0
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 0
+      }
+    }
+  ]
+}
