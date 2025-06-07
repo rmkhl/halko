@@ -8,13 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// setupStatusRoutes configures the status API routes
-func setupStatusRoutes(router *gin.Engine, api *API) {
-	router.POST("/api/status", api.setStatus)
-	router.GET("/api/status", api.getStatus)
-}
-
 // setStatus handles POST requests to update the status text on the LCD
+// This function is now part of the API struct and called by SetupRoutes.
+// No longer a standalone setupStatusRoutes function.
 func (api *API) setStatus(c *gin.Context) {
 	var payload types.StatusRequest
 	if err := c.ShouldBindJSON(&payload); err != nil {

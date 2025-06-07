@@ -37,8 +37,7 @@ func SetupRouter(api *API) *gin.Engine {
 	})
 
 	// Setup routes
-	setupTemperatureRoutes(router, api)
-	setupStatusRoutes(router, api)
+	SetupRoutes(router, api) // New grouped setup
 
 	return router
 }

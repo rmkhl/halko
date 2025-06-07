@@ -8,12 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// setupTemperatureRoutes configures the temperature API routes
-func setupTemperatureRoutes(router *gin.Engine, api *API) {
-	router.GET("/api/temperature", api.getTemperatures)
-}
-
 // getTemperatures handles GET requests to fetch temperature data
+// This function is now part of the API struct and called by SetupRoutes.
+// No longer a standalone setupTemperatureRoutes function.
 func (api *API) getTemperatures(c *gin.Context) {
 	temperatures, err := api.sensorUnit.GetTemperatures()
 	if err != nil {
