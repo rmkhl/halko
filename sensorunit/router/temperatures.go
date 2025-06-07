@@ -3,8 +3,9 @@ package router
 import (
 	"net/http"
 
+	"github.com/rmkhl/halko/types"
+
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhaklab/halko/types"
 )
 
 // setupTemperatureRoutes configures the temperature API routes

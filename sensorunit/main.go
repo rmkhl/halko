@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rmkhaklab/halko/sensorunit/router"
-	"github.com/rmkhaklab/halko/sensorunit/serial"
-	"github.com/rmkhaklab/halko/types"
+	"github.com/rmkhl/halko/sensorunit/router"
+	"github.com/rmkhl/halko/sensorunit/serial"
+	"github.com/rmkhl/halko/types"
 )
 
 // ConfigFilePath returns the path to the config file

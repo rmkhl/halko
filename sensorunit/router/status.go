@@ -3,8 +3,9 @@ package router
 import (
 	"net/http"
 
+	"github.com/rmkhl/halko/types"
+
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhaklab/halko/types"
 )
 
 // Status represents a status message for the display

@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhaklab/halko/sensorunit/serial"
+	"github.com/rmkhl/halko/sensorunit/serial"
 )
 
 // API represents the REST API for the sensor unit
