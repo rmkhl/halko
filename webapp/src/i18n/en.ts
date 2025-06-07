@@ -23,19 +23,7 @@ export const en = {
   },
   tabs: {
     current: "Current program",
-    phases: "Phases",
     programs: "Programs",
-  },
-  phases: {
-    ...common(),
-    cycles: {
-      title: "Cycles",
-      constant: "Constant",
-      delta: "Delta",
-      select: "Select cycle",
-      addDeltaCycle: "Add delta cycle",
-      range: "Range",
-    },
   },
   programs: {
     ...common(),
@@ -44,7 +32,7 @@ export const en = {
     preheatTo: "Preheat oven to",
     steps: {
       ...common(),
-      add: "Add",
+      add: "Add step",
       title: "Steps",
       timeConstraint: "Time constraint",
       temperatureConstraint: {
@@ -55,8 +43,6 @@ export const en = {
       heater: "Heater",
       fan: "Fan",
       humidifier: "Humidifier",
-      selectPhase: "Select",
-      noPhaseSelected: "No phase selected",
     },
   },
   sensors: {
