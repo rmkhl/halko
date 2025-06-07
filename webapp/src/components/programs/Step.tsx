@@ -1,16 +1,18 @@
 import React from "react";
-import { Step as ApiStep } from "../../types/api";
+import { Step as ApiStep, StepType, stepTypes } from "../../types/api";
 import { Button, Stack, StackProps } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { TextComponent } from "../form/TextComponent";
-import { TimeComponent } from "../form/TimeComponent";
-import { TemperatureRangeSlider } from "../form/TemperatureRangeSlider";
-import { PhaseSelector } from "./PhaseSelector";
 import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
+import { SelectionComponent } from "../form/SelectionComponent";
+import { NumberComponent } from "../form/NumberComponent";
 
 interface Position {
   idx: number;
+  isFirst: boolean;
+  isSecond: boolean;
+  isNextToLast: boolean;
   isLast: boolean;
 }
 
@@ -23,14 +25,7 @@ interface Props extends Omit<StackProps, "onChange"> {
 
 export const Step: React.FC<Props> = (props) => {
   const { editing, step, onChange: updateStep, pos, ...rest } = props;
-  const {
-    name,
-    timeConstraint,
-    temperatureConstraint,
-    heater,
-    fan,
-    humidifier,
-  } = step;
+  const { name, type, targetTemperature } = step;
   const { t } = useTranslation();
 
   const handleChange =
@@ -40,9 +35,11 @@ export const Step: React.FC<Props> = (props) => {
 
   const handleNudge = (newIdx: number) => updateStep({ ...step }, newIdx);
 
+  const canEdit = !(pos.isFirst || pos.isLast);
+
   return (
     <Stack gap={3} direction="row" {...rest}>
-      <Stack flex={1}>
+      <Stack flex={1} gap={2}>
         <TextComponent
           value={name}
           onChange={handleChange("name")}
@@ -50,45 +47,21 @@ export const Step: React.FC<Props> = (props) => {
           title={t("programs.steps.name")}
         />
 
-        <TimeComponent
-          editing={editing}
-          title={t("programs.steps.timeConstraint")}
-          value={timeConstraint}
-          onChange={handleChange("timeConstraint")}
+        <SelectionComponent
+          editing={editing && canEdit}
+          onChange={(s) => handleChange("type")(s as StepType)}
+          value={type}
+          title="Type"
+          options={stepTypes as unknown as string[]}
         />
 
-        <TemperatureRangeSlider
+        <NumberComponent
+          value={targetTemperature}
+          title="Target temperature"
+          onChange={handleChange("targetTemperature")}
           editing={editing}
-          title={t("programs.steps.temperatureConstraint.title")}
-          low={temperatureConstraint.minimum}
-          high={temperatureConstraint.maximum}
-          onChange={(low: number, high: number) => {
-            handleChange("temperatureConstraint")({
-              minimum: low,
-              maximum: high,
-            });
-          }}
-        />
-
-        <PhaseSelector
-          editing={editing}
-          title={t("programs.steps.heater")}
-          phase={heater}
-          onChange={handleChange("heater")}
-        />
-
-        <PhaseSelector
-          editing={editing}
-          title={t("programs.steps.fan")}
-          phase={fan}
-          onChange={handleChange("fan")}
-        />
-
-        <PhaseSelector
-          editing={editing}
-          title={t("programs.steps.humidifier")}
-          phase={humidifier}
-          onChange={handleChange("humidifier")}
+          min={0}
+          max={200}
         />
       </Stack>
 
@@ -106,7 +79,7 @@ interface NudgeColumnProps {
 
 const NudgeColumn: React.FC<NudgeColumnProps> = (props) => {
   const { pos, onChange } = props;
-  const { idx, isLast } = pos;
+  const { idx, isFirst, isSecond, isNextToLast, isLast } = pos;
 
   const handleUpClick = () => {
     onChange(idx - 1);
@@ -116,15 +89,23 @@ const NudgeColumn: React.FC<NudgeColumnProps> = (props) => {
     onChange(idx + 1);
   };
 
+  if (isFirst || isLast) {
+    return null;
+  }
+
   return (
     <Stack gap={3} justifyContent="center">
-      <Button disabled={idx === 0} onClick={handleUpClick}>
-        <ArrowUpwardRoundedIcon />
-      </Button>
+      {!isSecond && (
+        <Button disabled={idx === 0} onClick={handleUpClick}>
+          <ArrowUpwardRoundedIcon />
+        </Button>
+      )}
 
-      <Button disabled={isLast} onClick={handleDownClick}>
-        <ArrowDownwardRoundedIcon />
-      </Button>
+      {!isNextToLast && (
+        <Button disabled={isLast} onClick={handleDownClick}>
+          <ArrowDownwardRoundedIcon />
+        </Button>
+      )}
     </Stack>
   );
 };

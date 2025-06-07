@@ -24,11 +24,8 @@ export const executorApi = createApi({
         method: "POST",
         body: JSON.stringify({
           name: p.name,
-          default_step_time: p.defaultStepRuntime,
           steps: p.steps.map((s) => ({
             name: s.name,
-            time_constraint: s.timeConstraint,
-            temperature_constraint: s.temperatureConstraint,
             heater: s.heater,
             fan: s.fan,
             humidifier: s.humidifier,
