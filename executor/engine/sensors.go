@@ -11,17 +11,9 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-const (
-	PowerOn  PowerStatus = "On"
-	PowerOff PowerStatus = "Off"
-)
-
 type (
-	PowerStatus string
-
 	PowerResponse struct {
-		Status  PowerStatus `json:"status"`
-		Percent int         `json:"percent,omitempty"`
+		Percent int `json:"percent"`
 	}
 
 	PowerStatusResponse struct {

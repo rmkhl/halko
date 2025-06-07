@@ -82,16 +82,13 @@ Gets the status of all power channels.
 {
   "data": {
     "heater": {
-      "on": true,
-      "percentage": 100
+      "percent": 100
     },
     "fan": {
-      "on": true,
-      "percentage": 100
+      "percent": 100
     },
     "humidifier": {
-      "on": false,
-      "percentage": 0
+      "percent": 0
     }
   }
 }
@@ -108,8 +105,7 @@ Gets the status of a specific power channel.
 ```json
 {
   "data": {
-    "on": true,
-    "percentage": 100
+    "percent": 100
   }
 }
 ```
@@ -124,8 +120,7 @@ Operates a specific power channel.
 **Request Format:**
 ```json
 {
-  "on": true,
-  "percentage": 75
+  "percent": 75
 }
 ```
 
@@ -133,8 +128,7 @@ Operates a specific power channel.
 ```json
 {
   "data": {
-    "on": true,
-    "percentage": 75
+    "percent": 75
   }
 }
 ```
