@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rmkhl/halko/types"
 	"github.com/tarm/serial"
 )
 
@@ -157,7 +158,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 		var unit string
 
 		if valueStr == "NaN" {
-			value = 0
+			value = types.InvalidTemperatureReading
 			unit = "C"
 		} else {
 			unit = string(valueStr[len(valueStr)-1])
@@ -214,8 +215,6 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 
 	// Special handling for show commands - they don't return a meaningful response
 	if strings.HasPrefix(cmd, ShowCommand) {
-		// Just wait a bit to let Arduino process the command
-		time.Sleep(100 * time.Millisecond)
 		return "", nil
 	}
 

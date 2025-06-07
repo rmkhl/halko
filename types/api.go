@@ -17,6 +17,11 @@ const (
 	SensorStatusOK           SensorStatus = "ok"
 )
 
+const (
+	// signals invalid temperature reading
+	InvalidTemperatureReading = -273.15 // Absolute zero in Celsius, used to indicate an invalid reading
+)
+
 // StatusRequest defines the structure for a set status request body
 type StatusRequest struct {
 	Message string `json:"message"`
