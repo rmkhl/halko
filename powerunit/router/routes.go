@@ -6,15 +6,14 @@ import (
 )
 
 func setupRoutes(r *gin.Engine, p *power.Controller) {
-	api := r.Group("api")
+	powers := r.Group("powers")
+	api := powers.Group("api")
 	v1 := api.Group("v1")
 
-	powers := v1.Group("powers")
+	v1.GET("", statusAllPowers(p))
+	v1.GET("/:power", statusPower(p))
 
-	powers.GET("", statusAllPowers(p))
-	powers.GET("/:power", statusPower(p))
-
-	powers.POST("/:power", operatePower(p))
-	powers.PUT("/:power", operatePower(p))
-	powers.PATCH("/:power", operatePower(p))
+	v1.POST("/:power", operatePower(p))
+	v1.PUT("/:power", operatePower(p))
+	v1.PATCH("/:power", operatePower(p))
 }

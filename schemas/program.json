@@ -44,10 +44,17 @@
                                 "minimum": 0,
                                 "maximum": 100
                             },
+                            "min_delta": {
+                                "$comment": "Minimum temperature difference allowed (Celsius)",
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 20
+                            },
                             "max_delta": {
                                 "$comment": "Maximum temperature difference allowed (Celsius)",
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "maximum": 40
                             },
                             "pid": {
                                 "$comment": "PID values for the heater",

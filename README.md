@@ -70,8 +70,9 @@ The PowerUnit interfaces with Shelly smart switches to control power to heaters,
 #### `/sensorunit`
 
 The SensorUnit component includes:
-1.  Arduino firmware (`sensorunit/arduino/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
-2.  A Go webservice (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
+
+1. Arduino firmware (`sensorunit/arduino/sensorunit/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
+2. A Go service (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
 
 #### `/simulator`
 
@@ -103,17 +104,22 @@ Integration tests for the system components.
 
 Shared Go type definitions used across multiple components.
 
-#### `/sensorunit`
-
-Contains both Arduino code for the physical temperature sensor unit and a REST API webservice that interfaces with the Arduino over USB serial connection.
-
 ## Sensor Unit
 
-The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a Go webservice that provides a REST API for integration with the executor component.
+The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a service that provides a REST API for integration with the executor component.
 
 ### Hardware Components
 
 The sensor unit is based on an Arduino and uses MAX6675 thermocouple sensors to measure temperatures. It can display status messages on an LCD.
+
+### Arduino Firmware
+
+The Arduino firmware for the sensor unit is located at `/sensorunit/arduino/sensorunit/sensorunit.ino`. This firmware handles:
+
+- Reading from the MAX6675 thermocouple sensors
+- Displaying temperature readings and status on the LCD
+- Responding to serial commands from the Go service
+- Managing connection status with visual indicators
 
 ### Serial Commands
 
@@ -125,11 +131,11 @@ The unit accepts the following commands over the serial interface:
 
 ### Connection Status
 
-The sensor unit's webservice provides an endpoint to check the connection status and another to update the status message displayed on the LCD.
+The sensor unit's service provides an endpoint to check the connection status and another to update the status message displayed on the LCD.
 
 ### Integration
 
-The Executor component communicates with the SensorUnit's REST API to retrieve temperature data during drying programs. The SensorUnit continues to display temperatures locally even when disconnected from the main system. The Go webservice part of the SensorUnit handles the serial communication with the Arduino and exposes the data via HTTP.
+The Executor component communicates with the SensorUnit's REST API to retrieve temperature data during drying programs. The SensorUnit continues to display temperatures locally even when disconnected from the main system. The service part of the SensorUnit handles the serial communication with the Arduino and exposes the data via HTTP.
 
 #### Configuration
 
@@ -145,7 +151,9 @@ sudo systemctl enable --now sensorunit
 
 ## API Endpoints
 
-This section outlines the REST API endpoints provided by each module.
+This section outlines the basic REST API endpoints provided by each module.
+
+For detailed API documentation including request/response formats, see [API.md](API.md).
 
 ### Configurator (`/configurator`)
 
@@ -177,19 +185,19 @@ Base Path: `/engine/api/v1`
 
 ### PowerUnit (`/powerunit`)
 
-Base Path: `/api/v1`
+Base Path: `/powers/api/v1`
 
 - **Powers:**
-  - `GET /powers`: Get the status of all power channels.
-  - `GET /powers/:power`: Get the status of a specific power channel (e.g., `heater`, `fan`, `humidifier`).
-  - `POST /powers/:power`: Operate a specific power channel (turn on/off, set percentage). Also supports `PUT` and `PATCH` methods for the same operation.
+  - `GET /`: Get the status of all power channels.
+  - `GET /:power`: Get the status of a specific power channel (e.g., `heater`, `fan`, `humidifier`).
+  - `POST /:power`: Operate a specific power channel (turn on/off, set percentage). Also supports `PUT` and `PATCH` methods for the same operation.
 
 ### SensorUnit (`/sensorunit`)
 
-Base Path: `/api/v1` (Now consistent with other module APIs)
+Base Path: `/sensors/api/v1`
 
 - **Temperature:**
-  - `GET /temperature`: Fetch current temperature readings from all sensors.
+  - `GET /temperatures`: Fetch current temperature readings from all sensors.
 - **Status:**
   - `GET /status`: Check the connection status of the sensor unit.
   - `POST /status`: Update the status text displayed on the sensor unit's LCD.
@@ -203,9 +211,8 @@ The simulator mimics endpoints from other services for testing purposes.
   Base Path: `/sensors/api/v1`
   - **Temperature:**
     - `GET /temperatures`: Get readings from all simulated temperature sensors.
-    - `GET /temperatures/:sensor`: Get reading from a specific simulated sensor.
   - **Status:**
-    - `GET /status`: Get the simulated connection status (always returns "connected").
+    - `GET /status`: Get the simulated connection status.
     - `POST /status`: Log a status message (simulates updating an LCD).
       - Body: `{"message": "your status text"}`
 
