@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,7 +20,7 @@ import (
 func main() {
 	var configFileName string
 
-	flag.StringVar(&configFileName, "c", "/etc/halko.cfg", "Specify config file. Default is /etc/halko.cfg")
+	flag.StringVar(&configFileName, "c", "/etc/opt/halko.cfg", "Specify config file. Default is /etc/opt/halko.cfg")
 	flag.Parse()
 
 	configuration, err := types.ReadHalkoConfig(configFileName)
@@ -44,7 +43,7 @@ func main() {
 			}
 		}
 	}
-	serverAddr := fmt.Sprintf(":%s", serverPort)
+	serverAddr := ":" + serverPort
 	log.Printf("Starting power unit server on %s", serverAddr)
 
 	// Start the power controller in a goroutine
@@ -77,6 +76,9 @@ func main() {
 	sig := <-quit
 	log.Printf("Received signal %s, shutting down gracefully...", sig)
 
+	log.Printf("Stopping power controller...")
+	p.Stop()
+
 	// Create a deadline for the shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -84,11 +86,6 @@ func main() {
 	// Attempt graceful shutdown of the HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
-	}
-
-	// Shutdown the Shelly client
-	if err := s.Shutdown(); err != nil {
-		log.Printf("SHELLY SHUTDOWN ERROR --- %s", err)
 	}
 
 	log.Println("Server shutdown complete")

@@ -32,3 +32,5 @@ halko.cfg
 bin
 tmp
 .golangci.bck.yaml
+
+.vscode
