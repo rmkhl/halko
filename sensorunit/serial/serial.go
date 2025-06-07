@@ -82,11 +82,13 @@ func (s *SensorUnit) Close() error {
 	return err
 }
 
-// IsConnected returns true if the connection is established
+// IsConnected returns true if the connection is established and the Arduino is responding
 func (s *SensorUnit) IsConnected() bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.connected
+	// Use Connect which already verifies the Arduino responsiveness
+	// Connect() will return nil if already connected, or try to establish a connection
+	// and verify it with "helo;" command if not connected
+	err := s.Connect()
+	return err == nil
 }
 
 // GetTemperatures reads the current temperature values from the sensor unit
