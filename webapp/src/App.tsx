@@ -11,8 +11,6 @@ import { Navigation } from "./components/Navigation";
 import { theme } from "./material-ui/theme";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
-import { Phases } from "./components/phases/Phases";
-import { Phase } from "./components/phases/Phase";
 import { Programs } from "./components/programs/Programs";
 import { Program } from "./components/programs/Program";
 
@@ -23,7 +21,6 @@ const getRouter = (routes: Route[]) =>
       element: <Navigation routes={routes} />,
       children: [
         ...routes,
-        { path: "phases/:name", element: <Phase /> },
         { path: "programs/:name", element: <Program /> },
         { path: "/", element: <Navigate to="/current" /> },
         { path: "*", element: <Navigate to="/current" /> },
@@ -45,11 +42,6 @@ export const App: React.FC = () => {
         name: t("tabs.programs"),
         path: "programs",
         element: <Programs />,
-      },
-      {
-        name: t("tabs.phases"),
-        path: "phases",
-        element: <Phases />,
       },
     ],
     [t]
