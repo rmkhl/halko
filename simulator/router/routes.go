@@ -17,7 +17,6 @@ func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.Temperature
 
 	tempSensors := sensorAPIV1.Group("temperatures")
 	tempSensors.GET("", readAllTemperatureSensors(temperatureSensors))
-	tempSensors.GET(":sensor", readTemperatureSensor(temperatureSensors))
 
 	statusAPI := sensorAPIV1.Group("status")
 	statusAPI.GET("", router.getStatus)
