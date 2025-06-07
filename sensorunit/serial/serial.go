@@ -12,6 +12,14 @@ import (
 	"github.com/tarm/serial"
 )
 
+// Command constants
+const (
+	HeloCommand  = "helo;"
+	ReadCommand  = "read;"
+	ShowCommand  = "show"
+	HeloResponse = "helo"
+)
+
 // SensorUnit represents a connection to the Arduino sensor unit
 type SensorUnit struct {
 	port      *serial.Port
@@ -43,26 +51,36 @@ func NewSensorUnit(device string, baudRate int) (*SensorUnit, error) {
 // Connect establishes a connection to the sensor unit
 func (s *SensorUnit) Connect() error {
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
 	if s.connected {
+		s.mutex.Unlock()
 		return nil
 	}
 
 	port, err := serial.OpenPort(s.config)
 	if err != nil {
+		s.mutex.Unlock()
 		return fmt.Errorf("failed to open serial port: %w", err)
 	}
 
 	s.port = port
 	s.connected = true
 
+	// We need to unlock the mutex before calling sendCommand to avoid deadlock
+	s.mutex.Unlock()
+
 	// Send helo command to verify connection
-	_, err = s.sendCommand("helo;")
-	if err != nil {
+	response, err := s.sendCommand(HeloCommand)
+	if err != nil || response != HeloResponse {
+		// If communication fails, we need to close the port and mark as disconnected
+		s.mutex.Lock()
 		s.port.Close()
 		s.connected = false
-		return fmt.Errorf("failed to connect to sensor unit: %w", err)
+		s.mutex.Unlock()
+		if err != nil {
+			return fmt.Errorf("failed to connect to sensor unit: %w", err)
+		}
+		return fmt.Errorf("failed to connect to sensor unit: unexpected response %q", response)
 	}
 
 	return nil
@@ -84,11 +102,28 @@ func (s *SensorUnit) Close() error {
 
 // IsConnected returns true if the connection is established and the Arduino is responding
 func (s *SensorUnit) IsConnected() bool {
-	// Use Connect which already verifies the Arduino responsiveness
-	// Connect() will return nil if already connected, or try to establish a connection
-	// and verify it with "helo;" command if not connected
-	err := s.Connect()
-	return err == nil
+	// First check if we're already connected
+	s.mutex.Lock()
+	isConnected := s.connected
+	s.mutex.Unlock()
+
+	if !isConnected {
+		// If we're not connected, try to connect
+		err := s.Connect()
+		return err == nil
+	}
+
+	// If we're already connected, verify by sending a command
+	response, err := s.sendCommand(HeloCommand)
+	if err != nil || response != HeloResponse {
+		// If we can't communicate, mark as disconnected
+		s.mutex.Lock()
+		s.connected = false
+		s.mutex.Unlock()
+		return false
+	}
+
+	return true
 }
 
 // GetTemperatures reads the current temperature values from the sensor unit
@@ -97,7 +132,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 		return nil, err
 	}
 
-	response, err := s.sendCommand("read;")
+	response, err := s.sendCommand(ReadCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +190,7 @@ func (s *SensorUnit) SetStatusText(text string) error {
 		text = text[:15]
 	}
 
-	_, err := s.sendCommand(fmt.Sprintf("show %s;", text))
+	_, err := s.sendCommand(fmt.Sprintf("%s %s;", ShowCommand, text))
 	return err
 }
 
@@ -168,8 +203,8 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		return "", errors.New("not connected to sensor unit")
 	}
 
-	// Clear any pending data
-	s.port.Flush()
+	// Clear any pending data that might be initialization garbage
+	s.clearInputBuffer()
 
 	// Send command
 	_, err := s.port.Write([]byte(cmd))
@@ -177,22 +212,41 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		return "", fmt.Errorf("failed to send command: %w", err)
 	}
 
+	// Special handling for show commands - they don't return a meaningful response
+	if strings.HasPrefix(cmd, ShowCommand) {
+		// Just wait a bit to let Arduino process the command
+		time.Sleep(100 * time.Millisecond)
+		return "", nil
+	}
+
 	// Read response
 	scanner := bufio.NewScanner(s.port)
 	var response string
 
-	// First line is bufferIndex, second line is buffer content, third line is the actual response
-	// from the Arduino code we can see it prints these lines when processing commands
-	linesRead := 0
+	// Wait for a relevant response based on the command type
 	for scanner.Scan() {
 		line := scanner.Text()
-		linesRead++
+		line = strings.TrimSpace(line)
 
-		// Skip bufferIndex and buffer content lines
-		if linesRead >= 3 {
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// For read commands, we're looking for the temperature data format
+		if strings.HasPrefix(cmd, ReadCommand) && strings.Contains(line, "=") {
 			response = line
 			break
 		}
+
+		// For helo commands, we're looking for the helo response
+		if strings.HasPrefix(cmd, HeloCommand) && line == HeloResponse {
+			response = line
+			break
+		}
+
+		// Log unexpected lines for debugging
+		log.Printf("Skipping unexpected line for command %q: %q", cmd, line)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -200,4 +254,32 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 	}
 
 	return response, nil
+}
+
+// clearInputBuffer reads and discards any data in the input buffer
+// This helps handle any initialization garbage from the Arduino
+func (s *SensorUnit) clearInputBuffer() {
+	// Create a temporary buffer to read and discard any pending data
+	tempBuf := make([]byte, 1024)
+
+	// Store the original timeout
+	origTimeout := s.config.ReadTimeout
+
+	// Set a short timeout for clearing the buffer
+	s.config.ReadTimeout = time.Millisecond * 100
+
+	// First flush any outgoing data
+	s.port.Flush()
+
+	// Then try to read with a short timeout to clear any garbage
+	for {
+		n, err := s.port.Read(tempBuf)
+		if err != nil || n == 0 {
+			break
+		}
+		log.Printf("Cleared %d bytes of garbage from serial buffer: %q", n, string(tempBuf[:n]))
+	}
+
+	// Restore the original timeout
+	s.config.ReadTimeout = origTimeout
 }
