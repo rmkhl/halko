@@ -1,7 +1,6 @@
 package router
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,48 +28,30 @@ func statusAllPowers(p *power.Controller) gin.HandlerFunc {
 	}
 }
 
-func statusPower(p *power.Controller) gin.HandlerFunc {
+func operateAllPowers(p *power.Controller) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		powerName, _ := ctx.Params.Get("power")
-		id := getIDFromString(powerName)
-		if id == shelly.UnknownID {
-			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
-			return
-		}
+		var commands types.PowersCommand
 
-		// Get power percentage from the controller
-		percentage, err := p.GetCycle(id)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: err.Error()})
-			return
-		}
-
-		// Return the percentage
-		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerResponse]{
-			Data: types.PowerResponse{Percent: percentage},
-		})
-	}
-}
-
-func operatePower(p *power.Controller) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var command types.PowerCommand
-
-		if err := ctx.ShouldBind(&command); err != nil {
+		if err := ctx.ShouldBind(&commands); err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
-		powerName, _ := ctx.Params.Get("power")
-		id := getIDFromString(powerName)
-		if id == shelly.UnknownID {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Unknown power '%s'", powerName)})
-			return
+
+		// Convert the commands to the format expected by the controller
+		cycles := make(map[shelly.ID]uint8)
+		for powerName, command := range commands {
+			id := getIDFromString(powerName)
+			if id == shelly.UnknownID {
+				ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Unknown power '" + powerName + "'"})
+				return
+			}
+			cycles[id] = command.Percent
 		}
 
-		// Set the power percentage through the controller
-		err := p.SetCycle(command.Percent, id)
+		// Set all power percentages through the controller
+		err := p.SetAllCycles(cycles)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("error setting power cycle: %s", err)})
+			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Error setting power cycles: " + err.Error()})
 			return
 		}
 

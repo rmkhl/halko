@@ -222,3 +222,45 @@ func (c *Controller) GetAllCycles() (map[shelly.ID]uint8, error) {
 
 	return cycles, nil
 }
+
+// SetAllCycles updates all power cycle percentages at once
+func (c *Controller) SetAllCycles(cycles map[shelly.ID]uint8) error {
+	// Validate all percentages first
+	for id, percentage := range cycles {
+		if percentage > 100 {
+			return fmt.Errorf("percentage for %s must be between 0 and 100", id.String())
+		}
+		if _, exists := c.powerStates[id]; !exists {
+			return fmt.Errorf("unknown power ID: %d", id)
+		}
+	}
+
+	// Apply all changes
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for id, percentage := range cycles {
+		tracker := c.powerStates[id]
+		tracker.percentage = percentage
+
+		// If we're currently in the off portion of the cycle but the new percentage
+		// would make it on, turn it on immediately
+		if tracker.currentState == shelly.Off && percentage > 0 && c.tickCount < int(percentage) {
+			if _, err := c.shelly.SetState(shelly.On, id); err != nil {
+				return fmt.Errorf("error turning on %s after setting cycle: %w", id, err)
+			}
+			tracker.currentState = shelly.On
+		}
+
+		// If we're currently in the on portion of the cycle but the new percentage
+		// would make it off, turn it off immediately
+		if tracker.currentState == shelly.On && (percentage == 0 || c.tickCount >= int(percentage)) {
+			if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
+				return fmt.Errorf("error turning off %s after setting cycle: %w", id, err)
+			}
+			tracker.currentState = shelly.Off
+		}
+	}
+
+	return nil
+}
