@@ -2,7 +2,6 @@ package power
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -158,56 +157,6 @@ func (c *Controller) Stop() {
 			log.Printf("Error turning off %s during shutdown: %v", id, err)
 		}
 	}
-}
-
-// SetCycle updates the power cycle percentage for a specific device
-func (c *Controller) SetCycle(percentage uint8, id shelly.ID) error {
-	if percentage > 100 {
-		return errors.New("percentage must be between 0 and 100")
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	tracker, exists := c.powerStates[id]
-	if !exists {
-		return fmt.Errorf("unknown power ID: %d", id)
-	}
-
-	tracker.percentage = percentage
-
-	// If we're currently in the off portion of the cycle but the new percentage
-	// would make it on, turn it on immediately
-	if tracker.currentState == shelly.Off && percentage > 0 && c.tickCount < int(percentage) {
-		if _, err := c.shelly.SetState(shelly.On, id); err != nil {
-			return fmt.Errorf("error turning on %s after setting cycle: %w", id, err)
-		}
-		tracker.currentState = shelly.On
-	}
-
-	// If we're currently in the on portion of the cycle but the new percentage
-	// would make it off, turn it off immediately
-	if tracker.currentState == shelly.On && (percentage == 0 || c.tickCount >= int(percentage)) {
-		if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-			return fmt.Errorf("error turning off %s after setting cycle: %w", id, err)
-		}
-		tracker.currentState = shelly.Off
-	}
-
-	return nil
-}
-
-// GetCycle returns the power cycle percentage for a specific device
-func (c *Controller) GetCycle(id shelly.ID) (uint8, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	tracker, exists := c.powerStates[id]
-	if !exists {
-		return 0, fmt.Errorf("unknown power ID: %d", id)
-	}
-
-	return tracker.percentage, nil
 }
 
 // GetAllCycles returns the current power cycle percentages of all devices
