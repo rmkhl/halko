@@ -151,7 +151,9 @@ sudo systemctl enable --now sensorunit
 
 ## API Endpoints
 
-This section outlines the REST API endpoints provided by each module.
+This section outlines the basic REST API endpoints provided by each module.
+
+For detailed API documentation including request/response formats, see [API.md](API.md).
 
 ### Configurator (`/configurator`)
 
@@ -195,7 +197,7 @@ Base Path: `/powers/api/v1`
 Base Path: `/sensors/api/v1`
 
 - **Temperature:**
-  - `GET /temperature`: Fetch current temperature readings from all sensors.
+  - `GET /temperatures`: Fetch current temperature readings from all sensors.
 - **Status:**
   - `GET /status`: Check the connection status of the sensor unit.
   - `POST /status`: Update the status text displayed on the sensor unit's LCD.
@@ -209,9 +211,8 @@ The simulator mimics endpoints from other services for testing purposes.
   Base Path: `/sensors/api/v1`
   - **Temperature:**
     - `GET /temperatures`: Get readings from all simulated temperature sensors.
-    - `GET /temperatures/:sensor`: Get reading from a specific simulated sensor.
   - **Status:**
-    - `GET /status`: Get the simulated connection status (always returns "connected").
+    - `GET /status`: Get the simulated connection status.
     - `POST /status`: Log a status message (simulates updating an LCD).
       - Body: `{"message": "your status text"}`
 
