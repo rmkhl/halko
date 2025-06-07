@@ -71,8 +71,8 @@ The PowerUnit interfaces with Shelly smart switches to control power to heaters,
 
 The SensorUnit component includes:
 
-1. Arduino firmware (`sensorunit/arduino/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
-2. service (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
+1. Arduino firmware (`sensorunit/arduino/sensorunit/sensorunit.ino`) for a physical unit that reads from MAX6675 thermocouples and can display status on an LCD.
+2. A Go service (`sensorunit/main.go`) that communicates with the Arduino via USB serial and exposes a REST API for temperature and status.
 
 #### `/simulator`
 
@@ -111,6 +111,15 @@ The system includes an Arduino-based sensor unit for temperature monitoring in t
 ### Hardware Components
 
 The sensor unit is based on an Arduino and uses MAX6675 thermocouple sensors to measure temperatures. It can display status messages on an LCD.
+
+### Arduino Firmware
+
+The Arduino firmware for the sensor unit is located at `/sensorunit/arduino/sensorunit/sensorunit.ino`. This firmware handles:
+
+- Reading from the MAX6675 thermocouple sensors
+- Displaying temperature readings and status on the LCD
+- Responding to serial commands from the Go service
+- Managing connection status with visual indicators
 
 ### Serial Commands
 
