@@ -1,8 +1,8 @@
-MODULES = configurator executor powerunit simulator sensorunit
+MODULES = executor powerunit simulator sensorunit
 BINDIR = bin
 
 .PHONY: all
-all: prepare 
+all: prepare
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
 	go build -o $@ ./$*/

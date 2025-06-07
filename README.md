@@ -6,7 +6,6 @@ Halko is a distributed system for controlling and monitoring wood drying kilns. 
 
 The system is built with a microservices architecture with these main components:
 
-- **Configurator**: Manages program and phase configurations.
 - **Executor**: Runs drying programs and controls the kiln.
 - **PowerUnit**: Interfaces with Shelly devices to control power.
 - **SensorUnit**: Reads temperature data from physical sensors and provides an API.
@@ -54,10 +53,6 @@ make fmt-changed
 ## Project Structure
 
 ### Components
-
-#### `/configurator`
-
-The Configurator is a storage service for program and phase configurations. It allows for CRUD operations on this data, which is stored in the filesystem. It exposes a REST API for these operations.
 
 #### `/executor`
 
@@ -155,21 +150,6 @@ This section outlines the basic REST API endpoints provided by each module.
 
 For detailed API documentation including request/response formats, see [API.md](API.md).
 
-### Configurator (`/configurator`)
-
-Base Path: `/api/v1`
-
-- **Programs:**
-  - `GET /programs`: List all programs.
-  - `POST /programs`: Create a new program.
-  - `GET /programs/:name`: Get a specific program by name.
-  - `PUT /programs/:name`: Update a specific program by name.
-- **Phases:**
-  - `GET /phases`: List all phases.
-  - `POST /phases`: Create a new phase.
-  - `GET /phases/:name`: Get a specific phase by name.
-  - `PUT /phases/:name`: Update a specific phase by name.
-
 ### Executor (`/executor`)
 
 Base Path: `/engine/api/v1`
@@ -231,7 +211,7 @@ Each component can be controlled independently:
 
 ```bash
 # Start a specific component
-sudo systemctl start halko@configurator
+sudo systemctl start halko@executor
 
 # Stop a component
 sudo systemctl stop halko@executor

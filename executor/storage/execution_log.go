@@ -13,7 +13,7 @@ import (
 
 type (
 	ExecutionLogWriter struct {
-		storage    *ProgramStorage
+		storage    *FileStorage
 		name       string
 		file       *os.File
 		csvWriter  *csv.Writer
@@ -24,7 +24,7 @@ type (
 	}
 )
 
-func NewExecutionLogWriter(storage *ProgramStorage, name string, resolution int64) *ExecutionLogWriter {
+func NewExecutionLogWriter(storage *FileStorage, name string, resolution int64) *ExecutionLogWriter {
 	filePath := filepath.Join(storage.logPath, name+".csv")
 	logFile, err := os.Create(filePath)
 	if err != nil {
@@ -89,7 +89,7 @@ func (writer *ExecutionLogWriter) Close() {
 	writer.file = nil
 }
 
-func (storage *ProgramStorage) MaybeDeleteExecutionLog(name string) {
+func (storage *FileStorage) MaybeDeleteExecutionLog(name string) {
 	filePath := filepath.Join(storage.logPath, name+".csv")
 	os.Remove(filePath)
 }

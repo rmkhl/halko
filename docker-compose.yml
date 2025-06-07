@@ -1,16 +1,4 @@
 services:
-  configurator:
-    build:
-      context: ./configurator
-      dockerfile: Dockerfile
-    working_dir: /app/configurator
-    volumes:
-      - .:/app
-      - ./fsdb:/fsdb
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
-
   simulator:
     build:
       context: ./simulator

@@ -15,29 +15,36 @@ var (
 	ErrProgramDoesNotExist = errors.New("program does not exist")
 )
 
-type ProgramStorage struct {
-	basePath    string
-	runningPath string
-	statusPath  string
-	logPath     string
+type FileStorage struct {
+	basePath             string
+	executedProgramsPath string
+	statusPath           string
+	logPath              string
+	programPath          string
 }
 
-func NewProgramStorage(basePath string) (*ProgramStorage, error) {
-	storage := ProgramStorage{basePath: basePath}
+func NewFileStorage(basePath string) (*FileStorage, error) {
+	storage := FileStorage{basePath: basePath}
 
-	storage.runningPath = filepath.Join(storage.basePath, "programs")
-	err := os.MkdirAll(storage.runningPath, os.ModePerm)
+	storage.executedProgramsPath = filepath.Join(storage.basePath, "history")
+	err := os.MkdirAll(storage.executedProgramsPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
-	storage.statusPath = filepath.Join(storage.runningPath, "status")
+	storage.programPath = filepath.Join(storage.basePath, "programs")
+	err = os.MkdirAll(storage.programPath, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	storage.statusPath = filepath.Join(storage.executedProgramsPath, "status")
 	err = os.MkdirAll(storage.statusPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
-	storage.logPath = filepath.Join(storage.runningPath, "logs")
+	storage.logPath = filepath.Join(storage.executedProgramsPath, "logs")
 	err = os.MkdirAll(storage.logPath, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -46,10 +53,15 @@ func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 	return &storage, nil
 }
 
-func (storage *ProgramStorage) ListPrograms() ([]string, error) {
+func (storage *FileStorage) ListExecutedPrograms() ([]string, error) {
+	searchPath := filepath.Join(storage.executedProgramsPath, "*.json")
+	return storage.listPrograms(searchPath)
+}
+
+func (storage *FileStorage) listPrograms(searchPath string) ([]string, error) {
 	programs := []string{}
 
-	files, err := filepath.Glob(filepath.Join(storage.runningPath, "*.json"))
+	files, err := filepath.Glob(searchPath)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +74,12 @@ func (storage *ProgramStorage) ListPrograms() ([]string, error) {
 	return programs, nil
 }
 
-func (storage *ProgramStorage) LoadProgram(programName string) (*types.Program, error) {
-	filePath := filepath.Join(storage.runningPath, programName+".json")
+func (storage *FileStorage) LoadExecutedProgram(programName string) (*types.Program, error) {
+	filePath := filepath.Join(storage.executedProgramsPath, programName+".json")
+	return storage.loadProgram(filePath)
+}
 
+func (storage *FileStorage) loadProgram(filePath string) (*types.Program, error) {
 	jsonFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -85,7 +100,7 @@ func (storage *ProgramStorage) LoadProgram(programName string) (*types.Program, 
 	return &program, nil
 }
 
-func (storage *ProgramStorage) saveProgram(filePath string, program *types.Program) error {
+func (storage *FileStorage) saveProgram(filePath string, program *types.Program) error {
 	jsonFile, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -100,8 +115,8 @@ func (storage *ProgramStorage) saveProgram(filePath string, program *types.Progr
 	return err
 }
 
-func (storage *ProgramStorage) CreateProgram(programName string, program *types.Program) error {
-	filePath := filepath.Join(storage.runningPath, programName+".json")
+func (storage *FileStorage) CreateExecutedProgram(programName string, program *types.Program) error {
+	filePath := filepath.Join(storage.executedProgramsPath, programName+".json")
 
 	_, err := os.Stat(filePath)
 	if err == nil {
@@ -114,8 +129,61 @@ func (storage *ProgramStorage) CreateProgram(programName string, program *types.
 	return storage.saveProgram(filePath, program)
 }
 
-func (storage *ProgramStorage) DeleteProgram(programName string) error {
-	filePath := filepath.Join(storage.runningPath, programName+".json")
+func (storage *FileStorage) DeleteExecutedProgram(programName string) error {
+	filePath := filepath.Join(storage.executedProgramsPath, programName+".json")
+
+	_, err := os.Stat(filePath)
+	if err != nil {
+		return ErrProgramDoesNotExist
+	}
+
+	return os.Remove(filePath)
+}
+
+// Program template storage functions (stored in programPath)
+
+func (storage *FileStorage) ListStoredPrograms() ([]string, error) {
+	searchPath := filepath.Join(storage.programPath, "*.json")
+	return storage.listPrograms(searchPath)
+}
+
+func (storage *FileStorage) LoadStoredProgram(programName string) (*types.Program, error) {
+	filePath := filepath.Join(storage.programPath, programName+".json")
+	return storage.loadProgram(filePath)
+}
+
+func (storage *FileStorage) SaveStoredProgram(programName string, program *types.Program) error {
+	filePath := filepath.Join(storage.programPath, programName+".json")
+	return storage.saveProgram(filePath, program)
+}
+
+func (storage *FileStorage) CreateStoredProgram(programName string, program *types.Program) error {
+	filePath := filepath.Join(storage.programPath, programName+".json")
+
+	_, err := os.Stat(filePath)
+	if err == nil {
+		return ErrProgramExists
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return ErrProgramExists
+	}
+
+	return storage.saveProgram(filePath, program)
+}
+
+func (storage *FileStorage) UpdateStoredProgram(programName string, program *types.Program) error {
+	filePath := filepath.Join(storage.programPath, programName+".json")
+
+	_, err := os.Stat(filePath)
+	if err != nil {
+		return ErrProgramDoesNotExist
+	}
+
+	return storage.saveProgram(filePath, program)
+}
+
+func (storage *FileStorage) DeleteStoredProgram(programName string) error {
+	filePath := filepath.Join(storage.programPath, programName+".json")
 
 	_, err := os.Stat(filePath)
 	if err != nil {

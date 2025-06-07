@@ -9,12 +9,12 @@ import (
 
 type (
 	StateWriter struct {
-		storage *ProgramStorage
+		storage *FileStorage
 		name    string
 	}
 )
 
-func NewStateWriter(storage *ProgramStorage, name string) *StateWriter {
+func NewStateWriter(storage *FileStorage, name string) *StateWriter {
 	return &StateWriter{storage: storage, name: name}
 }
 
@@ -34,13 +34,13 @@ func (statusWriter *StateWriter) UpdateState(status types.ProgramState) error {
 	return nil
 }
 
-func (storage *ProgramStorage) MaybeDeleteState(name string) {
+func (storage *FileStorage) MaybeDeleteState(name string) {
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
 	os.Remove(statusFilePath)
 }
 
 // Returns saved state and time it was saved.
-func (storage *ProgramStorage) LoadState(name string) (types.ProgramState, int64, error) {
+func (storage *FileStorage) LoadState(name string) (types.ProgramState, int64, error) {
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
 
 	fileStatus, err := os.Stat(statusFilePath)

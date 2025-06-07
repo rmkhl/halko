@@ -45,7 +45,7 @@ type (
 		Data T `json:"data"`
 	}
 
-	SavedProgram struct {
+	RunHistory struct {
 		Name        string       `json:"name"`
 		State       ProgramState `json:"state"`
 		StartedAt   int64        `json:"started_at,omitempty"`
@@ -53,12 +53,12 @@ type (
 	}
 
 	ExecutedProgram struct {
-		SavedProgram
+		RunHistory
 		Program Program `json:"program"`
 	}
 
 	ProgramListing struct {
-		Programs []SavedProgram `json:"programs"`
+		Programs []RunHistory `json:"programs"`
 	}
 
 	// TemperatureStatus represents the current temperature of the material and oven in Celsius.
