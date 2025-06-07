@@ -1,4 +1,4 @@
-MODULES = configurator executor powerunit simulator
+MODULES = configurator executor powerunit simulator sensorunit
 BINDIR = bin
 
 .PHONY: all
@@ -63,10 +63,15 @@ systemd-units: install
 		if [ "$$bin" != "simulator" ]; then \
 			sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
 			sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
-			sudo systemctl enable --now halko@$$bin.service; \
+			sudo systemctl daemon-reload; \
+			sudo systemctl enable halko@$$bin.service; \
+			if systemctl is-active --quiet halko@$$bin.service; then \
+				sudo systemctl restart halko@$$bin.service; \
+			else \
+				sudo systemctl start halko@$$bin.service; \
+			fi; \
 		fi; \
 	done
-	sudo systemctl daemon-reload
 	@echo "Systemd unit files installed and services enabled."
 
 .PHONY: fmt-changed

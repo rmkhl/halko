@@ -2,6 +2,7 @@ package power
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -39,7 +40,7 @@ func worker(ctx context.Context, channel *channel, wg *sync.WaitGroup) {
 }
 
 func (c *Controller) Stop() {
-	c.errChan <- fmt.Errorf("controller stopped")
+	c.errChan <- errors.New("controller stopped")
 }
 
 func (c *Controller) Start() error {

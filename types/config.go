@@ -8,22 +8,28 @@ import (
 
 type (
 	ExecutorConfig struct {
-		BasePath             string                    `json:"base_path"`
-		TickLength           int                       `json:"tick_length"`
-		TemperatureSensorURL string                    `json:"temperature_sensor_url"`
-		PowerUnitURL         string                    `json:"power_unit_url"`
-		PidSettings          map[StepType]*PidSettings `json:"pid_settings"`
-		MaxDeltaHeating      float32                   `json:"max_delta_heating"`
-		MinDeltaHeating      float32                   `json:"min_delta_heating"`
+		BasePath        string                    `json:"base_path"`
+		TickLength      int                       `json:"tick_length"`
+		PowerUnitURL    string                    `json:"power_unit_url"`
+		SensorUnitURL   string                    `json:"sensor_unit_url"`
+		PidSettings     map[StepType]*PidSettings `json:"pid_settings"`
+		MaxDeltaHeating float32                   `json:"max_delta_heating"`
+		MinDeltaHeating float32                   `json:"min_delta_heating"`
 	}
 
 	PowerUnit struct {
 		ShellyAddress string `json:"shelly_address"`
 	}
 
+	SensorUnitConfig struct {
+		SerialDevice string `json:"serial_device"`
+		BaudRate     int    `json:"baud_rate"`
+	}
+
 	HalkoConfig struct {
-		ExecutorConfig *ExecutorConfig `json:"executor"`
-		PowerUnit      *PowerUnit      `json:"power_unit"`
+		ExecutorConfig *ExecutorConfig   `json:"executor"`
+		PowerUnit      *PowerUnit        `json:"power_unit"`
+		SensorUnit     *SensorUnitConfig `json:"sensorunit"`
 	}
 )
 

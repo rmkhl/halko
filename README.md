@@ -98,11 +98,11 @@ Shared Go type definitions used across multiple components.
 
 #### `/sensorunit`
 
-Arduino code for the physical temperature sensor unit.
+Contains both Arduino code for the physical temperature sensor unit and a REST API webservice that interfaces with the Arduino over USB serial connection.
 
 ## Sensor Unit
 
-The system includes an Arduino-based sensor unit for temperature monitoring in the kiln.
+The system includes an Arduino-based sensor unit for temperature monitoring in the kiln and a Go webservice that provides a REST API for integration with the executor component.
 
 ### Hardware Components
 
@@ -141,8 +141,49 @@ The LCD displays the current connection status:
 
 ### Integration
 
-The Executor component communicates with the sensor unit to retrieve temperature data during drying programs.
+The Executor component communicates with the sensor unit to retrieve temperature data during drying programs using the REST API.
 The sensor unit continues to display temperatures locally even when disconnected from the main system.
+
+### REST API Web Service
+
+The sensorunit directory includes a Go webservice that provides a REST API for interacting with the Arduino-based sensor unit:
+
+#### API Endpoints
+
+- `GET /api/temperature` - Fetch current temperature readings from all three sensors
+- `GET /api/status` - Check connection status of the sensor unit
+- `POST /api/status` - Update the status text displayed on the LCD screen
+
+#### Configuration
+
+The sensorunit webservice is configured through the main Halko configuration file (`halko.cfg`) with the following settings:
+
+```json
+"sensorunit": {
+  "serial_device": "/dev/ttyUSB0",  // Path to the USB serial device
+  "baud_rate": 9600                 // Baud rate for serial communication
+}
+```
+
+The service automatically extracts the port to use from the `executor.sensor_unit_url` setting.
+
+The executor component communicates with the sensorunit through the `sensor_unit_url` setting:
+
+```json
+"executor": {
+  "sensor_unit_url": "http://localhost:8089"
+}
+```
+
+#### Systemd Service
+
+The sensor unit service runs as a systemd service like other Halko components. It includes support for graceful termination, properly handling the following signals:
+
+- `SIGTERM` - For graceful shutdown (e.g., from systemctl stop)
+- `SIGINT` - For manual interruption (e.g., Ctrl+C)
+- `SIGHUP` - For service reload
+
+The service implements proper connection cleanup, ensuring the serial port is properly closed before termination. This prevents issues with reconnecting to the Arduino after a restart.
 
 ## Deployment
 
