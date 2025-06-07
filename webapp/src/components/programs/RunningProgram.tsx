@@ -44,7 +44,7 @@ export const RunningProgram: React.FC = () => {
   });
 
   const { data: sensorData } = useGetTemperaturesQuery(undefined, {
-    pollingInterval: 5000,
+    pollingInterval: 60000,
     skipPollingIfUnfocused: true,
   });
 

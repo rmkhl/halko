@@ -14,7 +14,6 @@ import { useFormData } from "../../hooks/useFormData";
 import { DataForm } from "../form/DataForm";
 import { useTranslation } from "react-i18next";
 import { Steps } from "./Steps";
-import { TimeComponent } from "../form/TimeComponent";
 
 const normalize = (program: ApiProgram): ApiProgram => {
   const cpy = { ...program };
@@ -98,22 +97,6 @@ export const Program: React.FC = () => {
         editing={editing}
         name={editing ? editProgram?.name : program.name}
         handleChange={updateName}
-      />
-
-      <TimeComponent
-        editing={editing}
-        title={t("programs.defaultStepRuntime")}
-        value={
-          editing ? editProgram?.defaultStepRuntime : program.defaultStepRuntime
-        }
-        onChange={updateEdited("defaultStepRuntime")}
-      />
-
-      <TimeComponent
-        editing={editing}
-        title={t("programs.preheatTo")}
-        value={editing ? editProgram?.preheatTo : program.preheatTo}
-        onChange={updateEdited("preheatTo")}
       />
 
       <Steps
