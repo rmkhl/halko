@@ -9,6 +9,7 @@ import (
 type (
 	ExecutorConfig struct {
 		BasePath        string                    `json:"base_path"`
+		Port            int                       `json:"port"`
 		TickLength      int                       `json:"tick_length"`
 		PowerUnitURL    string                    `json:"power_unit_url"`
 		SensorUnitURL   string                    `json:"sensor_unit_url"`
@@ -18,7 +19,10 @@ type (
 	}
 
 	PowerUnit struct {
-		ShellyAddress string `json:"shelly_address"`
+		ShellyAddress string         `json:"shelly_address"`
+		CycleLength   int            `json:"cycle_length"` // Duration of a power cycle in seconds
+		PowerMapping  map[string]int `json:"power_mapping"`
+		MaxIdleTime   int            `json:"max_idle_time"` // Maximum idle time in seconds before a executor is considered idle
 	}
 
 	SensorUnitConfig struct {

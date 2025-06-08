@@ -6,13 +6,14 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/powerunit/power"
+	"github.com/rmkhl/halko/powerunit/shelly"
 )
 
 type Router struct {
 	*gin.Engine
 }
 
-func New(p *power.Controller) *Router {
+func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) *Router {
 	ginRouter := gin.Default()
 	ginRouter.Use(cors.New(cors.Config{
 		AllowOrigins:  []string{"http://localhost:1234"},
@@ -23,7 +24,7 @@ func New(p *power.Controller) *Router {
 	}))
 
 	r := &Router{ginRouter}
-	setupRoutes(ginRouter, p)
+	setupRoutes(ginRouter, p, powerMapping, idMapping)
 
 	return r
 }

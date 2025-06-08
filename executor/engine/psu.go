@@ -19,8 +19,7 @@ const (
 
 type (
 	PowerCommand struct {
-		Command PowerStatus `json:"command"`
-		Percent uint8       `json:"percent,omitempty"`
+		Percent uint8 `json:"percent"`
 	}
 
 	psuController struct {
@@ -37,15 +36,9 @@ func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
 }
 
 func newPSUCommand(percentage uint8) *PowerCommand {
-	cmd := PowerCommand{
+	return &PowerCommand{
 		Percent: percentage,
 	}
-	if percentage == 0 {
-		cmd.Command = PowerOff
-	} else {
-		cmd.Command = PowerOn
-	}
-	return &cmd
 }
 
 func (p *psuController) setPower(psu string, percentage uint8) {
