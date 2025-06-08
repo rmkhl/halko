@@ -16,11 +16,10 @@ export interface Props {
   onChange: (value: number) => void;
 }
 
-export const NumberComponent: React.FC<React.PropsWithChildren<Props>> = (
-  props
-) => {
-  const { children, editing, value, onChange, min, max, title, placeholder } =
-    props;
+export const LabeledNumberComponent: React.FC<
+  React.PropsWithChildren<Props>
+> = (props) => {
+  const { title, ...rest } = props;
 
   return (
     <Stack
@@ -32,39 +31,51 @@ export const NumberComponent: React.FC<React.PropsWithChildren<Props>> = (
       <Typography variant="h6">{title}:</Typography>
 
       <Stack direction="row" alignItems="center" gap={3}>
-        {editing ? (
-          <>
-            <BaseNumberInput
-              slots={{
-                root: StyledInputRoot,
-                input: StyledInputElement,
-                incrementButton: StyledButton,
-                decrementButton: StyledButton,
-              }}
-              slotProps={{
-                incrementButton: {
-                  children: "▴",
-                },
-                decrementButton: {
-                  children: "▾",
-                },
-              }}
-              value={value}
-              onChange={(_, val) => val && onChange(val)}
-              placeholder={placeholder}
-              min={min}
-              max={max}
-            />
-
-            {children}
-          </>
-        ) : (
-          <>
-            <Typography>{value}</Typography> {children}
-          </>
-        )}
+        <NumberComponent {...rest} />
       </Stack>
     </Stack>
+  );
+};
+
+export const NumberComponent: React.FC<
+  React.PropsWithChildren<Omit<Props, "title">>
+> = (props) => {
+  const { editing, value, placeholder, min, max, onChange, children } = props;
+
+  return (
+    <>
+      {editing ? (
+        <>
+          <BaseNumberInput
+            slots={{
+              root: StyledInputRoot,
+              input: StyledInputElement,
+              incrementButton: StyledButton,
+              decrementButton: StyledButton,
+            }}
+            slotProps={{
+              incrementButton: {
+                children: "▴",
+              },
+              decrementButton: {
+                children: "▾",
+              },
+            }}
+            value={value}
+            onChange={(_, val) => val !== null && onChange(val)}
+            placeholder={placeholder}
+            min={min}
+            max={max}
+          />
+
+          {children}
+        </>
+      ) : (
+        <>
+          <Typography>{value}</Typography> {children}
+        </>
+      )}
+    </>
   );
 };
 

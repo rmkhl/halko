@@ -15,6 +15,7 @@ const emptyStep = (): ApiStep => ({
   id: uuidv4(),
   name: "",
   type: "heating",
+  runtime: 0,
   targetTemperature: 30,
   heater: {
     pid: {},

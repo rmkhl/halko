@@ -8,6 +8,7 @@ export const emptyProgram = (): Program => ({
       id: uuidv4(),
       name: "Heat",
       type: "heating",
+      runtime: 0,
       targetTemperature: 100,
       heater: {
         pid: {},
@@ -24,6 +25,7 @@ export const emptyProgram = (): Program => ({
       id: uuidv4(),
       name: "Cool down",
       type: "cooling",
+      runtime: 0,
       targetTemperature: 30,
       heater: {
         pid: {},

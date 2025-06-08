@@ -6,7 +6,8 @@ import { TextComponent } from "../form/TextComponent";
 import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import { SelectionComponent } from "../form/SelectionComponent";
-import { NumberComponent } from "../form/NumberComponent";
+import { LabeledNumberComponent } from "../form/NumberComponent";
+import { TimeComponent } from "../form/TimeComponent";
 
 interface Position {
   idx: number;
@@ -25,7 +26,8 @@ interface Props extends Omit<StackProps, "onChange"> {
 
 export const Step: React.FC<Props> = (props) => {
   const { editing, step, onChange: updateStep, pos, ...rest } = props;
-  const { name, type, targetTemperature, heater, humidifier, fan } = step;
+  const { name, type, targetTemperature, heater, humidifier, fan, runtime } =
+    step;
   const { t } = useTranslation();
 
   const handleChange =
@@ -55,7 +57,16 @@ export const Step: React.FC<Props> = (props) => {
           options={stepTypes as unknown as string[]}
         />
 
-        <NumberComponent
+        {type === "acclimate" && (
+          <TimeComponent
+            value={runtime}
+            title="Runtime"
+            onChange={handleChange("runtime")}
+            editing={editing}
+          />
+        )}
+
+        <LabeledNumberComponent
           value={targetTemperature}
           title="Target temperature"
           onChange={handleChange("targetTemperature")}
@@ -64,9 +75,9 @@ export const Step: React.FC<Props> = (props) => {
           max={200}
         >
           °C
-        </NumberComponent>
+        </LabeledNumberComponent>
 
-        <NumberComponent
+        <LabeledNumberComponent
           value={heater?.power}
           title="Heater power"
           onChange={(v) => handleChange("heater")({ power: v, pid: {} })}
@@ -75,9 +86,9 @@ export const Step: React.FC<Props> = (props) => {
           max={100}
         >
           %
-        </NumberComponent>
+        </LabeledNumberComponent>
 
-        <NumberComponent
+        <LabeledNumberComponent
           value={humidifier?.power}
           title="Humidifier power"
           onChange={(v) => handleChange("humidifier")({ power: v })}
@@ -86,9 +97,9 @@ export const Step: React.FC<Props> = (props) => {
           max={100}
         >
           %
-        </NumberComponent>
+        </LabeledNumberComponent>
 
-        <NumberComponent
+        <LabeledNumberComponent
           value={fan?.power}
           title="Fan power"
           onChange={(v) => handleChange("fan")({ power: v })}
@@ -97,7 +108,7 @@ export const Step: React.FC<Props> = (props) => {
           max={100}
         >
           %
-        </NumberComponent>
+        </LabeledNumberComponent>
       </Stack>
 
       {editing && (
