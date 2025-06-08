@@ -25,6 +25,7 @@ export interface Step {
   id: string;
   name: string;
   type: StepType;
+  runtime: number;
   targetTemperature: number;
   heater?: PowerPidSettings;
   fan?: PowerSetting;
