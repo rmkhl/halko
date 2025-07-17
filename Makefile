@@ -2,7 +2,7 @@ MODULES = executor powerunit simulator sensorunit
 BINDIR = bin
 
 .PHONY: all
-all: prepare
+all: prepare clean $(MODULES:%=$(BINDIR)/%)
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
 	go build -o $@ ./$*/
