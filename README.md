@@ -58,6 +58,8 @@ make fmt-changed
 
 The Executor is the core service that executes drying programs. It manages the state machine for program execution, interacts with the PowerUnit to control heating elements, and with the SensorUnit (or Simulator) to monitor temperatures. It also provides a REST API to manage and monitor program execution.
 
+The Executor includes a heartbeat service that periodically reports its IP address to a configured status endpoint. This allows monitoring systems to track the location and availability of the executor service in distributed deployments.
+
 #### `/powerunit`
 
 The PowerUnit interfaces with Shelly smart switches to control power to heaters, fans, and humidifiers. It provides a REST API for direct power control operations.
@@ -202,6 +204,79 @@ The simulator mimics endpoints from other services for testing purposes.
     - Query Params: `id=<switch_id>` (e.g., `id=0`)
   - `GET /Switch.Set`: Set the state of simulated Shelly switches.
     - Query Params: `id=<switch_id>&on=<true|false>`
+
+## System Configuration
+
+The system uses JSON configuration files to define connection endpoints, behavior parameters, and hardware settings.
+
+### Main Configuration File (`halko.cfg`)
+
+The main configuration file contains settings for all components. Here's an example configuration:
+
+```json
+{
+  "executor": {
+    "base_path": "/var/opt/halko",
+    "port": 8089,
+    "tick_length": 6000,
+    "sensor_unit_url": "http://localhost:8089/sensors",
+    "power_unit_url": "http://localhost:8090/powers",
+    "status_message_url": "http://localhost:8089/status",
+    "network_interface": "eth0",
+    "pid_settings": {
+      "acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5},
+      "cooling": null,
+      "heating": null
+    },
+    "max_delta_heating": 10.0,
+    "min_delta_heating": 5.0
+  },
+  "power_unit": {
+    "shelly_address": "http://localhost:8091",
+    "cycle_length": 60,
+    "max_idle_time": 70,
+    "power_mapping": {
+      "heater": 0,
+      "humidifier": 1,
+      "fan": 2
+    }
+  },
+  "sensorunit": {
+    "serial_device": "/dev/ttyUSB0",
+    "baud_rate": 9600
+  }
+}
+```
+
+### Executor Configuration Options
+
+- **`base_path`**: Directory for storing program data and execution logs
+- **`port`**: HTTP server port for the executor API
+- **`tick_length`**: Execution tick duration in milliseconds
+- **`sensor_unit_url`**: Base URL for sensor unit API calls
+- **`power_unit_url`**: Base URL for power unit API calls
+- **`status_message_url`**: URL endpoint for heartbeat status messages
+- **`network_interface`**: Network interface name for IP address reporting (e.g., "eth0", "wlan0")
+- **`pid_settings`**: PID controller parameters for different program phases
+- **`max_delta_heating`** / **`min_delta_heating`**: Temperature control limits
+
+### Heartbeat Service
+
+The executor includes an automatic heartbeat service that:
+
+- Reports the executor's IP address every 30 seconds
+- Uses the configured `network_interface` to determine the IP address
+- Sends status messages to the `status_message_url` endpoint
+- Helps monitor executor availability in distributed deployments
+- Starts automatically when the executor service starts
+
+The heartbeat sends a JSON payload in the following format:
+
+```json
+{"message": "192.168.1.100"}
+```
+
+Where the message contains the IPv4 address of the configured network interface.
 
 ## Deployment
 
