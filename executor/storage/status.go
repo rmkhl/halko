@@ -39,7 +39,6 @@ func (storage *FileStorage) MaybeDeleteState(name string) {
 	os.Remove(statusFilePath)
 }
 
-// Returns saved state and time it was saved.
 func (storage *FileStorage) LoadState(name string) (types.ProgramState, int64, error) {
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
 

@@ -1,6 +1,7 @@
 # Halko API Documentation
 
-This document provides detailed information about the REST APIs exposed by each component of the Halko wood drying kiln control system.
+This document provides detailed information about the REST APIs exposed by each
+component of the Halko wood drying kiln control system.
 
 ## 1. SensorUnit API
 
@@ -13,6 +14,7 @@ Base Path: `/sensors/api/v1`
 Fetches current temperature readings from all sensors.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -25,7 +27,9 @@ Fetches current temperature readings from all sensors.
 ```
 
 The response includes:
-- `oven`: The highest of the two oven temperatures or a single oven temperature if one sensor is unavailable
+
+- `oven`: The highest of the two oven temperatures or a single oven
+  temperature if one sensor is unavailable
 - `wood`: The current wood temperature
 - `ovenPrimary`: The primary oven temperature sensor reading
 - `ovenSecondary`: The secondary oven temperature sensor reading
@@ -37,6 +41,7 @@ The response includes:
 Checks the connection status of the sensor unit.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -46,6 +51,7 @@ Checks the connection status of the sensor unit.
 ```
 
 Possible status values:
+
 - `connected`: The sensor unit is connected and responding
 - `disconnected`: The sensor unit is not connected or not responding
 
@@ -54,6 +60,7 @@ Possible status values:
 Updates the status text displayed on the sensor unit's LCD.
 
 **Request Format:**
+
 ```json
 {
   "message": "Drying in progress"
@@ -61,6 +68,7 @@ Updates the status text displayed on the sensor unit's LCD.
 ```
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -78,6 +86,7 @@ Base Path: `/powers/api/v1`
 Gets the status of all power channels.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -99,9 +108,12 @@ Gets the status of all power channels.
 Gets the status of a specific power channel.
 
 **Path Parameters:**
-- `power`: The name of the power channel (e.g., `heater`, `fan`, `humidifier`)
+
+- `power`: The name of the power channel (e.g., `heater`, `fan`,
+  `humidifier`)
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -115,9 +127,12 @@ Gets the status of a specific power channel.
 Operates a specific power channel.
 
 **Path Parameters:**
-- `power`: The name of the power channel (e.g., `heater`, `fan`, `humidifier`)
+
+- `power`: The name of the power channel (e.g., `heater`, `fan`,
+  `humidifier`)
 
 **Request Format:**
+
 ```json
 {
   "percent": 75
@@ -125,6 +140,7 @@ Operates a specific power channel.
 ```
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -144,22 +160,19 @@ Base Path: `/engine/api/v1`
 Lists all available programs (definitions loaded by executor).
 
 **Response Format:**
+
 ```json
 {
   "data": [
     {
       "name": "Standard Drying",
       "description": "Standard drying program for pine",
-      "phases": [
-        // Phase details...
-      ]
+      "phases": []
     },
     {
       "name": "Quick Drying",
       "description": "Quick drying program for thinner woods",
-      "phases": [
-        // Phase details...
-      ]
+      "phases": []
     }
   ]
 }
@@ -170,9 +183,11 @@ Lists all available programs (definitions loaded by executor).
 Gets a specific program definition by name.
 
 **Path Parameters:**
+
 - `name`: The name of the program
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -187,8 +202,7 @@ Gets a specific program definition by name.
         "maxTemperature": 50,
         "fanPower": 100,
         "humidifierPower": 0
-      },
-      // More phases...
+      }
     ]
   }
 }
@@ -199,9 +213,11 @@ Gets a specific program definition by name.
 Deletes/unloads a specific program definition.
 
 **Path Parameters:**
+
 - `name`: The name of the program to delete
 
 **Response:**
+
 - Status 204 No Content on success
 
 ### Engine Control Endpoints
@@ -211,6 +227,7 @@ Deletes/unloads a specific program definition.
 Gets the status of the currently running program.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -228,6 +245,7 @@ Gets the status of the currently running program.
 ```
 
 If no program is running:
+
 ```json
 {
   "data": {
@@ -241,6 +259,7 @@ If no program is running:
 Starts a new program (by providing its definition or name).
 
 **Request Format:**
+
 ```json
 {
   "programName": "Standard Drying"
@@ -254,14 +273,13 @@ OR
   "program": {
     "name": "Custom Program",
     "description": "One-time custom program",
-    "phases": [
-      // Phase details...
-    ]
+    "phases": []
   }
 }
 ```
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -278,6 +296,7 @@ OR
 Cancels the currently running program.
 
 **Response:**
+
 - Status 204 No Content on success
 
 ## 4. Simulator API
@@ -288,11 +307,12 @@ The simulator mimics endpoints from the SensorUnit and Shelly devices.
 
 Base Path: `/sensors/api/v1`
 
-#### GET `/temperatures`
+#### Simulated GET `/temperatures`
 
 Gets readings from all simulated temperature sensors.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -304,11 +324,12 @@ Gets readings from all simulated temperature sensors.
 }
 ```
 
-#### GET `/status`
+#### Simulated GET `/status`
 
 Gets the simulated connection status.
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -317,11 +338,12 @@ Gets the simulated connection status.
 }
 ```
 
-#### POST `/status`
+#### Simulated POST `/status`
 
 Logs a status message (simulates updating an LCD).
 
 **Request Format:**
+
 ```json
 {
   "message": "Simulation in progress"
@@ -329,6 +351,7 @@ Logs a status message (simulates updating an LCD).
 ```
 
 **Response Format:**
+
 ```json
 {
   "data": {
@@ -346,9 +369,11 @@ Base Path: `/rpc`
 Gets the status of simulated Shelly switches.
 
 **Query Parameters:**
+
 - `id`: The ID of the switch (e.g., `0`, `1`, `2`)
 
 **Response Format:**
+
 ```json
 {
   "id": 0,
@@ -365,10 +390,12 @@ Gets the status of simulated Shelly switches.
 Sets the state of simulated Shelly switches.
 
 **Query Parameters:**
+
 - `id`: The ID of the switch (e.g., `0`, `1`, `2`)
 - `on`: Boolean value to set the switch state (`true` or `false`)
 
 **Response Format:**
+
 ```json
 {
   "id": 0,

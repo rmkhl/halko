@@ -12,9 +12,7 @@ import (
 	"time"
 )
 
-// TestShellyAPI tests the Shelly API endpoints of the simulator
 func TestShellyAPI(t *testing.T) {
-	// Get port from environment variable or use default
 	port := "8088"
 	if envPort := os.Getenv("TEST_PORT"); envPort != "" {
 		port = envPort
@@ -22,14 +20,11 @@ func TestShellyAPI(t *testing.T) {
 
 	baseURL := fmt.Sprintf("http://localhost:%s", port)
 
-	// Relative path to the simulator main.go from the test directory
 	simulatorPath := "../../simulator/main.go"
 
-	// Start the simulator as a subprocess
 	t.Log("Starting simulator...")
 	cmd := exec.Command("go", "run", simulatorPath, "-l", port)
 
-	// Set up pipes for stdout and stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatalf("Error creating stdout pipe: %v", err)
@@ -38,8 +33,6 @@ func TestShellyAPI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating stderr pipe: %v", err)
 	}
-
-	// Start the command
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Error starting simulator: %v", err)
 	}

@@ -34,7 +34,6 @@ func (h *Heater) Tick() {
 	h.temperature = max(h.minTemp, h.temperature-0.01)
 }
 
-// Implement TemperatureSensor interface.
 func (h *Heater) Temperature() float32 {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()

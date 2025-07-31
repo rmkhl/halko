@@ -7,11 +7,9 @@ import (
 	"time"
 )
 
-// PowerState represents the power state of a Shelly device
 type PowerState string
 
 const (
-	// Power states
 	Off     PowerState = "off"
 	On      PowerState = "on"
 	Unknown PowerState = "unknown"
@@ -19,13 +17,11 @@ const (
 	NumberOfDevices = 3 // Number of devices controlled by Shelly
 )
 
-// Shelly represents a Shelly device controller
 type Shelly struct {
 	address string
 	client  *http.Client
 }
 
-// Response structures for API calls
 type apiError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -36,7 +32,6 @@ type getStatusResponse struct {
 	Output bool `json:"output"`
 }
 
-// New creates a new Shelly controller with the specified address
 func New(address string) *Shelly {
 	return &Shelly{
 		address: address,
@@ -46,7 +41,6 @@ func New(address string) *Shelly {
 	}
 }
 
-// GetState retrieves the current power state of a specified device
 func (s *Shelly) GetState(id int) (PowerState, error) {
 	url := fmt.Sprintf("%s/rpc/Switch.GetStatus?id=%d", s.address, id)
 	resp, err := s.client.Get(url)
@@ -92,7 +86,6 @@ func (s *Shelly) SetState(state PowerState, id int) (PowerState, error) {
 	return state, nil
 }
 
-// Shutdown all powers
 func (s *Shelly) Shutdown() error {
 	for id := range 3 {
 		if _, err := s.SetState(Off, id); err != nil {

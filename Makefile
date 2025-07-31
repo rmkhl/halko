@@ -2,7 +2,7 @@ MODULES = executor powerunit simulator sensorunit
 BINDIR = bin
 
 .PHONY: all
-all: prepare
+all: prepare clean $(MODULES:%=$(BINDIR)/%)
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
 	go build -o $@ ./$*/
@@ -28,6 +28,11 @@ prepare:
 		echo "Install with: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin"; \
 	else \
 		echo "✓ golangci-lint is installed"; \
+	fi
+	@if ! command -v mdl > /dev/null; then \
+		echo "Warning: 'mdl' is not available. Markdown linting will not work."; \
+	else \
+		echo "✓ mdl is installed"; \
 	fi
 	@echo "Creating or updating go.work file with all modules..."
 	@if [ ! -f go.work ]; then \
@@ -58,6 +63,15 @@ lint:
 			(cd $$mod && golangci-lint run ./... || true); \
 		fi; \
 	done
+
+.PHONY: lint-markdown
+lint-markdown:
+	@if command -v mdl > /dev/null; then \
+		echo "Linting markdown files..."; \
+		mdl . || true; \
+	else \
+		echo "Warning: mdl is not installed. Skipping markdown linting."; \
+	fi
 
 .PHONY: update-modules
 update-modules:
@@ -125,6 +139,7 @@ help:
 	@echo "  rebuild          Clean and rebuild all executables from scratch."
 	@echo "  clean            Remove the bin/ directory and all built executables."
 	@echo "  lint             Run golangci-lint on all modules."
+	@echo "  lint-markdown    Run mdl (markdown linter) on all markdown files."
 	@echo "  update-modules   Update all go.mod dependencies and tidy them."
 	@echo "  install          Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
 	@echo "  systemd-units    Create, install, and enable systemd unit files for all binaries except simulator."
