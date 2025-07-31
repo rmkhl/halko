@@ -77,8 +77,6 @@ func deleteRun(storage *storage.FileStorage) gin.HandlerFunc {
 	}
 }
 
-// Stored program template functions (storage API)
-
 func listAllPrograms(storage *storage.FileStorage) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		programs, err := storage.ListStoredPrograms()
@@ -145,7 +143,6 @@ func updateProgram(storage *storage.FileStorage) gin.HandlerFunc {
 			return
 		}
 
-		// Ensure the program name matches the URL parameter
 		program.ProgramName = programName
 
 		err = storage.UpdateStoredProgram(programName, &program)

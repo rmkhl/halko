@@ -33,10 +33,8 @@ func main() {
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
 
-	// Channel for shutdown signals
 	stop := make(chan struct{})
 
-	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -50,19 +48,16 @@ func main() {
 	}))
 	router.SetupRoutes(server, temperatureSensors, shellyControls)
 
-	// Create http server
 	srv := &http.Server{
 		Addr:    ":" + *port,
 		Handler: server,
 	}
 
-	// Start simulation goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		log.Println("Starting simulation loop")
 
-		// run "simulated" environment
 		for {
 			select {
 			case <-ticker.C:
@@ -77,7 +72,6 @@ func main() {
 		}
 	}()
 
-	// Start server in a goroutine
 	go func() {
 		log.Printf("Server running on port %s", *port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -85,18 +79,14 @@ func main() {
 		}
 	}()
 
-	// Block until signal received
 	<-sigs
 	log.Println("Shutdown signal received")
 
-	// Close the stop channel to terminate the simulation loop
 	close(stop)
 
-	// Create a context with timeout for server shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Shutdown the server gracefully
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 	}

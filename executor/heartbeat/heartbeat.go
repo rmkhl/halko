@@ -31,7 +31,6 @@ var (
 func NewManager(config *types.ExecutorConfig) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Get the IP address once during initialization
 	executorIP, err := GetNetworkInterfaceIPv4(config.NetworkInterface)
 	if err != nil {
 		cancel() // Clean up the context since we're returning an error
@@ -73,7 +72,6 @@ func (hm *Manager) run() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
-	// Send initial heartbeat
 	if err := hm.sendHeartbeat(); err != nil {
 		log.Printf("Error sending initial heartbeat: %v", err)
 	}
@@ -92,7 +90,6 @@ func (hm *Manager) run() {
 }
 
 func (hm *Manager) sendHeartbeat() error {
-	// Prepare the heartbeat payload using StatusRequest with IP as message
 	payload := types.StatusRequest{
 		Message: hm.executorIP,
 	}
@@ -102,9 +99,7 @@ func (hm *Manager) sendHeartbeat() error {
 		return err
 	}
 
-	// Send the heartbeat to the sensor unit's status endpoint
-	statusURL := hm.config.SensorUnitURL + "/status"
-	resp, err := http.Post(statusURL, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(hm.config.StatusMessageURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
@@ -117,7 +112,6 @@ func (hm *Manager) sendHeartbeat() error {
 	return nil
 }
 
-// GetNetworkInterfaceIPv4 returns the IPv4 address of the specified network interface
 func GetNetworkInterfaceIPv4(interfaceName string) (string, error) {
 	iface, err := net.InterfaceByName(interfaceName)
 	if err != nil {

@@ -140,8 +140,6 @@ func (storage *FileStorage) DeleteExecutedProgram(programName string) error {
 	return os.Remove(filePath)
 }
 
-// Program template storage functions (stored in programPath)
-
 func (storage *FileStorage) ListStoredPrograms() ([]string, error) {
 	searchPath := filepath.Join(storage.programPath, "*.json")
 	return storage.listPrograms(searchPath)

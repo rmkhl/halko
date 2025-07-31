@@ -8,14 +8,12 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// PowerInfo defines the minimal interface needed for power status
 type PowerInfo interface {
 	Info() (bool, bool)
 }
 
 func readSwitchStatus(powers map[int8]interface{}) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Extract the switch ID from the query parameters
 		switchID := ctx.Query("id")
 		if switchID == "" {
 			ctx.String(http.StatusBadRequest, "Switch ID is required")
@@ -29,9 +27,7 @@ func readSwitchStatus(powers map[int8]interface{}) gin.HandlerFunc {
 		}
 
 		if power, exists := powers[int8(id)]; exists {
-			// Check if the power element implements PowerInfo
 			if powerInfo, ok := power.(PowerInfo); ok {
-				// Log the switch status
 				_, turnedOn := powerInfo.Info()
 
 				ctx.JSON(http.StatusOK, types.ShellySwitchGetStatusResponse{
@@ -57,14 +53,12 @@ func readSwitchStatus(powers map[int8]interface{}) gin.HandlerFunc {
 
 func setSwitchState(powers map[int8]interface{}) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Extract the switch ID from the query parameters
 		switchID := ctx.Query("id")
 		if switchID == "" {
 			ctx.String(http.StatusBadRequest, "Switch ID is required")
 			return
 		}
 
-		// Get the desired on/off state from the parameters
 		turnOn := ctx.Query("on")
 		if turnOn == "" {
 			ctx.String(http.StatusBadRequest, "On parameter is required")
@@ -78,20 +72,14 @@ func setSwitchState(powers map[int8]interface{}) gin.HandlerFunc {
 		}
 
 		if power, exists := powers[int8(id)]; exists {
-			// Check if the power element implements PowerInfo
 			if powerInfo, ok := power.(PowerInfo); ok {
-				// Get the current state before changing it
 				_, previousState := powerInfo.Info()
 
-				// Check if the object also has methods to change state
 				if switcher, ok := power.(interface{ SwitchTo(bool) }); ok {
-					// Convert parameter to boolean
 					newState := turnOn == "true"
 
-					// Change the state
 					switcher.SwitchTo(newState)
 
-					// Determine the previous state
 					wasOn := previousState
 
 					ctx.JSON(http.StatusOK, types.ShellySwitchSetResponse{

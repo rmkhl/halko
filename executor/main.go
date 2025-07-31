@@ -14,6 +14,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/engine"
+	"github.com/rmkhl/halko/executor/heartbeat"
 	"github.com/rmkhl/halko/executor/router"
 	"github.com/rmkhl/halko/executor/storage"
 	"github.com/rmkhl/halko/types"
@@ -36,6 +37,16 @@ func main() {
 	}
 
 	engine := engine.NewEngine(configuration.ExecutorConfig, storage)
+
+	// Create and start the heartbeat manager
+	heartbeatManager, err := heartbeat.NewManager(configuration.ExecutorConfig)
+	if err != nil {
+		log.Fatalf("Failed to create heartbeat manager: %v", err)
+	}
+	if err := heartbeatManager.Start(); err != nil {
+		log.Fatalf("Failed to start heartbeat manager: %v", err)
+	}
+
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
 		AllowOrigins:  []string{"http://localhost:1234"},
@@ -87,6 +98,11 @@ func main() {
 	// Stop the engine
 	if err := engine.StopEngine(); err != nil {
 		log.Printf("Error stopping engine: %s", err.Error())
+	}
+
+	// Stop the heartbeat manager
+	if err := heartbeatManager.Stop(); err != nil {
+		log.Printf("Error stopping heartbeat manager: %v", err)
 	}
 
 	log.Println("Server shutdown complete")

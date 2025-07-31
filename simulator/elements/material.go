@@ -17,7 +17,6 @@ func NewWood(minTemp float32) *Wood {
 	return &w
 }
 
-// Implement the HeatedMaterial interface.
 func (w *Wood) AmbientTemperature(temperature float32) {
 	var effectiveDelta float32
 
@@ -34,7 +33,6 @@ func (w *Wood) AmbientTemperature(temperature float32) {
 	w.temperature = max(w.minTemp, w.temperature+effectiveDelta)
 }
 
-// Implement the TemperatureSensor interface.
 func (w *Wood) Temperature() float32 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
