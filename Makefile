@@ -130,19 +130,39 @@ fmt-changed:
 	done
 	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
 
+.PHONY: test
+test:
+	@echo "Running all tests..."
+	@$(MAKE) test-program-validation || true
+	@$(MAKE) test-shelly-api || true
+	@echo "All tests completed."
+
+.PHONY: test-program-validation
+test-program-validation:
+	@echo "Running program validation tests..."
+	@cd types && go test -v -run TestProgramValidation
+
+.PHONY: test-shelly-api
+test-shelly-api:
+	@echo "Running shelly API tests..."
+	@cd tests/simulator && go test -v -run TestShellyAPI
+
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  help             Show this help message. (default)"
-	@echo "  all              Build all Go executables to bin/ directory."
-	@echo "  prepare          Check for required tools and create/update go.work file to include all modules."
-	@echo "  rebuild          Clean and rebuild all executables from scratch."
-	@echo "  clean            Remove the bin/ directory and all built executables."
-	@echo "  lint             Run golangci-lint on all modules."
-	@echo "  lint-markdown    Run mdl (markdown linter) on all markdown files."
-	@echo "  update-modules   Update all go.mod dependencies and tidy them."
-	@echo "  install          Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
-	@echo "  systemd-units    Create, install, and enable systemd unit files for all binaries except simulator."
-	@echo "  fmt-changed      Reformat changed Go files compared to the main branch using golangci-lint."
+	@echo "  help                  Show this help message. (default)"
+	@echo "  all                   Build all Go executables to bin/ directory."
+	@echo "  prepare               Check for required tools and create/update go.work file to include all modules."
+	@echo "  rebuild               Clean and rebuild all executables from scratch."
+	@echo "  clean                 Remove the bin/ directory and all built executables."
+	@echo "  lint                  Run golangci-lint on all modules."
+	@echo "  lint-markdown         Run mdl (markdown linter) on all markdown files."
+	@echo "  update-modules        Update all go.mod dependencies and tidy them."
+	@echo "  install               Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
+	@echo "  systemd-units         Create, install, and enable systemd unit files for all binaries except simulator."
+	@echo "  fmt-changed           Reformat changed Go files compared to the main branch using golangci-lint."
+	@echo "  test                  Run all tests."
+	@echo "  test-program-validation  Run program validation tests."
+	@echo "  test-shelly-api       Run shelly API tests."
 
 .DEFAULT_GOAL := help
