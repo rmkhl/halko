@@ -25,8 +25,8 @@ type (
 	}
 
 	PowerPidSettings struct {
-		MinDelta uint8        `json:"min_delta,omitempty"`
-		MaxDelta uint8        `json:"max_delta,omitempty"`
+		MinDelta float32      `json:"min_delta,omitempty"`
+		MaxDelta float32      `json:"max_delta,omitempty"`
 		Power    uint8        `json:"power,omitempty"`
 		Pid      *PidSettings `json:"pid,omitempty"`
 	}
@@ -90,7 +90,7 @@ func (p *ProgramStep) Validate() error {
 		}
 		// When using PID, min_delta and max_delta cannot be defined
 		if p.Heater.Pid != nil {
-			if p.Heater.MinDelta > 0 || p.Heater.MaxDelta > 0 {
+			if p.Heater.MinDelta != 0 || p.Heater.MaxDelta != 0 {
 				return errors.New("min_delta and max_delta cannot be set when using pid")
 			}
 			// If PID is not empty, all properties must be present

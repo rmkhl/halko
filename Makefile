@@ -57,7 +57,7 @@ rebuild: clean $(MODULES:%=$(BINDIR)/%)
 
 .PHONY: lint
 lint:
-	@for mod in $(MODULES) types; do \
+	@for mod in $(MODULES) types tests; do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Linting $$mod..."; \
 			(cd $$mod && golangci-lint run ./... || true); \
@@ -140,12 +140,12 @@ test:
 .PHONY: test-program-validation
 test-program-validation:
 	@echo "Running program validation tests..."
-	@cd types && go test -v -run TestProgramValidation
+	@cd tests && go test -v -run TestProgramValidation
 
 .PHONY: test-shelly-api
 test-shelly-api:
 	@echo "Running shelly API tests..."
-	@cd tests/simulator && go test -v -run TestShellyAPI
+	@cd tests && go test -v -run TestShellyAPI
 
 .PHONY: help
 help:

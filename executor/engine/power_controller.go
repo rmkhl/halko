@@ -83,9 +83,13 @@ func NewPowerController(targetTemperature float32, settings *types.PowerPidSetti
 	}
 
 	// Use the delta values from the step settings, or fall back to heating config values
-	if settings.MaxDelta > 0 {
-		maxDelta = float32(settings.MaxDelta)
-		minDelta = 0 // Default for non-heating steps
+	if settings.MaxDelta != 0 {
+		maxDelta = settings.MaxDelta
+		if settings.MinDelta != 0 {
+			minDelta = settings.MinDelta
+		} else {
+			minDelta = 0 // Default for non-heating steps
+		}
 	} else {
 		maxDelta = maxDeltaHeating
 		minDelta = minDeltaHeating
@@ -111,9 +115,9 @@ func (c *PowerController) Update(power uint8, owenTemperature float32, woodTempe
 	// Calculate target temperature based on wood temperature and max/min delta
 	var targetTemperature float32
 
-	if c.MinDelta > 0 {
-		// For heating with min delta (respect both max and min delta values)
-		// Don't let the oven get too far ahead or too close to the wood temperature
+	if c.MinDelta != 0 {
+		// When both min and max delta are specified, respect both constraints
+		// Don't let the oven get too far ahead or behind the wood temperature
 		targetTemperature = min(c.TargetTemperature,
 			max(woodTemperature+c.MinDelta,
 				min(woodTemperature+c.MaxDelta, c.TargetTemperature)))
