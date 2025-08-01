@@ -55,6 +55,22 @@ type (
 	}
 )
 
+// Duplicate creates a deep copy of a Program using JSON marshaling/unmarshaling
+func (p Program) Duplicate() (Program, error) {
+	data, err := json.Marshal(p)
+	if err != nil {
+		return Program{}, err
+	}
+
+	var copy Program
+	err = json.Unmarshal(data, &copy)
+	if err != nil {
+		return Program{}, err
+	}
+
+	return copy, nil
+}
+
 // MarshalJSON implements json.Marshaler for StepDuration
 func (d StepDuration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.Duration.String())

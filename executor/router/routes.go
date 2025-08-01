@@ -24,7 +24,7 @@ func SetupRoutes(r *gin.Engine, storage *storage.FileStorage, engine *engine.Con
 	storageAPIV1 := storageAPI.Group("v1")
 	storageAPIV1.GET("programs", listAllPrograms(storage))
 	storageAPIV1.GET("programs/:name", getProgram(storage))
-	storageAPIV1.POST("programs", createProgram(storage))
-	storageAPIV1.POST("programs/:name", updateProgram(storage))
+	storageAPIV1.POST("programs", createProgram(storage, engine))
+	storageAPIV1.POST("programs/:name", updateProgram(storage, engine))
 	storageAPIV1.DELETE("programs/:name", deleteProgram(storage))
 }
