@@ -5,10 +5,6 @@
       "name": "Initial Heating",
       "type": "heating",
       "temperature_target": 100,
-      "heater": {
-        "min_delta": 5,
-        "max_delta": 15
-      },
       "fan": {
         "power": 100
       },
@@ -20,10 +16,6 @@
       "name": "Secondary Heating",
       "type": "heating",
       "temperature_target": 150,
-      "heater": {
-        "min_delta": 5,
-        "max_delta": 15
-      },
       "fan": {
         "power": 100
       },

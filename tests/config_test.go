@@ -57,11 +57,12 @@ func TestConfigReading(t *testing.T) {
 
 	// Check that acclimate PID settings exist
 	acclimate, exists := config.ExecutorConfig.Defaults.PidSettings[types.StepTypeAcclimate]
-	if !exists {
+	switch {
+	case !exists:
 		t.Error("Acclimate PID settings should exist")
-	} else if acclimate == nil {
+	case acclimate == nil:
 		t.Error("Acclimate PID settings should not be nil")
-	} else {
+	default:
 		if acclimate.Kp == 0 {
 			t.Error("Acclimate Kp should not be zero")
 		}

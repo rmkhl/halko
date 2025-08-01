@@ -170,8 +170,18 @@ func (h *heatUpStateHandler) executeState() fsmState {
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		fanPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
+			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
+		}
+		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		humidifierPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
+			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
+		}
+		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
 	}
 	return fsmStateHeatUp
 }
@@ -190,8 +200,18 @@ func (h *acclimateStateHandler) executeState() fsmState {
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		fanPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
+			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
+		}
+		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		humidifierPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
+			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
+		}
+		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
 	}
 	return fsmStateAcclimate
 }
@@ -214,8 +234,18 @@ func (h *coolDownStateHandler) executeState() fsmState {
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
-		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		fanPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
+			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
+		}
+		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		humidifierPower := uint8(0)
+		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
+			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
+		}
+		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
 	}
 	return fsmStateCoolDown
 }

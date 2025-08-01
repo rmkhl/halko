@@ -15,7 +15,7 @@ type (
 	StepType string
 
 	PowerSetting struct {
-		Power uint8 `json:"power"`
+		Power *uint8 `json:"power,omitempty"`
 	}
 
 	PidSettings struct {
@@ -25,9 +25,9 @@ type (
 	}
 
 	PowerPidSettings struct {
-		MinDelta float32      `json:"min_delta,omitempty"`
-		MaxDelta float32      `json:"max_delta,omitempty"`
-		Power    uint8        `json:"power,omitempty"`
+		MinDelta *float32     `json:"min_delta,omitempty"`
+		MaxDelta *float32     `json:"max_delta,omitempty"`
+		Power    *uint8       `json:"power,omitempty"`
 		Pid      *PidSettings `json:"pid,omitempty"`
 	}
 
@@ -47,14 +47,76 @@ type (
 	}
 )
 
+// PowerSetting helper methods
+func (ps *PowerSetting) IsDefined() bool {
+	return ps.Power != nil
+}
+
+func (ps *PowerSetting) GetPower() uint8 {
+	if ps.Power == nil {
+		return 0
+	}
+	return *ps.Power
+}
+
+func (ps *PowerSetting) SetPower(power uint8) {
+	ps.Power = &power
+}
+
+// PowerPidSettings helper methods
+func (pps *PowerPidSettings) IsPowerDefined() bool {
+	return pps.Power != nil
+}
+
+func (pps *PowerPidSettings) IsMinDeltaDefined() bool {
+	return pps.MinDelta != nil
+}
+
+func (pps *PowerPidSettings) IsMaxDeltaDefined() bool {
+	return pps.MaxDelta != nil
+}
+
+func (pps *PowerPidSettings) GetPower() uint8 {
+	if pps.Power == nil {
+		return 0
+	}
+	return *pps.Power
+}
+
+func (pps *PowerPidSettings) GetMinDelta() float32 {
+	if pps.MinDelta == nil {
+		return 0
+	}
+	return *pps.MinDelta
+}
+
+func (pps *PowerPidSettings) GetMaxDelta() float32 {
+	if pps.MaxDelta == nil {
+		return 0
+	}
+	return *pps.MaxDelta
+}
+
+func (pps *PowerPidSettings) SetPower(power uint8) {
+	pps.Power = &power
+}
+
+func (pps *PowerPidSettings) SetMinDelta(delta float32) {
+	pps.MinDelta = &delta
+}
+
+func (pps *PowerPidSettings) SetMaxDelta(delta float32) {
+	pps.MaxDelta = &delta
+}
+
 func (p *ProgramStep) Validate() error {
 	// Do some rudimentary validation for different step types, purposefully not "optimized" for code brevity
 	//
 	// For all steps the power setting for the fan and humidifier must be set between 0 and 100.
-	if p.Fan.Power > 100 {
+	if p.Fan.Power != nil && *p.Fan.Power > 100 {
 		return errors.New("fan power must be between 0 and 100")
 	}
-	if p.Humidifier.Power > 100 {
+	if p.Humidifier.Power != nil && *p.Humidifier.Power > 100 {
 		return errors.New("humidifier power must be between 0 and 100")
 	}
 
@@ -71,7 +133,7 @@ func (p *ProgramStep) Validate() error {
 		if p.Runtime != nil {
 			return errors.New("runtime cannot be set for heating step")
 		}
-		if p.Heater.Power == 0 {
+		if p.Heater.Power == nil || *p.Heater.Power == 0 {
 			return errors.New("heater power must be set for heating step")
 		}
 		if p.Heater.Pid != nil {
@@ -90,7 +152,7 @@ func (p *ProgramStep) Validate() error {
 		}
 		// When using PID, min_delta and max_delta cannot be defined
 		if p.Heater.Pid != nil {
-			if p.Heater.MinDelta != 0 || p.Heater.MaxDelta != 0 {
+			if (p.Heater.MinDelta != nil && *p.Heater.MinDelta != 0) || (p.Heater.MaxDelta != nil && *p.Heater.MaxDelta != 0) {
 				return errors.New("min_delta and max_delta cannot be set when using pid")
 			}
 			// If PID is not empty, all properties must be present

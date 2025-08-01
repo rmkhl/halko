@@ -58,9 +58,14 @@ func (c *PidController) Reset() {
 }
 
 // Simple constant power controller, basically used to control the fan and the humidifier.
-func newConstantPowerController(power uint8) *PowerController {
+func newConstantPowerController(power *uint8) *PowerController {
+	if power == nil {
+		return &PowerController{
+			ConstantPower: 0,
+		}
+	}
 	return &PowerController{
-		ConstantPower: power,
+		ConstantPower: *power,
 	}
 }
 
@@ -71,6 +76,7 @@ func NewPowerController(targetTemperature float32, settings *types.PowerPidSetti
 	var controller *PidController
 	var maxDelta float32
 	var minDelta float32
+	var constantPower uint8
 
 	if settings.Pid == nil {
 		controllerConfig = defaultPidSettings
@@ -82,11 +88,16 @@ func NewPowerController(targetTemperature float32, settings *types.PowerPidSetti
 		controller = NewPidController(controllerConfig)
 	}
 
+	// Handle constant power setting
+	if settings.Power != nil {
+		constantPower = *settings.Power
+	}
+
 	// Use the delta values from the step settings, or fall back to heating config values
-	if settings.MaxDelta != 0 {
-		maxDelta = settings.MaxDelta
-		if settings.MinDelta != 0 {
-			minDelta = settings.MinDelta
+	if settings.MaxDelta != nil && *settings.MaxDelta != 0 {
+		maxDelta = *settings.MaxDelta
+		if settings.MinDelta != nil && *settings.MinDelta != 0 {
+			minDelta = *settings.MinDelta
 		} else {
 			minDelta = 0 // Default for non-heating steps
 		}
@@ -97,7 +108,7 @@ func NewPowerController(targetTemperature float32, settings *types.PowerPidSetti
 
 	return &PowerController{
 		PidController:     controller,
-		ConstantPower:     settings.Power,
+		ConstantPower:     constantPower,
 		TargetTemperature: targetTemperature,
 		MaxDelta:          maxDelta,
 		MinDelta:          minDelta,
