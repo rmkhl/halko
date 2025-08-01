@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/storage"
 	"github.com/rmkhl/halko/types"
 )
@@ -100,7 +101,7 @@ func getProgram(storage *storage.FileStorage) gin.HandlerFunc {
 	}
 }
 
-func createProgram(storage *storage.FileStorage) gin.HandlerFunc {
+func createProgram(storage *storage.FileStorage, engine *engine.ControlEngine) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var program types.Program
 
@@ -110,12 +111,22 @@ func createProgram(storage *storage.FileStorage) gin.HandlerFunc {
 			return
 		}
 
-		err = program.Validate()
+		// Create a deep copy for validation
+		programCopy, err := program.Duplicate()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: "Failed to copy program: " + err.Error()})
+			return
+		}
+
+		// Apply defaults to the copy and validate
+		programCopy.ApplyDefaults(engine.GetDefaults())
+		err = programCopy.Validate()
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
 
+		// Store the original program without defaults applied
 		err = storage.CreateStoredProgram(program.ProgramName, &program)
 		if err != nil {
 			ctx.JSON(http.StatusConflict, types.APIErrorResponse{Err: err.Error()})
@@ -126,7 +137,7 @@ func createProgram(storage *storage.FileStorage) gin.HandlerFunc {
 	}
 }
 
-func updateProgram(storage *storage.FileStorage) gin.HandlerFunc {
+func updateProgram(storage *storage.FileStorage, engine *engine.ControlEngine) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		programName, _ := ctx.Params.Get("name")
 		var program types.Program
@@ -137,12 +148,22 @@ func updateProgram(storage *storage.FileStorage) gin.HandlerFunc {
 			return
 		}
 
-		err = program.Validate()
+		// Create a deep copy for validation
+		programCopy, err := program.Duplicate()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, types.APIErrorResponse{Err: "Failed to copy program: " + err.Error()})
+			return
+		}
+
+		// Apply defaults to the copy and validate
+		programCopy.ApplyDefaults(engine.GetDefaults())
+		err = programCopy.Validate()
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
 			return
 		}
 
+		// Store the original program without defaults applied
 		program.ProgramName = programName
 
 		err = storage.UpdateStoredProgram(programName, &program)

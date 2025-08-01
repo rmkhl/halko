@@ -59,3 +59,60 @@ func TestProgramValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestProgramValidationWithCopy(t *testing.T) {
+	// Load defaults from the template config
+	config, err := types.ReadHalkoConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("Failed to read template config: %v", err)
+	}
+
+	if config.ExecutorConfig == nil || config.ExecutorConfig.Defaults == nil {
+		t.Fatal("Config or defaults not found")
+	}
+
+	// Test the new validation pattern used in createProgram/updateProgram
+	examplePath := filepath.Join("..", "example", "example-program-delta.json")
+	data, err := os.ReadFile(examplePath)
+	if err != nil {
+		t.Fatalf("Failed to read example file: %v", err)
+	}
+
+	var originalProgram types.Program
+	err = json.Unmarshal(data, &originalProgram)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal program: %v", err)
+	}
+
+	// Store the original state to verify it's not modified
+	originalJSON, _ := json.Marshal(originalProgram)
+
+	// Create a deep copy for validation (simulating the router behavior)
+	programCopy, err := originalProgram.Duplicate()
+	if err != nil {
+		t.Fatalf("Failed to duplicate program: %v", err)
+	}
+
+	// Apply defaults to the copy and validate
+	programCopy.ApplyDefaults(config.ExecutorConfig.Defaults)
+	err = programCopy.Validate()
+	if err != nil {
+		t.Errorf("Program validation failed on copy: %v", err)
+	}
+
+	// Verify the original program was not modified
+	currentJSON, _ := json.Marshal(originalProgram)
+	if string(originalJSON) != string(currentJSON) {
+		t.Error("Original program was unexpectedly modified during validation")
+	}
+
+	// Verify the copy has defaults applied
+	if !programCopy.DefaultsApplied {
+		t.Error("Copy should have defaults applied")
+	}
+
+	// Verify the original does not have defaults applied
+	if originalProgram.DefaultsApplied {
+		t.Error("Original program should not have defaults applied")
+	}
+}
