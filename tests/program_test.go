@@ -85,7 +85,10 @@ func TestProgramValidationWithCopy(t *testing.T) {
 	}
 
 	// Store the original state to verify it's not modified
-	originalJSON, _ := json.Marshal(originalProgram)
+	originalJSON, err := json.Marshal(originalProgram)
+	if err != nil {
+		t.Fatalf("Failed to marshal original program: %v", err)
+	}
 
 	// Create a deep copy for validation (simulating the router behavior)
 	programCopy, err := originalProgram.Duplicate()
@@ -101,7 +104,10 @@ func TestProgramValidationWithCopy(t *testing.T) {
 	}
 
 	// Verify the original program was not modified
-	currentJSON, _ := json.Marshal(originalProgram)
+	currentJSON, err := json.Marshal(originalProgram)
+	if err != nil {
+		t.Fatalf("Failed to marshal current program: %v", err)
+	}
 	if string(originalJSON) != string(currentJSON) {
 		t.Error("Original program was unexpectedly modified during validation")
 	}
