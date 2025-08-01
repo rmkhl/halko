@@ -187,19 +187,9 @@ func (h *heatUpStateHandler) executeState() fsmState {
 }
 
 func (h *heatUpStateHandler) enterState() {
-	var fanPower *uint8
-	var humidifierPower *uint8
-
-	if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil {
-		fanPower = h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-	}
-	if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil {
-		humidifierPower = h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-	}
-
-	h.fanPower = newConstantPowerController(fanPower)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, h.fsm.defaults.PidSettings[types.StepTypeHeating], h.fsm.defaults.MaxDeltaHeating, h.fsm.defaults.MinDeltaHeating)
-	h.humidifierPower = newConstantPowerController(humidifierPower)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *acclimateStateHandler) executeState() fsmState {
@@ -227,19 +217,9 @@ func (h *acclimateStateHandler) executeState() fsmState {
 }
 
 func (h *acclimateStateHandler) enterState() {
-	var fanPower *uint8
-	var humidifierPower *uint8
-
-	if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil {
-		fanPower = h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-	}
-	if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil {
-		humidifierPower = h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-	}
-
-	h.fanPower = newConstantPowerController(fanPower)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, h.fsm.defaults.PidSettings[types.StepTypeAcclimate], 0, 0)
-	h.humidifierPower = newConstantPowerController(humidifierPower)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *coolDownStateHandler) executeState() fsmState {
@@ -271,19 +251,9 @@ func (h *coolDownStateHandler) executeState() fsmState {
 }
 
 func (h *coolDownStateHandler) enterState() {
-	var fanPower *uint8
-	var humidifierPower *uint8
-
-	if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil {
-		fanPower = h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-	}
-	if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil {
-		humidifierPower = h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-	}
-
-	h.fanPower = newConstantPowerController(fanPower)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, h.fsm.defaults.PidSettings[types.StepTypeCooling], 0, 0)
-	h.humidifierPower = newConstantPowerController(humidifierPower)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *failedStateHandler) executeState() fsmState {
