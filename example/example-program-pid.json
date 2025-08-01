@@ -1,0 +1,61 @@
+{
+  "name": "Four-Stage Kiln Drying Program using PID acclimation",
+  "steps": [
+    {
+      "name": "Initial Heating",
+      "type": "heating",
+      "temperature_target": 100,
+      "heater": {
+        "min_delta": 5,
+        "max_delta": 15
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 100
+      }
+    },
+    {
+      "name": "Secondary Heating",
+      "type": "heating",
+      "temperature_target": 150,
+      "heater": {
+        "min_delta": 5,
+        "max_delta": 15
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 50
+      }
+    },
+    {
+      "name": "Acclimation Phase",
+      "type": "acclimate",
+      "temperature_target": 160,
+      "runtime": 21600,
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 25
+      }
+    },
+    {
+      "name": "Cooling Phase",
+      "type": "cooling",
+      "temperature_target": 30,
+      "heater": {
+        "power": 0
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 0
+      }
+    }
+  ]
+}

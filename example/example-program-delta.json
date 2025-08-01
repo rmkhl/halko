@@ -1,12 +1,13 @@
 {
-  "name": "Four-Stage Kiln Drying Program",
+  "name": "Four-Stage Kiln Drying Program using delta acclimation",
   "steps": [
     {
       "name": "Initial Heating",
       "type": "heating",
       "temperature_target": 100,
       "heater": {
-        "power": 80
+        "min_delta": 5,
+        "max_delta": 15
       },
       "fan": {
         "power": 100
@@ -20,7 +21,8 @@
       "type": "heating",
       "temperature_target": 150,
       "heater": {
-        "power": 100
+        "min_delta": 5,
+        "max_delta": 15
       },
       "fan": {
         "power": 100
@@ -35,7 +37,8 @@
       "temperature_target": 160,
       "runtime": 21600,
       "heater": {
-        "pid": {}
+        "min_delta": -2,
+        "max_delta": 2
       },
       "fan": {
         "power": 100
