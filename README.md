@@ -85,7 +85,8 @@ The SensorUnit component includes:
 - A Go service (`sensorunit/main.go`) that communicates with the Arduino via
   USB serial and exposes a REST API for temperature and status.
 
-For detailed information about hardware setup, serial communication, and configuration, see [sensorunit/README.md](sensorunit/README.md).
+For detailed information about hardware setup, serial communication, and
+configuration, see [sensorunit/README.md](sensorunit/README.md).
 
 #### `/simulator`
 
@@ -127,6 +128,11 @@ Shared Go type definitions used across multiple components.
 For detailed API documentation including request/response formats
 and endpoint specifications, see [API.md](API.md).
 
+## Program Structure
+
+For detailed information about kiln drying program structure, step types,
+power control methods, and validation rules, see [PROGRAM.md](PROGRAM.md).
+
 ## System Configuration
 
 The system uses JSON configuration files to define connection endpoints,
@@ -147,13 +153,13 @@ example configuration:
     "power_unit_url": "http://localhost:8090/powers",
     "status_message_url": "http://localhost:8089/status",
     "network_interface": "eth0",
-    "pid_settings": {
-      "acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5},
-      "cooling": null,
-      "heating": null
-    },
-    "max_delta_heating": 10.0,
-    "min_delta_heating": 5.0
+    "defaults": {
+      "pid_settings": {
+        "acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5}
+      },
+      "max_delta_heating": 10.0,
+      "min_delta_heating": 5.0
+    }
   },
   "power_unit": {
     "shelly_address": "http://localhost:8091",
@@ -182,9 +188,10 @@ example configuration:
 - **`status_message_url`**: URL endpoint for heartbeat status messages
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
-- **`pid_settings`**: PID controller parameters for different program phases
-- **`max_delta_heating`** / **`min_delta_heating`**: Temperature control
-  limits
+- **`defaults`**: Default configuration settings
+  - **`pid_settings`**: PID controller parameters for different program phases
+  - **`max_delta_heating`** / **`min_delta_heating`**: Temperature control
+    limits
 
 ### Heartbeat Service
 

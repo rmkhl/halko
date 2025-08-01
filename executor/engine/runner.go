@@ -36,7 +36,7 @@ type (
 		psuStatus         fsmPSUStatus
 		temperatureStatus fsmTemperatures
 
-		pidDefaults *map[types.StepType]*types.PidSettings
+		defaults *types.Defaults
 	}
 )
 
@@ -50,7 +50,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.File
 		psuSensorResponses:         make(chan psuReadings),
 		currentProgram:             program,
 		programStatus:              &types.ExecutionStatus{Program: *program},
-		pidDefaults:                &config.PidSettings,
+		defaults:                   config.Defaults,
 	}
 
 	psuSensorReader, err := newPSUSensorReader(config.PowerUnitURL+"/api/v1", runner.psuSensorCommands, runner.psuSensorResponses)
@@ -69,7 +69,7 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.File
 		return nil, err
 	}
 
-	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.pidDefaults, config.MaxDeltaHeating, config.MinDeltaHeating)
+	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.defaults)
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = programStorage.CreateExecutedProgram(programName, program)

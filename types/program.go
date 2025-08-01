@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -9,13 +10,18 @@ const (
 	StepTypeHeating   StepType = "heating"
 	StepTypeCooling   StepType = "cooling"
 	StepTypeAcclimate StepType = "acclimate"
+
+	PowerSettingTypeSimple PowerSettingType = "simple"
+	PowerSettingTypeDelta  PowerSettingType = "delta"
+	PowerSettingTypePid    PowerSettingType = "pid"
 )
 
 type (
-	StepType string
+	StepType         string
+	PowerSettingType string
 
-	PowerSetting struct {
-		Power uint8 `json:"power"`
+	StepDuration struct {
+		time.Duration
 	}
 
 	PidSettings struct {
@@ -25,103 +31,196 @@ type (
 	}
 
 	PowerPidSettings struct {
-		MinDelta uint8        `json:"min_delta,omitempty"`
-		MaxDelta uint8        `json:"max_delta,omitempty"`
-		Power    uint8        `json:"power,omitempty"`
-		Pid      *PidSettings `json:"pid,omitempty"`
+		Type     PowerSettingType `json:"type,omitempty"`
+		MinDelta *float32         `json:"min_delta,omitempty"`
+		MaxDelta *float32         `json:"max_delta,omitempty"`
+		Power    *uint8           `json:"power,omitempty"`
+		Pid      *PidSettings     `json:"pid,omitempty"`
 	}
 
 	ProgramStep struct {
-		Name              string           `json:"name"`
-		StepType          StepType         `json:"type"`
-		TargetTemperature uint8            `json:"temperature_target,omitempty"`
-		Runtime           *time.Duration   `json:"runtime,omitempty"`
-		Heater            PowerPidSettings `json:"heater"`
-		Fan               PowerSetting     `json:"fan"`
-		Humidifier        PowerSetting     `json:"humidifier"`
+		Name              string            `json:"name"`
+		StepType          StepType          `json:"type"`
+		TargetTemperature uint8             `json:"temperature_target,omitempty"`
+		Runtime           *StepDuration     `json:"runtime,omitempty"`
+		Heater            *PowerPidSettings `json:"heater,omitempty"`
+		Fan               *PowerPidSettings `json:"fan,omitempty"`
+		Humidifier        *PowerPidSettings `json:"humidifier,omitempty"`
 	}
 
 	Program struct {
-		ProgramName  string        `json:"name"`
-		ProgramSteps []ProgramStep `json:"steps"`
+		ProgramName     string        `json:"name"`
+		ProgramSteps    []ProgramStep `json:"steps"`
+		DefaultsApplied bool          `json:"-"`
 	}
 )
 
-func (p *ProgramStep) Validate() error {
-	// Do some rudimentary validation for different step types, purposefully not "optimized" for code brevity
-	//
-	// For all steps the power setting for the fan and humidifier must be set between 0 and 100.
-	if p.Fan.Power > 100 {
-		return errors.New("fan power must be between 0 and 100")
+// MarshalJSON implements json.Marshaler for StepDuration
+func (d StepDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
+
+// UnmarshalJSON implements json.Unmarshaler for StepDuration
+func (d *StepDuration) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
 	}
-	if p.Humidifier.Power > 100 {
-		return errors.New("humidifier power must be between 0 and 100")
+	duration, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	d.Duration = duration
+	return nil
+}
+
+func isValidPercentage(value uint8) bool {
+	return value <= 100
+}
+
+func (p *PowerPidSettings) Validate(component string) error {
+	hasDeltas := p.MinDelta != nil || p.MaxDelta != nil
+
+	controlMethods := 0
+	if p.Power != nil {
+		controlMethods++
+		p.Type = PowerSettingTypeSimple
+	}
+	if hasDeltas {
+		controlMethods++
+		p.Type = PowerSettingTypeDelta
+	}
+	if p.Pid != nil {
+		controlMethods++
+		p.Type = PowerSettingTypePid
 	}
 
-	// Target temperature cannot be above 200
-	if p.TargetTemperature > 200 {
-		return errors.New("target temperature must be between 0 and 200")
+	if controlMethods != 1 {
+		return errors.New(component + " must define exactly one control method: power, min/max deltas, or PID")
 	}
 
-	// For heating step: require temperature_target (no runtime) and heater must have power (no PID)
-	if p.StepType == StepTypeHeating {
-		if p.TargetTemperature == 0 {
-			return errors.New("target temperature must be set for heating step")
-		}
-		if p.Runtime != nil {
-			return errors.New("runtime cannot be set for heating step")
-		}
-		if p.Heater.Power == 0 {
-			return errors.New("heater power must be set for heating step")
-		}
-		if p.Heater.Pid != nil {
-			return errors.New("pid cannot be set for heating step")
-		}
+	if hasDeltas && (p.MinDelta == nil || p.MaxDelta == nil) {
+		return errors.New(component + " min and max delta must both be defined")
 	}
 
-	// For acclimate step: require both temperature_target and runtime
-	// nolint:nestif  // I'll take the blame on this and refactor it later
-	if p.StepType == StepTypeAcclimate {
-		if p.TargetTemperature == 0 {
-			return errors.New("target temperature must be set for acclimate step")
-		}
-		if p.Runtime == nil {
-			return errors.New("runtime must be set for acclimate step")
-		}
-		// When using PID, min_delta and max_delta cannot be defined
-		if p.Heater.Pid != nil {
-			if p.Heater.MinDelta > 0 || p.Heater.MaxDelta > 0 {
-				return errors.New("min_delta and max_delta cannot be set when using pid")
-			}
-			// If PID is not empty, all properties must be present
-			if p.Heater.Pid.Kp == 0 && (p.Heater.Pid.Ki != 0 || p.Heater.Pid.Kd != 0) {
-				return errors.New("all pid properties (kp, ki, kd) must be set if any are specified")
-			}
-			if p.Heater.Pid.Ki == 0 && (p.Heater.Pid.Kp != 0 || p.Heater.Pid.Kd != 0) {
-				return errors.New("all pid properties (kp, ki, kd) must be set if any are specified")
-			}
-			if p.Heater.Pid.Kd == 0 && (p.Heater.Pid.Kp != 0 || p.Heater.Pid.Ki != 0) {
-				return errors.New("all pid properties (kp, ki, kd) must be set if any are specified")
-			}
-		}
-	}
-
-	// For cooling step: require either temperature_target or runtime
-	if p.StepType == StepTypeCooling {
-		if p.Runtime == nil && p.TargetTemperature == 0 {
-			return errors.New("either runtime or target temperature must be set for cooling step")
-		}
-		// If target temperature is set, it must be below 50
-		if p.TargetTemperature > 50 {
-			return errors.New("target temperature must be below 50 for cooling step")
-		}
+	if p.Power != nil && !isValidPercentage(*p.Power) {
+		return errors.New(component + " power must be between 0 and 100")
 	}
 
 	return nil
 }
 
+func (p *ProgramStep) Validate() error {
+	// Validate fan - call validate first to capture any errors
+	fanErr := p.Fan.Validate("fan")
+	if p.Fan.Type != PowerSettingTypeSimple {
+		return errors.New("fan must use simple power control")
+	}
+	if fanErr != nil {
+		return fanErr
+	}
+
+	// Validate humidifier - call validate first to capture any errors
+	humidifierErr := p.Humidifier.Validate("humidifier")
+	if p.Humidifier.Type != PowerSettingTypeSimple {
+		return errors.New("humidifier must use simple power control")
+	}
+	if humidifierErr != nil {
+		return humidifierErr
+	}
+
+	switch p.StepType {
+	case StepTypeHeating:
+		return p.validateHeatingStep()
+	case StepTypeAcclimate:
+		return p.validateAcclimateStep()
+	case StepTypeCooling:
+		return p.validateCoolingStep()
+	default:
+		return errors.New("unknown step type")
+	}
+}
+
+func (p *ProgramStep) validateHeatingStep() error {
+	if p.Runtime != nil {
+		return errors.New("heating step cannot have runtime")
+	}
+	return p.Heater.Validate("heater")
+}
+
+func (p *ProgramStep) validateAcclimateStep() error {
+	if p.Runtime == nil {
+		return errors.New("acclimate step must have runtime")
+	}
+	return p.Heater.Validate("heater")
+}
+
+func (p *ProgramStep) validateCoolingStep() error {
+	if p.Runtime != nil {
+		return errors.New("cooling step cannot have runtime")
+	}
+	// Validate heater - call validate first to capture any errors
+	heaterErr := p.Heater.Validate("heater")
+	if p.Heater.Type != PowerSettingTypeSimple {
+		return errors.New("cooling step heater must use simple power control")
+	}
+	if heaterErr != nil {
+		return heaterErr
+	}
+	return nil
+}
+
+func (p *Program) ApplyDefaults(defaults *Defaults) {
+	zeroPower := uint8(0)
+
+	for i := range p.ProgramSteps {
+		step := &p.ProgramSteps[i]
+
+		if step.Heater == nil {
+			step.Heater = &PowerPidSettings{}
+		}
+
+		if step.Heater.Pid == nil && step.Heater.Power == nil &&
+			step.Heater.MinDelta == nil && step.Heater.MaxDelta == nil {
+			switch step.StepType {
+			case StepTypeAcclimate:
+				defaultPid := defaults.PidSettings[StepTypeAcclimate]
+				step.Heater.Pid = &PidSettings{
+					Kp: defaultPid.Kp,
+					Ki: defaultPid.Ki,
+					Kd: defaultPid.Kd,
+				}
+			case StepTypeHeating:
+				step.Heater.MinDelta = &defaults.MinDeltaHeating
+				step.Heater.MaxDelta = &defaults.MaxDeltaHeating
+			case StepTypeCooling:
+				step.Heater.Power = &zeroPower
+			}
+		}
+
+		if step.Fan == nil {
+			step.Fan = &PowerPidSettings{}
+		}
+		if step.Fan.Power == nil {
+			step.Fan.Power = &zeroPower
+		}
+
+		if step.Humidifier == nil {
+			step.Humidifier = &PowerPidSettings{}
+		}
+		if step.Humidifier.Power == nil {
+			step.Humidifier.Power = &zeroPower
+		}
+	}
+
+	p.DefaultsApplied = true
+}
+
 func (p *Program) Validate() error {
-	// Validate each step
+	if !p.DefaultsApplied {
+		return errors.New("defaults must be applied before validation")
+	}
+
 	for _, step := range p.ProgramSteps {
 		err := step.Validate()
 		if err != nil {
@@ -129,47 +228,42 @@ func (p *Program) Validate() error {
 		}
 	}
 
-	// Validate the logical order of steps
-	return p.validateStepOrder()
+	return p.validateStepOrderAndTemperatureProgression()
 }
 
-// validateStepOrder ensures that steps follow a logical temperature progression:
-// 1. First step must be heating
-// 2. For heating steps: temperature must be higher than previous step
-// 3. For acclimate steps: temperature must be >= previous step
-// 4. For cooling steps: temperature must be lower than previous step
-// 5. Program must end with a cooling step
-func (p *Program) validateStepOrder() error {
+func (p *Program) validateStepOrderAndTemperatureProgression() error {
 	if len(p.ProgramSteps) <= 2 {
 		return errors.New("program must have at least two step")
 	}
 
-	// Check that the first step is a heating step
 	if p.ProgramSteps[0].StepType != StepTypeHeating {
 		return errors.New("first step must be a heating step")
 	}
 
-	// Check that the last step is a cooling step
 	if p.ProgramSteps[len(p.ProgramSteps)-1].StepType != StepTypeCooling {
 		return errors.New("last step must be a cooling step")
 	}
 
-	// Check temperature progression
-	for i := 1; i < len(p.ProgramSteps); i++ {
+	for i := 0; i < len(p.ProgramSteps)-1; i++ {
 		currentStep := p.ProgramSteps[i]
-		previousStep := p.ProgramSteps[i-1]
 
-		switch currentStep.StepType {
+		if currentStep.TargetTemperature > 200 {
+			return errors.New("target temperature must not exceed 200 degrees")
+		}
+
+		nextStep := p.ProgramSteps[i+1]
+
+		switch nextStep.StepType {
 		case StepTypeHeating:
-			if currentStep.TargetTemperature <= previousStep.TargetTemperature {
+			if nextStep.TargetTemperature <= currentStep.TargetTemperature {
 				return errors.New("heating step temperature must be higher than previous step")
 			}
 		case StepTypeAcclimate:
-			if currentStep.TargetTemperature < previousStep.TargetTemperature {
+			if nextStep.TargetTemperature < currentStep.TargetTemperature {
 				return errors.New("acclimate step temperature must be greater than or equal to previous step")
 			}
 		case StepTypeCooling:
-			if currentStep.TargetTemperature >= previousStep.TargetTemperature {
+			if nextStep.TargetTemperature >= currentStep.TargetTemperature {
 				return errors.New("cooling step temperature must be lower than previous step")
 			}
 		}

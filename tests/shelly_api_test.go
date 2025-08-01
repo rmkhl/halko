@@ -1,4 +1,4 @@
-package simulator_test
+package tests
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ func TestShellyAPI(t *testing.T) {
 		port = envPort
 	}
 
-	baseURL := fmt.Sprintf("http://localhost:%s", port)
+	baseURL := "http://localhost:" + port
 
-	simulatorPath := "../../simulator/main.go"
+	simulatorPath := "../simulator/main.go"
 
 	t.Log("Starting simulator...")
 	cmd := exec.Command("go", "run", simulatorPath, "-l", port)

@@ -29,6 +29,10 @@ func startNewProgram(engine *engine.ControlEngine) gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Does not compute (%s)", err.Error())})
 			return
 		}
+
+		// Apply defaults before validation
+		program.ApplyDefaults(engine.GetDefaults())
+
 		err = program.Validate()
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
