@@ -19,10 +19,6 @@ type (
 	StepType         string
 	PowerSettingType string
 
-	PowerSetting struct {
-		Power *uint8 `json:"power,omitempty"`
-	}
-
 	PidSettings struct {
 		Kp float32 `json:"kp"`
 		Ki float32 `json:"ki"`
@@ -43,8 +39,8 @@ type (
 		TargetTemperature uint8             `json:"temperature_target,omitempty"`
 		Runtime           *time.Duration    `json:"runtime,omitempty"`
 		Heater            *PowerPidSettings `json:"heater,omitempty"`
-		Fan               *PowerSetting     `json:"fan,omitempty"`
-		Humidifier        *PowerSetting     `json:"humidifier,omitempty"`
+		Fan               *PowerPidSettings `json:"fan,omitempty"`
+		Humidifier        *PowerPidSettings `json:"humidifier,omitempty"`
 	}
 
 	Program struct {
@@ -58,7 +54,7 @@ func isValidPercentage(value uint8) bool {
 	return value <= 100
 }
 
-func (p *PowerPidSettings) Validate() error {
+func (p *PowerPidSettings) Validate(component string) error {
 	hasDeltas := p.MinDelta != nil || p.MaxDelta != nil
 
 	controlMethods := 0
@@ -76,27 +72,37 @@ func (p *PowerPidSettings) Validate() error {
 	}
 
 	if controlMethods != 1 {
-		return errors.New("heater must define exactly one control method: power, min/max deltas, or PID")
+		return errors.New(component + " must define exactly one control method: power, min/max deltas, or PID")
 	}
 
 	if hasDeltas && (p.MinDelta == nil || p.MaxDelta == nil) {
-		return errors.New("heater min and max delta must both be defined")
+		return errors.New(component + " min and max delta must both be defined")
 	}
 
 	if p.Power != nil && !isValidPercentage(*p.Power) {
-		return errors.New("heater power must be between 0 and 100")
+		return errors.New(component + " power must be between 0 and 100")
 	}
 
 	return nil
 }
 
 func (p *ProgramStep) Validate() error {
-	if !isValidPercentage(*p.Fan.Power) {
-		return errors.New("fan power must be between 0 and 100")
+	// Validate fan - call validate first to capture any errors
+	fanErr := p.Fan.Validate("fan")
+	if p.Fan.Type != PowerSettingTypeSimple {
+		return errors.New("fan must use simple power control")
+	}
+	if fanErr != nil {
+		return fanErr
 	}
 
-	if !isValidPercentage(*p.Humidifier.Power) {
-		return errors.New("humidifier power must be between 0 and 100")
+	// Validate humidifier - call validate first to capture any errors
+	humidifierErr := p.Humidifier.Validate("humidifier")
+	if p.Humidifier.Type != PowerSettingTypeSimple {
+		return errors.New("humidifier must use simple power control")
+	}
+	if humidifierErr != nil {
+		return humidifierErr
 	}
 
 	switch p.StepType {
@@ -115,25 +121,27 @@ func (p *ProgramStep) validateHeatingStep() error {
 	if p.Runtime != nil {
 		return errors.New("heating step cannot have runtime")
 	}
-	return p.Heater.Validate()
+	return p.Heater.Validate("heater")
 }
 
 func (p *ProgramStep) validateAcclimateStep() error {
 	if p.Runtime == nil {
 		return errors.New("acclimate step must have runtime")
 	}
-	return p.Heater.Validate()
+	return p.Heater.Validate("heater")
 }
 
 func (p *ProgramStep) validateCoolingStep() error {
 	if p.Runtime != nil {
 		return errors.New("cooling step cannot have runtime")
 	}
-	if err := p.Heater.Validate(); err != nil {
-		return err
-	}
+	// Validate heater - call validate first to capture any errors
+	heaterErr := p.Heater.Validate("heater")
 	if p.Heater.Type != PowerSettingTypeSimple {
 		return errors.New("cooling step heater must use simple power control")
+	}
+	if heaterErr != nil {
+		return heaterErr
 	}
 	return nil
 }
@@ -167,14 +175,14 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		}
 
 		if step.Fan == nil {
-			step.Fan = &PowerSetting{}
+			step.Fan = &PowerPidSettings{}
 		}
 		if step.Fan.Power == nil {
 			step.Fan.Power = &zeroPower
 		}
 
 		if step.Humidifier == nil {
-			step.Humidifier = &PowerSetting{}
+			step.Humidifier = &PowerPidSettings{}
 		}
 		if step.Humidifier.Power == nil {
 			step.Humidifier.Power = &zeroPower
