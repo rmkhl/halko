@@ -133,9 +133,15 @@ fmt-changed:
 .PHONY: test
 test:
 	@echo "Running all tests..."
+	@$(MAKE) test-config || true
 	@$(MAKE) test-program-validation || true
 	@$(MAKE) test-shelly-api || true
 	@echo "All tests completed."
+
+.PHONY: test-config
+test-config:
+	@echo "Running configuration tests..."
+	@cd tests && go test -v -run TestConfig
 
 .PHONY: test-program-validation
 test-program-validation:

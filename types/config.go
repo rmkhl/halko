@@ -7,17 +7,21 @@ import (
 )
 
 type (
+	Defaults struct {
+		PidSettings     map[StepType]*PidSettings `json:"pid_settings"`
+		MaxDeltaHeating float32                   `json:"max_delta_heating"`
+		MinDeltaHeating float32                   `json:"min_delta_heating"`
+	}
+
 	ExecutorConfig struct {
-		BasePath         string                    `json:"base_path"`
-		Port             int                       `json:"port"`
-		TickLength       int                       `json:"tick_length"`
-		PowerUnitURL     string                    `json:"power_unit_url"`
-		SensorUnitURL    string                    `json:"sensor_unit_url"`
-		StatusMessageURL string                    `json:"status_message_url"`
-		PidSettings      map[StepType]*PidSettings `json:"pid_settings"`
-		MaxDeltaHeating  float32                   `json:"max_delta_heating"`
-		MinDeltaHeating  float32                   `json:"min_delta_heating"`
-		NetworkInterface string                    `json:"network_interface"`
+		BasePath         string    `json:"base_path"`
+		Port             int       `json:"port"`
+		TickLength       int       `json:"tick_length"`
+		PowerUnitURL     string    `json:"power_unit_url"`
+		SensorUnitURL    string    `json:"sensor_unit_url"`
+		StatusMessageURL string    `json:"status_message_url"`
+		NetworkInterface string    `json:"network_interface"`
+		Defaults         *Defaults `json:"defaults"`
 	}
 
 	PowerUnit struct {
