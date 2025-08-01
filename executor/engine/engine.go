@@ -41,6 +41,10 @@ func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
 	return engine.runner.programStatus
 }
 
+func (engine *ControlEngine) GetDefaults() *types.Defaults {
+	return engine.config.Defaults
+}
+
 func (engine *ControlEngine) StartEngine(program *types.Program) error {
 	if engine.runner != nil {
 		return ErrProgramAlreadyRunning
