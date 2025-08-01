@@ -62,18 +62,18 @@ func (p Program) Duplicate() (Program, error) {
 		return Program{}, err
 	}
 
-	var copy Program
-	err = json.Unmarshal(data, &copy)
+	var duplicate Program
+	err = json.Unmarshal(data, &duplicate)
 	if err != nil {
 		return Program{}, err
 	}
 
-	return copy, nil
+	return duplicate, nil
 }
 
 // MarshalJSON implements json.Marshaler for StepDuration
 func (d StepDuration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.Duration.String())
+	return json.Marshal(d.String())
 }
 
 // UnmarshalJSON implements json.Unmarshaler for StepDuration
