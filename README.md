@@ -85,7 +85,8 @@ The SensorUnit component includes:
 - A Go service (`sensorunit/main.go`) that communicates with the Arduino via
   USB serial and exposes a REST API for temperature and status.
 
-For detailed information about hardware setup, serial communication, and configuration, see [sensorunit/README.md](sensorunit/README.md).
+For detailed information about hardware setup, serial communication, and
+configuration, see [sensorunit/README.md](sensorunit/README.md).
 
 #### `/simulator`
 
@@ -126,6 +127,11 @@ Shared Go type definitions used across multiple components.
 
 For detailed API documentation including request/response formats
 and endpoint specifications, see [API.md](API.md).
+
+## Program Structure
+
+For detailed information about kiln drying program structure, step types,
+power control methods, and validation rules, see [PROGRAM.md](PROGRAM.md).
 
 ## System Configuration
 
