@@ -35,7 +35,7 @@
       "name": "Acclimation Phase",
       "type": "acclimate",
       "temperature_target": 160,
-      "runtime": 21600,
+      "runtime": "6h",
       "fan": {
         "power": 100
       },

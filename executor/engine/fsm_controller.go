@@ -194,7 +194,7 @@ func (h *heatUpStateHandler) enterState() {
 
 func (h *acclimateStateHandler) executeState() fsmState {
 	// Once we have been acclimating long enough, we can move to the next step
-	if time.Now().Unix()-h.fsm.stepStarted >= int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds()) {
+	if time.Now().Unix()-h.fsm.stepStarted >= int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Duration.Seconds()) {
 		return fsmStateNextProgramStep
 	}
 	// If we have new temperature readings, update the power settings
@@ -224,7 +224,7 @@ func (h *acclimateStateHandler) enterState() {
 
 func (h *coolDownStateHandler) executeState() fsmState {
 	// If we have been cooling down long enough, we can move to the next step
-	if h.fsm.program.ProgramSteps[h.fsm.step].Runtime != nil && time.Now().Unix()-h.fsm.stepStarted >= int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds()) {
+	if h.fsm.program.ProgramSteps[h.fsm.step].Runtime != nil && time.Now().Unix()-h.fsm.stepStarted >= int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Duration.Seconds()) {
 		return fsmStateNextProgramStep
 	}
 	// If the wood has cooled enough (or we have reached the time limit), we can move to the next step

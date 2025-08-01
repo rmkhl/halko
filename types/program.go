@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -18,6 +19,10 @@ const (
 type (
 	StepType         string
 	PowerSettingType string
+
+	StepDuration struct {
+		time.Duration
+	}
 
 	PidSettings struct {
 		Kp float32 `json:"kp"`
@@ -37,7 +42,7 @@ type (
 		Name              string            `json:"name"`
 		StepType          StepType          `json:"type"`
 		TargetTemperature uint8             `json:"temperature_target,omitempty"`
-		Runtime           *time.Duration    `json:"runtime,omitempty"`
+		Runtime           *StepDuration     `json:"runtime,omitempty"`
 		Heater            *PowerPidSettings `json:"heater,omitempty"`
 		Fan               *PowerPidSettings `json:"fan,omitempty"`
 		Humidifier        *PowerPidSettings `json:"humidifier,omitempty"`
@@ -49,6 +54,25 @@ type (
 		DefaultsApplied bool          `json:"-"`
 	}
 )
+
+// MarshalJSON implements json.Marshaler for StepDuration
+func (d StepDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
+
+// UnmarshalJSON implements json.Unmarshaler for StepDuration
+func (d *StepDuration) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	duration, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	d.Duration = duration
+	return nil
+}
 
 func isValidPercentage(value uint8) bool {
 	return value <= 100

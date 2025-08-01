@@ -27,7 +27,7 @@
       "name": "Acclimation Phase",
       "type": "acclimate",
       "temperature_target": 160,
-      "runtime": 21600,
+      "runtime": "6h",
       "heater": {
         "min_delta": -2,
         "max_delta": 2
