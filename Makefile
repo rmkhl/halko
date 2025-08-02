@@ -1,4 +1,4 @@
-MODULES = executor powerunit simulator sensorunit
+MODULES = executor powerunit simulator sensorunit validator
 BINDIR = bin
 
 .PHONY: all
@@ -84,10 +84,10 @@ update-modules:
 
 .PHONY: install
 install: clean all
-	@echo "Installing binaries to /opt/halko (excluding simulator)..."
+	@echo "Installing binaries to /opt/halko (excluding simulator and validator)..."
 	sudo install -d /opt/halko
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ]; then \
+		if [ "$$bin" != "simulator" ] && [ "$$bin" != "validator" ]; then \
 			sudo install -m 755 $(BINDIR)/$$bin /opt/halko/; \
 		fi; \
 	done
@@ -96,7 +96,7 @@ install: clean all
 	@echo "Installing config to /etc/opt/halko.cfg if not present..."
 	sudo install -d /etc/opt
 	@if [ ! -f /etc/opt/halko.cfg ]; then \
-		sudo install -m 644 halko.cfg.sample /etc/opt/halko.cfg; \
+		sudo install -m 644 templates/halko.cfg /etc/opt/halko.cfg; \
 		 echo "Installed default config to /etc/opt/halko.cfg"; \
 	else \
 		 echo "/etc/opt/halko.cfg already exists, not overwriting."; \
@@ -104,9 +104,9 @@ install: clean all
 
 .PHONY: systemd-units
 systemd-units: install
-	@echo "Creating and installing systemd unit files for all binaries except simulator..."
+	@echo "Creating and installing systemd unit files for all binaries except simulator and validator..."
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ]; then \
+		if [ "$$bin" != "simulator" ] && [ "$$bin" != "validator" ]; then \
 			sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
 			sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
 			sudo systemctl daemon-reload; \
@@ -153,6 +153,20 @@ test-shelly-api:
 	@echo "Running shelly API tests..."
 	@cd tests && go test -v -run TestShellyAPI
 
+.PHONY: validate
+validate:
+	@if [ -z "$(PROGRAM)" ]; then \
+		echo "Usage: make validate PROGRAM=path/to/program.json"; \
+		echo "Example: make validate PROGRAM=example/example-program-delta.json"; \
+		exit 1; \
+	fi
+	@if [ ! -f $(BINDIR)/validator ]; then \
+		echo "Building validator..."; \
+		$(MAKE) $(BINDIR)/validator; \
+	fi
+	@echo "Validating program: $(PROGRAM)"
+	@$(BINDIR)/validator -program $(PROGRAM) -verbose
+
 .PHONY: help
 help:
 	@echo "Available targets:"
@@ -164,11 +178,12 @@ help:
 	@echo "  lint                  Run golangci-lint on all modules."
 	@echo "  lint-markdown         Run mdl (markdown linter) on all markdown files."
 	@echo "  update-modules        Update all go.mod dependencies and tidy them."
-	@echo "  install               Install all binaries except simulator to /opt/halko and copy halko.cfg.sample to /etc/opt/halko.cfg if not present."
+	@echo "  install               Install all binaries except simulator to /opt/halko and copy templates/halko.cfg to /etc/opt/halko.cfg if not present."
 	@echo "  systemd-units         Create, install, and enable systemd unit files for all binaries except simulator."
 	@echo "  fmt-changed           Reformat changed Go files compared to the main branch using golangci-lint."
 	@echo "  test                  Run all tests."
 	@echo "  test-program-validation  Run program validation tests."
 	@echo "  test-shelly-api       Run shelly API tests."
+	@echo "  validate              Validate a program.json file using: make validate PROGRAM=path/to/program.json"
 
 .DEFAULT_GOAL := help
