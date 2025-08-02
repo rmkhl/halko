@@ -39,7 +39,36 @@ Send a program to a remote executor with verbose output:
 halkoctl send -program my-program.json -host 192.168.1.100 -port 8080 -verbose
 ```
 
-## API Endpoint
+### status
+
+Gets the status of the currently running program from the Halko executor.
+
+```bash
+halkoctl status [options]
+```
+
+#### Options
+
+- `-host string`: Executor host (default: localhost)
+- `-port string`: Executor port (default: 8080)
+- `-verbose`: Enable verbose output
+- `-help`: Show help for status command
+
+#### Examples
+
+Get status from the local executor:
+```bash
+halkoctl status
+```
+
+Get status from a remote executor with verbose output:
+```bash
+halkoctl status -host 192.168.1.100 -port 8080 -verbose
+```
+
+## API Endpoints
+
+### send command
 
 The `send` command sends a POST request to the executor's `/engine/api/v1/running` endpoint with the program definition in the request body:
 
@@ -48,6 +77,36 @@ The `send` command sends a POST request to the executor's `/engine/api/v1/runnin
   "program": {
     "name": "Program Name",
     "steps": [...]
+  }
+}
+```
+
+### status command
+
+The `status` command sends a GET request to the executor's `/engine/api/v1/running` endpoint and displays the response in a user-friendly format.
+
+Example response when a program is running:
+```json
+{
+  "data": {
+    "status": "running",
+    "program": {
+      "name": "Standard Drying",
+      "currentPhase": "Initial Heating",
+      "elapsedTime": 1200,
+      "currentTemperature": 42.5,
+      "targetTemperature": 45,
+      "remainingTime": 2400
+    }
+  }
+}
+```
+
+Example response when no program is running:
+```json
+{
+  "data": {
+    "status": "idle"
   }
 }
 ```
