@@ -214,6 +214,9 @@ func getStatus(host, port string, verbose bool) error {
 		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
+	// Set headers for consistency
+	req.Header.Set("Accept", "application/json")
+
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
