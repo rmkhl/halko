@@ -24,6 +24,7 @@
 //
 #include <max6675.h>
 #include <LiquidCrystal.h>
+#include <math.h>
 
 // Pins used:
 // MAX6675
@@ -55,19 +56,22 @@ int LCD_D7 = 19;
 
 LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
+float temperature[3] = {0.0, 0.0, 0.0};
+bool is_valid[3] = {false, false, false};
+
 void displayTemperature(int sensor, float temperature)
 {
     int col = sensor * 5;
     char buffer[6];
 
     lcd.setCursor(col, 1);
-    if (isnan(temperature)) // No valid temperature measurement
+    if (!is_valid[sensor]) // No valid temperature measurement
     {
         lcd.print(" NaN ");
     }
     else
     {
-        sprintf(buffer, "%3dC ", int(temperature));
+        sprintf(buffer, "%3dC ", (int)round(temperature));
         lcd.print(buffer);
     }
 }
@@ -90,8 +94,6 @@ void displayRunning()
     lcd.print(ticker[i]);
     i = (i + 1) & 1;
 }
-
-float temperature[3] = {0.0, 0.0, 0.0};
 
 float previousCommandMillis = 0.0;
 #define DISCONNECTED_INTERVAL 30000
@@ -140,7 +142,7 @@ void processSerial()
             {
                 Serial.print(sensorName[i]);
                 Serial.print("=");
-                if (isnan(temperature[i]))
+                if (!is_valid[i])
                 {
                     Serial.print("NaN");
                 }
@@ -170,7 +172,7 @@ void processSerial()
 }
 
 unsigned long previousMillis = millis();
-#define INTERVAL 1000
+#define INTERVAL 500
 
 void setup()
 {
@@ -178,14 +180,15 @@ void setup()
     lcd.begin(16, 2);
     lcd.clear();
     displayStatus("Initializing");
-    for (int i = 0; i < 3; i++)
-    {
-        temperature[i] = sensor[i].readCelsius();
-        delay(INTERVAL);
-    }
-    displayStatus("Disconnected");
     displayRunning();
 }
+
+float measurement[3][4] = {
+  {0.0, 0.0, 0.0, 0.0},
+  {0.0, 0.0, 0.0, 0.0},
+  {0.0, 0.0, 0.0, 0.0}};
+
+int n_measure = 0;
 
 void loop()
 {
@@ -199,9 +202,22 @@ void loop()
     {
         for (int i = 0; i < 3; i++)
         {
-            temperature[i] = (temperature[i] + sensor[i].readCelsius()) / 2.0;
-            displayTemperature(i, temperature[i]);
+            float sensor_temperature = sensor[i].readCelsius();
+            if (isnan(sensor_temperature)) {
+              is_valid[i] = false;
+              displayTemperature(i, sensor_temperature);
+            } else {
+              is_valid[i] = true;
+              measurement[i][n_measure] = sensor_temperature;
+              temperature[i] = 0.0;
+              for (int j = 0; j < 3; j++) {
+                temperature[i] += measurement[i][j];
+              }
+              temperature[i] = temperature[i] / 4.0;
+              displayTemperature(i, temperature[i]);
+            }
         }
+        n_measure = (n_measure + 1) % 4;
         displayRunning();
         previousMillis = currentMillis;
 
