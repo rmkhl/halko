@@ -15,7 +15,6 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// addCORSHeaders adds CORS headers to responses
 func addCORSHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1234")
@@ -24,7 +23,6 @@ func addCORSHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 		w.Header().Set("Access-Control-Max-Age", "43200") // 12 hours
 
-		// Handle preflight OPTIONS requests
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -45,7 +43,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Use storage config from configuration
 	storageBasePath := "/tmp/halko" // Default fallback
 	port := 8091                    // Default port
 
@@ -57,7 +54,6 @@ func main() {
 			port = configuration.StorageConfig.Port
 		}
 	} else if configuration.ExecutorConfig != nil && configuration.ExecutorConfig.BasePath != "" {
-		// Fallback to executor config if storage config is not available
 		storageBasePath = configuration.ExecutorConfig.BasePath
 	}
 
@@ -69,7 +65,6 @@ func main() {
 	mux := http.NewServeMux()
 	router.SetupRoutes(mux, storage)
 
-	// Add CORS middleware
 	corsHandler := addCORSHeaders(mux)
 
 	srv := &http.Server{
@@ -77,7 +72,6 @@ func main() {
 		Handler: corsHandler,
 	}
 
-	// Start the server in a goroutine
 	go func() {
 		log.Printf("Starting storage server on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

@@ -110,7 +110,6 @@ func (runner *programRunner) Run() {
 			runner.temperatureStatus.updated = time.Now().Unix()
 			runner.temperatureStatus.reading = temperatures
 		}
-		// Update program status
 		runner.fsmController.UpdateStatus(runner.programStatus)
 		runner.logWriter.AddLine(runner.programStatus)
 	}

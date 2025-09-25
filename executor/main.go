@@ -17,7 +17,6 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// addCORSHeaders adds CORS headers to responses
 func addCORSHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1234")
@@ -26,7 +25,6 @@ func addCORSHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
 		w.Header().Set("Access-Control-Max-Age", "43200") // 12 hours
 
-		// Handle preflight OPTIONS requests
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -65,7 +63,6 @@ func main() {
 	mux := http.NewServeMux()
 	router.SetupRoutes(mux, storage, engine)
 
-	// Add CORS middleware
 	corsHandler := addCORSHeaders(mux)
 
 	port := configuration.ExecutorConfig.Port
@@ -75,7 +72,6 @@ func main() {
 		Handler: corsHandler,
 	}
 
-	// Start the server in a goroutine
 	go func() {
 		log.Printf("Starting executor server on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

@@ -14,7 +14,6 @@ import (
 )
 
 func handleSendCommand() {
-	// Parse send command options using local options
 	opts, err := ParseSendOptions()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -32,7 +31,6 @@ func handleSendCommand() {
 		os.Exit(exitError)
 	}
 
-	// Get the executor URL from config
 	url := getExecutorAPIURL(globalConfig)
 
 	if globalOpts.Verbose {
@@ -41,7 +39,6 @@ func handleSendCommand() {
 		fmt.Println()
 	}
 
-	// Send the program
 	err = sendProgram(opts.ProgramPath, url, globalOpts.Verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to send program: %v\n", err)
@@ -83,12 +80,10 @@ func showSendHelp() {
 }
 
 func sendProgram(programPath, executorURL string, verbose bool) error {
-	// Check if file exists
 	if _, err := os.Stat(programPath); os.IsNotExist(err) {
 		return fmt.Errorf("program file does not exist: %s", programPath)
 	}
 
-	// Load the program file
 	if verbose {
 		fmt.Printf("Loading program from: %s\n", programPath)
 	}
@@ -102,7 +97,6 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 		fmt.Println("✓ Program file loaded successfully")
 	}
 
-	// Parse the JSON to validate it's properly formatted
 	if verbose {
 		fmt.Println("Validating JSON format...")
 	}
@@ -118,8 +112,6 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 			program.ProgramName, len(program.ProgramSteps))
 	}
 
-	// Prepare the request body
-	// According to the API, we can send the program directly in a "program" field
 	requestBody := map[string]interface{}{
 		"program": program,
 	}
@@ -133,15 +125,12 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 		fmt.Println("Sending HTTP request...")
 	}
 
-	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// Construct the URL
 	url := executorURL + "/engine/running"
 
-	// Create the HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP request: %w", err)
@@ -149,14 +138,12 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read response: %w", err)
@@ -169,7 +156,6 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 		}
 	}
 
-	// Check if the request was successful
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		errorMsg := fmt.Sprintf("HTTP request failed with status %d", resp.StatusCode)
 		if len(respBody) > 0 {

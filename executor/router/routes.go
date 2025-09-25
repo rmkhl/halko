@@ -9,7 +9,6 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// writeJSON writes a JSON response
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -20,13 +19,11 @@ func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	}
 }
 
-// writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine) {
-	// Engine routes
 	mux.HandleFunc("GET /engine/programs", listAllRuns(storage))
 	mux.HandleFunc("GET /engine/programs/{name}", getRun(storage))
 	mux.HandleFunc("DELETE /engine/programs/{name}", deleteRun(storage))

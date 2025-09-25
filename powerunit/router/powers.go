@@ -9,17 +9,14 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// writeJSON writes a JSON response
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		// Log the error but don't change the response as headers are already sent
 		_ = err
 	}
 }
 
-// writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }

@@ -58,7 +58,6 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	// Start server in a goroutine
 	go func() {
 		log.Printf("Starting sensorunit service on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

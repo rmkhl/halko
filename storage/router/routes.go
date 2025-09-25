@@ -8,23 +8,19 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// writeJSON writes a JSON response
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		// Log the error but don't change the response as headers are already sent
 		_ = err
 	}
 }
 
-// writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage) {
-	// Storage routes for programs
 	mux.HandleFunc("GET /storage/programs", listAllPrograms(storage))
 	mux.HandleFunc("GET /storage/programs/{name}", getProgram(storage))
 	mux.HandleFunc("POST /storage/programs", createProgram(storage))
@@ -72,7 +68,6 @@ func createProgram(storage *filestorage.FileStorage) http.HandlerFunc {
 			return
 		}
 
-		// Store the program
 		err = storage.CreateStoredProgram(program.ProgramName, &program)
 		if err != nil {
 			writeError(w, http.StatusConflict, err.Error())
@@ -94,7 +89,6 @@ func updateProgram(storage *filestorage.FileStorage) http.HandlerFunc {
 			return
 		}
 
-		// Set the program name from the URL
 		program.ProgramName = programName
 
 		err = storage.UpdateStoredProgram(programName, &program)

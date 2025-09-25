@@ -8,22 +8,18 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// writeJSON writes a JSON response
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		// Log the error but don't change the response as headers are already sent
 		_ = err
 	}
 }
 
-// writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-// getTemperatures handles GET requests to fetch temperature data
 func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
 	temperatures, err := api.sensorUnit.GetTemperatures()
 	if err != nil {
@@ -33,7 +29,6 @@ func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
 
 	response := make(types.TemperatureResponse)
 
-	// Map the sensor values to the expected keys
 	var ovenPrimary float32
 	var ovenSecondary float32
 
