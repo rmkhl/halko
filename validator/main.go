@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -101,7 +102,7 @@ func validateProgram(programPath, configPath string, verbose bool) error {
 	}
 
 	if config.ExecutorConfig == nil || config.ExecutorConfig.Defaults == nil {
-		return fmt.Errorf("config file missing executor defaults")
+		return errors.New("config file missing executor defaults")
 	}
 
 	if verbose {
