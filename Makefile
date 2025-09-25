@@ -14,6 +14,12 @@ $(BINDIR):
 clean:
 	rm -rf $(BINDIR)
 
+.PHONY: clean-containers
+clean-containers:
+	@for service in $(CONTAINER_MODULES); do \
+		docker rmi $(DOCKER_TAG_PREFIX)/$$service:latest 2>/dev/null || true; \
+	done
+
 .PHONY: prepare
 prepare:
 	@echo "Checking for required tools..."
@@ -33,6 +39,11 @@ prepare:
 		echo "Warning: 'mdl' is not available. Markdown linting will not work."; \
 	else \
 		echo "✓ mdl is installed"; \
+	fi
+	@if ! command -v docker > /dev/null; then \
+		echo "Warning: 'docker' is not available. Container targets will not work."; \
+	else \
+		echo "✓ Docker is installed"; \
 	fi
 	@echo "Creating or updating go.work file with all modules..."
 	@if [ ! -f go.work ]; then \
@@ -153,6 +164,37 @@ test-shelly-api:
 	@echo "Running shelly API tests..."
 	@cd tests && go test -v -run TestShellyAPI
 
+# Container-related variables
+CONTAINER_MODULES = executor powerunit simulator storage
+DOCKER_TAG_PREFIX = halko
+
+.PHONY: containers
+containers: prepare clean
+	@$(MAKE) $(BINDIR)/executor
+	@$(MAKE) $(BINDIR)/powerunit
+	@$(MAKE) $(BINDIR)/simulator
+	@$(MAKE) $(BINDIR)/storage
+	@$(MAKE) container-executor
+	@$(MAKE) container-powerunit
+	@$(MAKE) container-simulator
+	@$(MAKE) container-storage
+
+.PHONY: container-executor
+container-executor:
+	@docker build -f containers/Dockerfile.executor -t $(DOCKER_TAG_PREFIX)/executor:latest .
+
+.PHONY: container-powerunit
+container-powerunit:
+	@docker build -f containers/Dockerfile.powerunit -t $(DOCKER_TAG_PREFIX)/powerunit:latest .
+
+.PHONY: container-simulator
+container-simulator:
+	@docker build -f containers/Dockerfile.simulator -t $(DOCKER_TAG_PREFIX)/simulator:latest .
+
+.PHONY: container-storage
+container-storage:
+	@docker build -f containers/Dockerfile.storage -t $(DOCKER_TAG_PREFIX)/storage:latest .
+
 .PHONY: validate
 validate:
 	@if [ -z "$(PROGRAM)" ]; then \
@@ -172,9 +214,15 @@ help:
 	@echo "Available targets:"
 	@echo "  help                  Show this help message. (default)"
 	@echo "  all                   Build all Go executables to bin/ directory."
+	@echo "  containers            Build binaries and Docker containers for all services."
+	@echo "  container-executor    Build only the executor Docker container."
+	@echo "  container-powerunit   Build only the powerunit Docker container."
+	@echo "  container-simulator   Build only the simulator Docker container."
+	@echo "  container-storage     Build only the storage Docker container."
 	@echo "  prepare               Check for required tools and create/update go.work file to include all modules."
 	@echo "  rebuild               Clean and rebuild all executables from scratch."
 	@echo "  clean                 Remove the bin/ directory and all built executables."
+	@echo "  clean-containers      Remove all built Docker containers and images."
 	@echo "  lint                  Run golangci-lint on all modules."
 	@echo "  lint-markdown         Run mdl (markdown linter) on all markdown files."
 	@echo "  update-modules        Update all go.mod dependencies and tidy them."

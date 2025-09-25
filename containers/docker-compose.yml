@@ -1,24 +1,25 @@
 services:
   simulator:
     build:
-      context: ./simulator
-      dockerfile: Dockerfile
+      context: ../simulator
+      dockerfile: ../containers/Dockerfile.simulator
     working_dir: /app/simulator
     volumes:
-      - .:/app
-      - ./fsdb:/fsdb
+      - ..:/app
+      - ../fsdb:/fsdb
     ports:
+      - "8087:8087"
       - "8088:8088"
     restart: unless-stopped
 
   executor:
     build:
-      context: ./executor
-      dockerfile: Dockerfile
+      context: ../executor
+      dockerfile: ../containers/Dockerfile.executor
     working_dir: /app/executor
     volumes:
-      - .:/app
-      - ./fsdb:/fsdb
+      - ..:/app
+      - ../fsdb:/fsdb
     ports:
       - "8089:8089"
     depends_on:
@@ -28,11 +29,11 @@ services:
 
   powerunit:
     build:
-      context: ./powerunit
-      dockerfile: Dockerfile
+      context: ../powerunit
+      dockerfile: ../containers/Dockerfile.powerunit
     working_dir: /app/powerunit
     volumes:
-      - .:/app
+      - ..:/app
     ports:
       - "8090:8090"
     restart: unless-stopped

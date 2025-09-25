@@ -1,0 +1,12 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY ../bin/executor /app/executor
+COPY halko.cfg /app/halko.cfg
+
+RUN chmod +x /app/executor
+
+ENTRYPOINT ["./executor", "-c", "/app/halko.cfg", "-v"]
