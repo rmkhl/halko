@@ -5,12 +5,13 @@ import (
 
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
+	"github.com/rmkhl/halko/types"
 )
 
-func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) http.Handler {
+func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string, endpoints *types.APIEndpoints) http.Handler {
 	mux := http.NewServeMux()
 
-	setupRoutes(mux, p, powerMapping, idMapping)
+	setupRoutes(mux, p, powerMapping, idMapping, endpoints)
 
 	handler := addCORSHeaders(mux)
 

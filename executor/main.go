@@ -50,7 +50,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	engine := engine.NewEngine(configuration.ExecutorConfig, storage)
+	engine := engine.NewEngine(configuration.ExecutorConfig, storage, configuration.APIEndpoints)
 
 	heartbeatManager, err := heartbeat.NewManager(configuration.ExecutorConfig)
 	if err != nil {
@@ -61,7 +61,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	router.SetupRoutes(mux, storage, engine)
+	router.SetupRoutes(mux, storage, engine, configuration.APIEndpoints)
 
 	corsHandler := addCORSHeaders(mux)
 

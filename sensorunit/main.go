@@ -48,7 +48,7 @@ func main() {
 	}
 
 	api := router.NewAPI(sensorUnit)
-	r := router.SetupRouter(api)
+	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),

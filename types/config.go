@@ -46,11 +46,20 @@ type (
 		Port     int    `json:"port"`
 	}
 
+	APIEndpoints struct {
+		Programs     string `json:"programs"`
+		Running      string `json:"running"`
+		Temperatures string `json:"temperatures"`
+		Status       string `json:"status"`
+		Root         string `json:"root"`
+	}
+
 	HalkoConfig struct {
 		ExecutorConfig *ExecutorConfig   `json:"executor"`
 		PowerUnit      *PowerUnit        `json:"power_unit"`
 		SensorUnit     *SensorUnitConfig `json:"sensorunit"`
 		StorageConfig  *StorageConfig    `json:"storage"`
+		APIEndpoints   *APIEndpoints     `json:"api_endpoints"`
 	}
 )
 
@@ -170,6 +179,25 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if len(c.PowerUnit.PowerMapping) == 0 {
 		return errors.New("power unit power mapping is required")
+	}
+
+	if c.APIEndpoints == nil {
+		return errors.New("API endpoints configuration is required")
+	}
+	if c.APIEndpoints.Programs == "" {
+		return errors.New("API endpoints programs path is required")
+	}
+	if c.APIEndpoints.Running == "" {
+		return errors.New("API endpoints running path is required")
+	}
+	if c.APIEndpoints.Temperatures == "" {
+		return errors.New("API endpoints temperatures path is required")
+	}
+	if c.APIEndpoints.Status == "" {
+		return errors.New("API endpoints status path is required")
+	}
+	if c.APIEndpoints.Root == "" {
+		return errors.New("API endpoints root path is required")
 	}
 
 	return nil

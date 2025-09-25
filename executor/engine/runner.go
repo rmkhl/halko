@@ -40,7 +40,7 @@ type (
 	}
 )
 
-func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.FileStorage, program *types.Program) (*programRunner, error) {
+func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.FileStorage, program *types.Program, endpoints *types.APIEndpoints) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -53,18 +53,18 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.File
 		defaults:                   config.Defaults,
 	}
 
-	psuSensorReader, err := newPSUSensorReader("http://"+config.PowerUnitHost+"/powers", runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader("http://"+config.PowerUnitHost+endpoints.Root, runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader("http://"+config.SensorUnitHost+"/sensors/temperatures", runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader("http://"+config.SensorUnitHost+endpoints.Temperatures, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.temperatureSensorReader = temperatureSensorReader
-	psuController, err := newPSUController(config)
+	psuController, err := newPSUController(config, endpoints)
 	if err != nil {
 		return nil, err
 	}

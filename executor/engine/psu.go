@@ -28,10 +28,10 @@ type (
 	}
 )
 
-func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
+func newPSUController(config *types.ExecutorConfig, endpoints *types.APIEndpoints) (*psuController, error) {
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURL: "http://" + config.PowerUnitHost + "/powers",
+		powerControlURL: "http://" + config.PowerUnitHost + endpoints.Root,
 	}, nil
 }
 

@@ -5,9 +5,10 @@ import (
 
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
+	"github.com/rmkhl/halko/types"
 )
 
-func setupRoutes(mux *http.ServeMux, p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) {
-	mux.HandleFunc("GET /powers", getAllPercentages(p, idMapping))
-	mux.HandleFunc("POST /powers", setAllPercentages(p, powerMapping))
+func setupRoutes(mux *http.ServeMux, p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string, endpoints *types.APIEndpoints) {
+	mux.HandleFunc("GET "+endpoints.Root, getAllPercentages(p, idMapping))
+	mux.HandleFunc("POST "+endpoints.Root, setAllPercentages(p, powerMapping))
 }

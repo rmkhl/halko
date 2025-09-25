@@ -23,14 +23,14 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine) {
-	mux.HandleFunc("GET /engine/programs", listAllRuns(storage))
-	mux.HandleFunc("GET /engine/programs/{name}", getRun(storage))
-	mux.HandleFunc("DELETE /engine/programs/{name}", deleteRun(storage))
+func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+	mux.HandleFunc("GET "+endpoints.Programs, listAllRuns(storage))
+	mux.HandleFunc("GET "+endpoints.Programs+"/{name}", getRun(storage))
+	mux.HandleFunc("DELETE "+endpoints.Programs+"/{name}", deleteRun(storage))
 
-	mux.HandleFunc("GET /engine/running", getCurrentProgram(engine))
-	mux.HandleFunc("POST /engine/running", startNewProgram(engine))
-	mux.HandleFunc("DELETE /engine/running", cancelRunningProgram(engine))
+	mux.HandleFunc("GET "+endpoints.Running, getCurrentProgram(engine))
+	mux.HandleFunc("POST "+endpoints.Running, startNewProgram(engine))
+	mux.HandleFunc("DELETE "+endpoints.Running, cancelRunningProgram(engine))
 
 	// Note: /storage/ endpoints are now handled by the independent storage service
 }

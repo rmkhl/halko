@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/rmkhl/halko/sensorunit/serial"
+	"github.com/rmkhl/halko/types"
 )
 
 type API struct {
@@ -16,10 +17,10 @@ func NewAPI(sensorUnit *serial.SensorUnit) *API {
 	}
 }
 
-func SetupRouter(api *API) http.Handler {
+func SetupRouter(api *API, endpoints *types.APIEndpoints) http.Handler {
 	mux := http.NewServeMux()
 
-	SetupRoutes(mux, api)
+	SetupRoutes(mux, api, endpoints)
 
 	return addCORSHeaders(mux)
 }

@@ -174,6 +174,13 @@ example configuration:
   "sensorunit": {
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
+  },
+  "api_endpoints": {
+    "programs": "/programs",
+    "running": "/running",
+    "temperatures": "/temperatures",
+    "status": "/status",
+    "root": "/"
   }
 }
 ```

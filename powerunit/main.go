@@ -44,7 +44,7 @@ func main() {
 	serverAddr := fmt.Sprintf(":%d", port)
 
 	p := power.New(maxIdleTime, cycleLength, shellyController)
-	r := router.New(p, powerMapping, idMapping)
+	r := router.New(p, powerMapping, idMapping, configuration.APIEndpoints)
 
 	log.Printf("Starting power unit server on %s", serverAddr)
 
