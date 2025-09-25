@@ -33,7 +33,6 @@ func ConfigFilePath() (string, error) {
 		"halko.cfg", // Current directory
 	}
 
-	// Add user home directory paths
 	if homeDir, err := os.UserHomeDir(); err == nil {
 		searchPaths = append(searchPaths,
 			filepath.Join(homeDir, ".halko.cfg"),           // ~/.halko.cfg
@@ -41,27 +40,23 @@ func ConfigFilePath() (string, error) {
 		)
 	}
 
-	// Add system directories
 	searchPaths = append(searchPaths,
 		"/etc/halko/halko.cfg",     // System config directory
 		"/etc/opt/halko/halko.cfg", // Optional system config directory
 	)
 
-	// Add executable directory path
 	if exePath, err := os.Executable(); err == nil {
 		exeDir := filepath.Dir(exePath)
 		executablePath := filepath.Join(exeDir, "halko.cfg")
 		searchPaths = append(searchPaths, executablePath)
 	}
 
-	// Search for existing config file
 	for _, path := range searchPaths {
 		if _, err := os.Stat(path); err == nil {
 			return path, nil
 		}
 	}
 
-	// Return error if no config file found
 	return "", fmt.Errorf("no halko.cfg file found in any of the search paths: %v", searchPaths)
 }
 
@@ -77,7 +72,6 @@ func ParseGlobalOptions() (*GlobalOptions, error) {
 		Verbose:    false,
 	}
 
-	// Setup flag definitions to support both single and double dash
 	configPath := flag.String("config", defaultConfigPath, "Path to configuration file (accepts --config)")
 	flag.StringVar(&opts.ConfigPath, "c", defaultConfigPath, "Path to configuration file (shorthand)")
 
@@ -86,7 +80,6 @@ func ParseGlobalOptions() (*GlobalOptions, error) {
 
 	flag.Parse()
 
-	// Apply parsed values
 	if *configPath != defaultConfigPath {
 		opts.ConfigPath = *configPath
 	}
@@ -100,7 +93,7 @@ func ParseGlobalOptions() (*GlobalOptions, error) {
 // ParseSimulatorOptions parses command-line options for the simulator module
 func ParseSimulatorOptions() *SimulatorOptions {
 	opts := &SimulatorOptions{
-		Port: "8088", // default value
+		Port: "8088",
 	}
 
 	port := flag.String("l", "8088", "Port to listen on (Default: 8088)")

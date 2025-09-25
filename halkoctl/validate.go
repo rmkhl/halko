@@ -10,7 +10,6 @@ import (
 )
 
 func handleValidateCommand() {
-	// Parse validate command options using local options
 	opts, err := ParseValidateOptions()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
@@ -36,7 +35,6 @@ func handleValidateCommand() {
 		fmt.Println()
 	}
 
-	// Validate the program
 	err = validateProgram(opts.ProgramPath, globalOpts.Verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Validation failed: %v\n", err)
@@ -75,7 +73,6 @@ func showValidateHelp() {
 }
 
 func validateProgram(programPath string, verbose bool) error {
-	// Use the globally loaded config
 	if globalConfig == nil {
 		return errors.New("no configuration loaded - this should not happen")
 	}
@@ -89,7 +86,6 @@ func validateProgram(programPath string, verbose bool) error {
 		fmt.Println("✓ Configuration loaded successfully")
 	}
 
-	// Load the program file
 	if verbose {
 		fmt.Printf("Loading program from: %s\n", programPath)
 	}
@@ -108,7 +104,6 @@ func validateProgram(programPath string, verbose bool) error {
 		fmt.Println("✓ Program file loaded successfully")
 	}
 
-	// Parse the JSON
 	if verbose {
 		fmt.Println("Parsing JSON...")
 	}
@@ -124,7 +119,6 @@ func validateProgram(programPath string, verbose bool) error {
 			program.ProgramName, len(program.ProgramSteps))
 	}
 
-	// Apply defaults to the program (no need to duplicate since we're not saving it)
 	if verbose {
 		fmt.Println("Applying defaults...")
 	}
@@ -136,7 +130,6 @@ func validateProgram(programPath string, verbose bool) error {
 		fmt.Println("Running validation...")
 	}
 
-	// Validate the program
 	err = program.Validate()
 	if err != nil {
 		return fmt.Errorf("program validation failed: %w", err)
@@ -145,7 +138,6 @@ func validateProgram(programPath string, verbose bool) error {
 	if verbose {
 		fmt.Println("✓ Program validation completed successfully")
 
-		// Show program structure
 		fmt.Println()
 		fmt.Println("Program structure:")
 		fmt.Printf("  Name: %s\n", program.ProgramName)

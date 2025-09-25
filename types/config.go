@@ -29,9 +29,9 @@ type (
 
 	PowerUnit struct {
 		ShellyAddress string         `json:"shelly_address"`
-		CycleLength   int            `json:"cycle_length"` // Duration of a power cycle in seconds
+		CycleLength   int            `json:"cycle_length"`
 		PowerMapping  map[string]int `json:"power_mapping"`
-		MaxIdleTime   int            `json:"max_idle_time"` // Maximum idle time in seconds before a executor is considered idle
+		MaxIdleTime   int            `json:"max_idle_time"`
 	}
 
 	SensorUnitConfig struct {
@@ -90,7 +90,6 @@ func findDefaultConfigPath() string {
 	return ""
 }
 
-// readHalkoConfig reads the halko configuration from the specified path (private function)
 func readHalkoConfig(path string) (*HalkoConfig, error) {
 	jsonFile, err := os.Open(path)
 	if err != nil {

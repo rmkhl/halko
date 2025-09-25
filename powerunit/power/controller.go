@@ -60,7 +60,6 @@ func (c *Controller) Start() error {
 	ticker := time.NewTicker(c.tickDuration)
 	defer ticker.Stop()
 
-	// Initialize all power states to 0% and assume they are On
 	c.mu.Lock()
 	for i := range shelly.NumberOfDevices {
 		c.powerStates[i].percentage = 0
@@ -69,15 +68,12 @@ func (c *Controller) Start() error {
 	c.lastCommand = time.Now()
 	c.mu.Unlock()
 
-	// Run the power cycle loop
 	for {
-		// Check if context is done
 		select {
 		case <-c.ctx.Done():
 			log.Println("Power controller stopped")
 			return nil
 		case <-ticker.C:
-			// Process current tick
 			if err := c.processTick(); err != nil {
 				log.Printf("Error processing tick: %v", err)
 			}
@@ -89,9 +85,7 @@ func (c *Controller) processTick() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// At the start of a new cycle
 	if c.tickCount == 0 {
-		// Turn on units that are OFF and have non-zero percentage
 		for id := range shelly.NumberOfDevices {
 			tracker := c.powerStates[id]
 			if tracker.percentage > 0 && tracker.currentState == shelly.Off {
@@ -105,7 +99,6 @@ func (c *Controller) processTick() error {
 		}
 	}
 
-	// During the cycle, check if any powers need to be turned off
 	for id := range shelly.NumberOfDevices {
 		tracker := c.powerStates[id]
 		if c.tickCount >= int(tracker.percentage) && tracker.currentState == shelly.On {
@@ -124,7 +117,6 @@ func (c *Controller) processTick() error {
 		for id := range shelly.NumberOfDevices {
 			c.powerStates[id].percentage = 0
 		}
-		// Update lastCommand timestamp to avoid repeated shutdowns
 		c.lastCommand = time.Now()
 	}
 
@@ -146,8 +138,6 @@ func (c *Controller) Stop() {
 func (c *Controller) GetAllPercentages() [shelly.NumberOfDevices]uint8 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	// Update lastCommand timestamp
 	c.lastCommand = time.Now()
 
 	var percentages [shelly.NumberOfDevices]uint8
@@ -163,7 +153,6 @@ func (c *Controller) SetAllPercentages(percentages [shelly.NumberOfDevices]uint8
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Update lastCommand timestamp
 	c.lastCommand = time.Now()
 
 	for id := range shelly.NumberOfDevices {

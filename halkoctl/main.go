@@ -16,7 +16,6 @@ const (
 var globalOpts *types.GlobalOptions
 
 func main() {
-	// Parse global flags using unified types
 	var commandIndex int
 	globalOpts, commandIndex = ParseGlobalOptions()
 
@@ -25,14 +24,12 @@ func main() {
 		os.Exit(exitError)
 	}
 
-	// Check for help commands before loading config
 	command := os.Args[commandIndex]
 	if command == "help" || command == "-h" || command == helpFlag {
 		showHelp()
 		os.Exit(exitSuccess)
 	}
 
-	// Check for command-specific help
 	if commandIndex+1 < len(os.Args) {
 		nextArg := os.Args[commandIndex+1]
 		if nextArg == "-h" || nextArg == helpFlag {
@@ -50,7 +47,6 @@ func main() {
 		}
 	}
 
-	// Load configuration
 	config, err := types.LoadConfig(globalOpts.ConfigPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
@@ -58,7 +54,6 @@ func main() {
 	}
 	globalConfig = config
 
-	// Remove processed global flags from os.Args for command parsing
 	newArgs := []string{os.Args[0]}
 	newArgs = append(newArgs, os.Args[commandIndex:]...)
 	os.Args = newArgs

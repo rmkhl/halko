@@ -21,7 +21,6 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
-	// Parse command-line options using unified types
 	opts := types.ParseSimulatorOptions()
 
 	fan := elements.NewPower("Fan")
