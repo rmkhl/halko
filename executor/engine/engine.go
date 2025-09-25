@@ -10,11 +10,12 @@ import (
 
 type (
 	ControlEngine struct {
-		wg        *sync.WaitGroup
-		config    *types.ExecutorConfig
-		storage   *storage.FileStorage
-		runner    *programRunner
-		endpoints *types.APIEndpoints
+		wg          *sync.WaitGroup
+		config      *types.ExecutorConfig
+		halkoConfig *types.HalkoConfig
+		storage     *storage.FileStorage
+		runner      *programRunner
+		endpoints   *types.APIEndpoints
 	}
 )
 
@@ -23,11 +24,12 @@ var (
 	ErrNoProgramRunning      = errors.New("no program running")
 )
 
-func NewEngine(config *types.ExecutorConfig, storage *storage.FileStorage, endpoints *types.APIEndpoints) *ControlEngine {
+func NewEngine(halkoConfig *types.HalkoConfig, storage *storage.FileStorage, endpoints *types.APIEndpoints) *ControlEngine {
 	engine := ControlEngine{
-		config:    config,
-		runner:    nil,
-		storage:   storage,
+		config:      halkoConfig.ExecutorConfig,
+		halkoConfig: halkoConfig,
+		runner:      nil,
+		storage:     storage,
 		endpoints: endpoints,
 		wg:        new(sync.WaitGroup),
 	}
@@ -52,7 +54,7 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 		return ErrProgramAlreadyRunning
 	}
 
-	runner, err := newProgramRunner(engine.config, engine.storage, program, engine.endpoints)
+	runner, err := newProgramRunner(engine.halkoConfig, engine.storage, program, engine.endpoints)
 	if err != nil {
 		return err
 	}

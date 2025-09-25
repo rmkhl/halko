@@ -11,13 +11,10 @@ import (
 
 func TestProgramValidation(t *testing.T) {
 	// Load defaults from the template config
+	// LoadConfig already validates the configuration structure
 	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
-	}
-
-	if config.ExecutorConfig == nil || config.ExecutorConfig.Defaults == nil {
-		t.Fatal("Config or defaults not found")
 	}
 
 	tests := []struct {
@@ -62,13 +59,10 @@ func TestProgramValidation(t *testing.T) {
 
 func TestProgramValidationWithCopy(t *testing.T) {
 	// Load defaults from the template config
+	// LoadConfig already validates the configuration structure
 	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
-	}
-
-	if config.ExecutorConfig == nil || config.ExecutorConfig.Defaults == nil {
-		t.Fatal("Config or defaults not found")
 	}
 
 	// Test the new validation pattern used in createProgram/updateProgram

@@ -28,10 +28,15 @@ type (
 	}
 )
 
-func newPSUController(config *types.ExecutorConfig, endpoints *types.APIEndpoints) (*psuController, error) {
+func newPSUController(halkoConfig *types.HalkoConfig, endpoints *types.APIEndpoints) (*psuController, error) {
+	powerURL, err := halkoConfig.GetPowerUnitUrl()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
+	}
+
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURL: "http://" + config.PowerUnitHost + endpoints.Root,
+		powerControlURL: powerURL + endpoints.Root,
 	}, nil
 }
 
