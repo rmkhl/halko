@@ -19,10 +19,13 @@ func handleSendCommand() {
 	sendFlags := flag.NewFlagSet("send", flag.ExitOnError)
 
 	var (
-		programPath = sendFlags.String("program", "", "Path to the program.json file to send (required)")
-		verbose     = sendFlags.Bool("verbose", false, "Enable verbose output")
-		help        = sendFlags.Bool("help", false, "Show help for send command")
+		verbose = sendFlags.Bool("v", false, "Enable verbose output")
+		help    = sendFlags.Bool("h", false, "Show help for send command")
 	)
+
+	// Add long options
+	sendFlags.BoolVar(verbose, "verbose", false, "Enable verbose output")
+	sendFlags.BoolVar(help, "help", false, "Show help for send command")
 
 	// Parse the arguments starting from os.Args[2] (after "send")
 	if err := sendFlags.Parse(os.Args[2:]); err != nil {
@@ -35,23 +38,27 @@ func handleSendCommand() {
 		os.Exit(exitSuccess)
 	}
 
-	if *programPath == "" {
-		fmt.Fprintf(os.Stderr, "Error: -program flag is required\n\n")
+	// Get the program path from remaining arguments
+	args := sendFlags.Args()
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Error: program file path is required\n\n")
 		showSendHelp()
 		os.Exit(exitError)
 	}
+
+	programPath := args[0]
 
 	// Get the executor URL from config
 	url := getExecutorAPIURL(globalConfig)
 
 	if *verbose {
-		fmt.Printf("Sending program: %s\n", *programPath)
+		fmt.Printf("Sending program: %s\n", programPath)
 		fmt.Printf("Executor endpoint: %s\n", url)
 		fmt.Println()
 	}
 
 	// Send the program
-	err := sendProgram(*programPath, url, *verbose)
+	err := sendProgram(programPath, url, *verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to send program: %v\n", err)
 		os.Exit(exitError)
@@ -67,23 +74,25 @@ func showSendHelp() {
 	fmt.Println("Sends a program.json file to the Halko executor to start execution.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Printf("  %s send -program <path-to-program.json> [options]\n", os.Args[0])
+	fmt.Printf("  %s send <program-file> [options]\n", os.Args[0])
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("  program-file      Path to the program.json file to send (required)")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -program string")
-	fmt.Println("        Path to the program.json file to send (required)")
-	fmt.Println("  -host string")
-	fmt.Println("        Executor host (default: localhost)")
-	fmt.Println("  -port string")
-	fmt.Println("        Executor port (default: 8080)")
-	fmt.Println("  -verbose")
+	fmt.Println("  -v, --verbose")
 	fmt.Println("        Enable verbose output")
-	fmt.Println("  -help")
+	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
 	fmt.Println()
+	fmt.Println("Global Options:")
+	fmt.Println("  -c, --config string")
+	fmt.Println("        Path to the halko.cfg configuration file")
+	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Printf("  %s send -program example/example-program-delta.json\n", os.Args[0])
-	fmt.Printf("  %s send -program my-program.json -host 192.168.1.100 -port 8080 -verbose\n", os.Args[0])
+	fmt.Printf("  %s send example/example-program-delta.json\n", os.Args[0])
+	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json -v\n", os.Args[0])
+	fmt.Printf("  %s send my-program.json --verbose\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("The program will be sent to the executor's POST /engine/api/v1/running endpoint")
 	fmt.Println("to start immediate execution. The executor will validate the program.")

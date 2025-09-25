@@ -11,6 +11,7 @@ import (
 const (
 	exitSuccess = 0
 	exitError   = 1
+	helpFlag    = "--help"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 	// Find command and extract config flag
 	for i := 1; i < len(os.Args); i++ {
 		arg := os.Args[i]
-		if arg == "-config" || arg == "--config" {
+		if arg == "-c" || arg == "--config" {
 			if i+1 < len(os.Args) {
 				configPath = os.Args[i+1]
 				i++ // skip the config path value
@@ -39,7 +40,7 @@ func main() {
 
 	// Check for help commands before loading config
 	command := os.Args[commandIndex]
-	if command == "help" || command == "-help" || command == "--help" {
+	if command == "help" || command == "-h" || command == helpFlag {
 		showHelp()
 		os.Exit(exitSuccess)
 	}
@@ -47,7 +48,7 @@ func main() {
 	// Check for command-specific help
 	if commandIndex+1 < len(os.Args) {
 		nextArg := os.Args[commandIndex+1]
-		if nextArg == "-help" || nextArg == "--help" {
+		if nextArg == "-h" || nextArg == helpFlag {
 			switch command {
 			case "send":
 				showSendHelp()
@@ -82,7 +83,7 @@ func main() {
 		handleStatusCommand()
 	case "validate":
 		handleValidateCommand()
-	case "help", "-help", "--help":
+	case "help", "-help", helpFlag:
 		showHelp()
 		os.Exit(exitSuccess)
 	default:

@@ -5,12 +5,12 @@ A command-line tool for interacting with the Halko wood drying kiln control syst
 ## Usage
 
 ```bash
-halkoctl [-config <config-file>] <command> [options]
+halkoctl [-c|--config <config-file>] <command> [options]
 ```
 
 ## Global Options
 
-- `-config string`: Path to halko.cfg configuration file (optional, auto-discovers if not specified)
+- `-c, --config string`: Path to halko.cfg configuration file (optional, auto-discovers if not specified)
 
 ## Commands
 
@@ -19,27 +19,30 @@ halkoctl [-config <config-file>] <command> [options]
 Sends a program.json file to the Halko executor to start program execution.
 
 ```bash
-halkoctl send -program <path-to-program.json> [options]
+halkoctl send <program-file> [options]
 ```
 
-#### Options
+#### Send Arguments
 
-- `-program string`: Path to the program.json file to send (required)
-- `-verbose`: Enable verbose output
-- `-help`: Show help for send command
+- `program-file`: Path to the program.json file to send (required)
 
-#### Examples
+#### Send Options
+
+- `-v, --verbose`: Enable verbose output
+- `-h, --help`: Show help for send command
+
+#### Send Examples
 
 Send a program using default config:
 
 ```bash
-halkoctl send -program example/example-program-delta.json
+halkoctl send example/example-program-delta.json
 ```
 
 Send a program with custom config and verbose output:
 
 ```bash
-halkoctl -config /path/to/halko.cfg send -program my-program.json -verbose
+halkoctl --config /path/to/halko.cfg send my-program.json -v
 ```
 
 ### status
@@ -52,8 +55,8 @@ halkoctl status [options]
 
 #### Status Options
 
-- `-verbose`: Enable verbose output
-- `-help`: Show help for status command
+- `-v, --verbose`: Enable verbose output
+- `-h, --help`: Show help for status command
 
 #### Status Examples
 
@@ -66,7 +69,7 @@ halkoctl status
 Get status with custom config and verbose output:
 
 ```bash
-halkoctl -config /path/to/halko.cfg status -verbose
+halkoctl --config /path/to/halko.cfg status -v
 ```
 
 ### validate
@@ -74,27 +77,30 @@ halkoctl -config /path/to/halko.cfg status -verbose
 Validates a program.json file against the Halko program schema and business rules.
 
 ```bash
-halkoctl validate -program <path-to-program.json> [options]
+halkoctl validate <program-file> [options]
 ```
+
+#### Validate Arguments
+
+- `program-file`: Path to the program.json file to validate (required)
 
 #### Validate Options
 
-- `-program string`: Path to the program.json file to validate (required)
-- `-verbose`: Enable verbose output
-- `-help`: Show help for validate command
+- `-v, --verbose`: Enable verbose output
+- `-h, --help`: Show help for validate command
 
 #### Validate Examples
 
 Validate a program using default config:
 
 ```bash
-halkoctl validate -program example/example-program-delta.json
+halkoctl validate example/example-program-delta.json
 ```
 
 Validate a program with custom config and verbose output:
 
 ```bash
-halkoctl -config /path/to/halko.cfg validate -program my-program.json -verbose
+halkoctl --config /path/to/halko.cfg validate my-program.json --verbose
 ```
 
 ## API Endpoints

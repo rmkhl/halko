@@ -16,9 +16,13 @@ func handleStatusCommand() {
 	statusFlags := flag.NewFlagSet("status", flag.ExitOnError)
 
 	var (
-		verbose = statusFlags.Bool("verbose", false, "Enable verbose output")
-		help    = statusFlags.Bool("help", false, "Show help for status command")
+		verbose = statusFlags.Bool("v", false, "Enable verbose output")
+		help    = statusFlags.Bool("h", false, "Show help for status command")
 	)
+
+	// Add long options
+	statusFlags.BoolVar(verbose, "verbose", false, "Enable verbose output")
+	statusFlags.BoolVar(help, "help", false, "Show help for status command")
 
 	// Parse the arguments starting from os.Args[2] (after "status")
 	if err := statusFlags.Parse(os.Args[2:]); err != nil {
@@ -62,18 +66,18 @@ func showStatusHelp() {
 	fmt.Printf("  %s status [options]\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -host string")
-	fmt.Println("        Executor host (default: localhost)")
-	fmt.Println("  -port string")
-	fmt.Println("        Executor port (default: 8080)")
-	fmt.Println("  -verbose")
+	fmt.Println("  -v, --verbose")
 	fmt.Println("        Enable verbose output")
-	fmt.Println("  -help")
+	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
+	fmt.Println()
+	fmt.Println("Global Options:")
+	fmt.Println("  -c, --config string")
+	fmt.Println("        Path to the halko.cfg configuration file")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Printf("  %s status\n", os.Args[0])
-	fmt.Printf("  %s status -host 192.168.1.100 -port 8080 -verbose\n", os.Args[0])
+	fmt.Printf("  %s --config /path/to/halko.cfg status -v\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("The status will be retrieved from the executor's GET /engine/api/v1/running endpoint.")
 }

@@ -15,10 +15,13 @@ func handleValidateCommand() {
 	validateFlags := flag.NewFlagSet("validate", flag.ExitOnError)
 
 	var (
-		programPath = validateFlags.String("program", "", "Path to the program.json file to validate (required)")
-		verbose     = validateFlags.Bool("verbose", false, "Enable verbose output")
-		help        = validateFlags.Bool("help", false, "Show help for validate command")
+		verbose = validateFlags.Bool("v", false, "Enable verbose output")
+		help    = validateFlags.Bool("h", false, "Show help for validate command")
 	)
+
+	// Add long options
+	validateFlags.BoolVar(verbose, "verbose", false, "Enable verbose output")
+	validateFlags.BoolVar(help, "help", false, "Show help for validate command")
 
 	// Parse the arguments starting from os.Args[2] (after "validate")
 	if err := validateFlags.Parse(os.Args[2:]); err != nil {
@@ -31,14 +34,18 @@ func handleValidateCommand() {
 		os.Exit(exitSuccess)
 	}
 
-	if *programPath == "" {
-		fmt.Fprintf(os.Stderr, "Error: -program flag is required\n\n")
+	// Get the program path from remaining arguments
+	args := validateFlags.Args()
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Error: program file path is required\n\n")
 		showValidateHelp()
 		os.Exit(exitError)
 	}
 
+	programPath := args[0]
+
 	if *verbose {
-		fmt.Printf("Validating program: %s\n", *programPath)
+		fmt.Printf("Validating program: %s\n", programPath)
 		if globalConfig != nil {
 			fmt.Printf("Using config from loaded configuration\n")
 		}
@@ -46,7 +53,7 @@ func handleValidateCommand() {
 	}
 
 	// Validate the program
-	err := validateProgram(*programPath, *verbose)
+	err := validateProgram(programPath, *verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Validation failed: %v\n", err)
 		os.Exit(exitError)
@@ -62,23 +69,24 @@ func showValidateHelp() {
 	fmt.Println("This command validates a program.json file against the Halko program schema and business rules.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  halkoctl validate -program <path-to-program.json> [options]")
+	fmt.Println("  halkoctl validate <program-file> [options]")
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("  program-file      Path to the program.json file to validate (required)")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -program string")
-	fmt.Println("        Path to the program.json file to validate (required)")
-	fmt.Println("  -verbose")
+	fmt.Println("  -v, --verbose")
 	fmt.Println("        Enable verbose output")
-	fmt.Println("  -help")
+	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
 	fmt.Println()
 	fmt.Println("Global Options:")
-	fmt.Println("  -config string")
-	fmt.Println("        Path to the halko.cfg file (applied before command)")
+	fmt.Println("  -c, --config string")
+	fmt.Println("        Path to the halko.cfg configuration file")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  halkoctl validate -program example/example-program-delta.json")
-	fmt.Println("  halkoctl -config my-halko.cfg validate -program my-program.json -verbose")
+	fmt.Println("  halkoctl validate example/example-program-delta.json")
+	fmt.Println("  halkoctl --config /path/to/halko.cfg validate my-program.json -v")
 }
 
 func validateProgram(programPath string, verbose bool) error {
