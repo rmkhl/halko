@@ -10,14 +10,31 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/heartbeat"
 	"github.com/rmkhl/halko/executor/router"
 	"github.com/rmkhl/halko/executor/storage"
 	"github.com/rmkhl/halko/types"
 )
+
+// addCORSHeaders adds CORS headers to responses
+func addCORSHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1234")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
+		w.Header().Set("Access-Control-Max-Age", "43200") // 12 hours
+
+		// Handle preflight OPTIONS requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	opts, err := types.ParseGlobalOptions()
@@ -45,21 +62,17 @@ func main() {
 		log.Fatalf("Failed to start heartbeat manager: %v", err)
 	}
 
-	server := gin.Default()
-	server.Use(cors.New(cors.Config{
-		AllowOrigins:  []string{"http://localhost:1234"},
-		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:  []string{"Origin", "Content-Type"},
-		ExposeHeaders: []string{"Content-Length"},
-		MaxAge:        12 * time.Hour,
-	}))
-	router.SetupRoutes(server, storage, engine)
+	mux := http.NewServeMux()
+	router.SetupRoutes(mux, storage, engine)
+
+	// Add CORS middleware
+	corsHandler := addCORSHeaders(mux)
 
 	port := configuration.ExecutorConfig.Port
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
-		Handler: server,
+		Handler: corsHandler,
 	}
 
 	// Start the server in a goroutine
