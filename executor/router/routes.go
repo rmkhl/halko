@@ -1,30 +1,36 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
+	"encoding/json"
+	"net/http"
+
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/types"
 )
 
-func SetupRoutes(r *gin.Engine, storage *storage.FileStorage, engine *engine.ControlEngine) {
-	engineAPI := r.Group("engine/api")
-	engineAPIV1 := engineAPI.Group("v1")
+func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// Log the error but don't change the response as headers are already sent
+		// In a real application, you might want to handle this more gracefully
+		_ = err
+	}
+}
 
-	runStorage := engineAPIV1.Group("programs")
-	runStorage.GET("", listAllRuns(storage))
-	runStorage.GET(":name", getRun(storage))
-	runStorage.DELETE(":name", deleteRun(storage))
+func writeError(w http.ResponseWriter, statusCode int, message string) {
+	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
+}
 
-	engineControl := engineAPIV1.Group("running")
-	engineControl.GET("", getCurrentProgram(engine))
-	engineControl.POST("", startNewProgram(engine))
-	engineControl.DELETE("", cancelRunningProgram(engine))
+func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+	mux.HandleFunc("GET "+endpoints.Programs, listAllRuns(storage))
+	mux.HandleFunc("GET "+endpoints.Programs+"/{name}", getRun(storage))
+	mux.HandleFunc("DELETE "+endpoints.Programs+"/{name}", deleteRun(storage))
 
-	storageAPI := r.Group("storage/api")
-	storageAPIV1 := storageAPI.Group("v1")
-	storageAPIV1.GET("programs", listAllPrograms(storage))
-	storageAPIV1.GET("programs/:name", getProgram(storage))
-	storageAPIV1.POST("programs", createProgram(storage, engine))
-	storageAPIV1.POST("programs/:name", updateProgram(storage, engine))
-	storageAPIV1.DELETE("programs/:name", deleteProgram(storage))
+	mux.HandleFunc("GET "+endpoints.Running, getCurrentProgram(engine))
+	mux.HandleFunc("POST "+endpoints.Running, startNewProgram(engine))
+	mux.HandleFunc("DELETE "+endpoints.Running, cancelRunningProgram(engine))
+
+	// Note: /storage/ endpoints are now handled by the independent storage service
 }

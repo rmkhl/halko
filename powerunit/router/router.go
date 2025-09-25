@@ -1,30 +1,36 @@
 package router
 
 import (
-	"time"
+	"net/http"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
+	"github.com/rmkhl/halko/types"
 )
 
-type Router struct {
-	*gin.Engine
+func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string, endpoints *types.APIEndpoints) http.Handler {
+	mux := http.NewServeMux()
+
+	setupRoutes(mux, p, powerMapping, idMapping, endpoints)
+
+	handler := addCORSHeaders(mux)
+
+	return handler
 }
 
-func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) *Router {
-	ginRouter := gin.Default()
-	ginRouter.Use(cors.New(cors.Config{
-		AllowOrigins:  []string{"http://localhost:1234"},
-		AllowMethods:  []string{"GET", "POST", "PUT"},
-		AllowHeaders:  []string{"Origin", "Content-Type"},
-		ExposeHeaders: []string{"Content-Length"},
-		MaxAge:        12 * time.Hour,
-	}))
+func addCORSHeaders(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:1234")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Length")
+		w.Header().Set("Access-Control-Max-Age", "43200") // 12 hours
 
-	r := &Router{ginRouter}
-	setupRoutes(ginRouter, p, powerMapping, idMapping)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 
-	return r
+		mux.ServeHTTP(w, r)
+	})
 }

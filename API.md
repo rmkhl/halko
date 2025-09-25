@@ -5,7 +5,7 @@ component of the Halko wood drying kiln control system.
 
 ## 1. SensorUnit API
 
-Base Path: `/sensors/api/v1`
+Base Path: `/sensors`
 
 ### Temperature Endpoints
 
@@ -79,7 +79,7 @@ Updates the status text displayed on the sensor unit's LCD.
 
 ## 2. PowerUnit API
 
-Base Path: `/powers/api/v1`
+Base Path: `/powers`
 
 ### GET `/`
 
@@ -151,9 +151,12 @@ Operates a specific power channel.
 
 ## 3. Executor API
 
-Base Path: `/engine/api/v1`
+Base Path: `/engine`
+Default Port: `8090`
 
-### Program Storage Endpoints
+**Note:** Program storage endpoints (`/storage/*`) have been moved to the independent Storage Service API (Section 4).
+
+### Program Execution History Endpoints
 
 #### GET `/programs`
 
@@ -299,13 +302,120 @@ Cancels the currently running program.
 
 - Status 204 No Content on success
 
-## 4. Simulator API
+## 4. Storage Service API
+
+Base Path: `/storage`
+Default Port: `8091`
+
+The storage service provides independent program storage management.
+
+### Program Storage Endpoints
+
+#### GET `/programs`
+
+Lists all stored programs.
+
+**Response Format:**
+
+```json
+{
+  "data": [
+    "Standard Drying",
+    "Quick Drying",
+    "Pine Program"
+  ]
+}
+```
+
+#### GET `/programs/{name}`
+
+Gets a specific stored program by name.
+
+**Path Parameters:**
+
+- `name`: The name of the program
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "programName": "Standard Drying",
+    "description": "Standard drying program for pine",
+    "phases": [
+      {
+        "name": "Initial Heating",
+        "duration": 3600,
+        "targetTemperature": 45,
+        "steps": []
+      }
+    ]
+  }
+}
+```
+
+#### POST `/programs`
+
+Creates a new stored program.
+
+**Request Body:**
+
+```json
+{
+  "programName": "New Program",
+  "description": "Description of the program",
+  "phases": []
+}
+```
+
+**Response:**
+
+- Status 201 Created on success
+- Status 409 Conflict if program already exists
+
+#### POST `/programs/{name}`
+
+Updates an existing stored program.
+
+**Path Parameters:**
+
+- `name`: The name of the program to update
+
+**Request Body:**
+
+```json
+{
+  "programName": "Updated Program",
+  "description": "Updated description",
+  "phases": []
+}
+```
+
+**Response:**
+
+- Status 200 OK on success
+- Status 404 Not Found if program doesn't exist
+
+#### DELETE `/programs/{name}`
+
+Deletes a stored program.
+
+**Path Parameters:**
+
+- `name`: The name of the program to delete
+
+**Response:**
+
+- Status 200 OK on success
+- Status 404 Not Found if program doesn't exist
+
+## 5. Simulator API
 
 The simulator mimics endpoints from the SensorUnit and Shelly devices.
 
 ### Simulated SensorUnit API
 
-Base Path: `/sensors/api/v1`
+Base Path: `/sensors`
 
 #### Simulated GET `/temperatures`
 

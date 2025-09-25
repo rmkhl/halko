@@ -1,42 +1,37 @@
 package router
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/rmkhl/halko/types"
-
-	"github.com/gin-gonic/gin"
 )
 
 // setStatus handles POST requests to update the status text on the LCD
 // This function is now part of the API struct and called by SetupRoutes.
 // No longer a standalone setupStatusRoutes function.
-func (api *API) setStatus(c *gin.Context) {
+func (api *API) setStatus(w http.ResponseWriter, r *http.Request) {
 	var payload types.StatusRequest
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, types.APIErrorResponse{
-			Err: "Invalid request format",
-		})
-		return
-	}
-
-	err := api.sensorUnit.SetStatusText(payload.Message)
+	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, types.APIErrorResponse{
-			Err: err.Error(),
-		})
+		writeError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
 
-	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
+	err = api.sensorUnit.SetStatusText(payload.Message)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, types.APIResponse[types.StatusResponse]{
 		Data: types.StatusResponse{
 			Status: types.SensorStatusOK,
 		},
 	})
 }
 
-// getStatus handles GET requests to check the connection status
-func (api *API) getStatus(c *gin.Context) {
+func (api *API) getStatus(w http.ResponseWriter, _ *http.Request) {
 	isConnected := api.sensorUnit.IsConnected()
 
 	status := types.SensorStatusConnected
@@ -44,7 +39,7 @@ func (api *API) getStatus(c *gin.Context) {
 		status = types.SensorStatusDisconnected
 	}
 
-	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
+	writeJSON(w, http.StatusOK, types.APIResponse[types.StatusResponse]{
 		Data: types.StatusResponse{
 			Status: status,
 		},

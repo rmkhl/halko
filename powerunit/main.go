@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,17 +37,14 @@ func main() {
 		idMapping[id] = name
 	}
 
-	var serverPort string
-	if parsedURL, err := url.Parse(configuration.ExecutorConfig.PowerUnitURL); err == nil {
-		if parsedURL.Port() == "" {
-			log.Fatal("PowerUnitURL must include a port")
-		}
-		serverPort = parsedURL.Port()
+	port := configuration.PowerUnit.Port
+	if port == 0 {
+		port = 8092 // Default port
 	}
-	serverAddr := ":" + serverPort
+	serverAddr := fmt.Sprintf(":%d", port)
 
 	p := power.New(maxIdleTime, cycleLength, shellyController)
-	r := router.New(p, powerMapping, idMapping)
+	r := router.New(p, powerMapping, idMapping, configuration.APIEndpoints)
 
 	log.Printf("Starting power unit server on %s", serverAddr)
 

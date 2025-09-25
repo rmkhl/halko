@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -30,12 +29,9 @@ func main() {
 	serialDevice := halkoConfig.SensorUnit.SerialDevice
 	baudRate := halkoConfig.SensorUnit.BaudRate
 
-	// Extract port from executor config
-	parts := strings.Split(halkoConfig.ExecutorConfig.SensorUnitURL, ":")
-	var port int
-	_, err = fmt.Sscanf(parts[2], "%d", &port)
-	if err != nil {
-		log.Fatalf("Failed to parse port from sensor unit URL: %v", err)
+	port := halkoConfig.SensorUnit.Port
+	if port == 0 {
+		port = 8093 // Default port
 	}
 
 	sensorUnit, err := serial.NewSensorUnit(serialDevice, baudRate)
@@ -52,7 +48,7 @@ func main() {
 	}
 
 	api := router.NewAPI(sensorUnit)
-	r := router.SetupRouter(api)
+	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
@@ -62,7 +58,6 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	// Start server in a goroutine
 	go func() {
 		log.Printf("Starting sensorunit service on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

@@ -2,79 +2,75 @@ package router
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/types"
 )
 
-func getCurrentProgram(engine *engine.ControlEngine) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+func getCurrentProgram(engine *engine.ControlEngine) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		currentStatus := engine.CurrentStatus()
 		if currentStatus == nil {
-			ctx.JSON(http.StatusNoContent, types.APIErrorResponse{Err: "No program running"})
+			writeError(w, http.StatusNoContent, "No program running")
 			return
 		}
-		ctx.JSON(http.StatusOK, types.APIResponse[types.ExecutionStatus]{Data: *currentStatus})
+		writeJSON(w, http.StatusOK, types.APIResponse[types.ExecutionStatus]{Data: *currentStatus})
 	}
 }
 
-func startNewProgram(engine *engine.ControlEngine) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		// Read and log the raw request body, then restore it for binding
-		body, err := io.ReadAll(ctx.Request.Body)
+func startNewProgram(engine *engine.ControlEngine) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("Failed to read request body: %v", err)
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Failed to read request body (%s)", err.Error())})
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("Failed to read request body (%s)", err.Error()))
 			return
 		}
 		log.Printf("Raw request body: %s", string(body))
 
-		// Restore the request body for ShouldBind to use
-		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 		var program types.Program
 
-		err = ctx.ShouldBind(&program)
+		err = json.NewDecoder(r.Body).Decode(&program)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: fmt.Sprintf("Does not compute (%s)", err.Error())})
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("Does not compute (%s)", err.Error()))
 			return
 		}
 
-		// Log the program before validation
 		log.Printf("Received program: %s with %d steps", program.ProgramName, len(program.ProgramSteps))
 		for i, step := range program.ProgramSteps {
 			log.Printf("  Step %d: %s (%s) - Target: %d°C", i+1, step.Name, step.StepType, step.TargetTemperature)
 		}
 
-		// Apply defaults before validation
 		program.ApplyDefaults(engine.GetDefaults())
 
 		err = program.Validate()
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		err = engine.StartEngine(&program)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		ctx.JSON(http.StatusCreated, types.APIResponse[types.Program]{Data: program})
+		writeJSON(w, http.StatusCreated, types.APIResponse[types.Program]{Data: program})
 	}
 }
 
-func cancelRunningProgram(engine *engine.ControlEngine) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+func cancelRunningProgram(engine *engine.ControlEngine) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		err := engine.StopEngine()
 		if err != nil {
-			ctx.JSON(http.StatusNotFound, types.APIErrorResponse{Err: err.Error()})
+			writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
-		ctx.JSON(http.StatusOK, types.APIResponse[string]{Data: "Stopped"})
+		writeJSON(w, http.StatusOK, types.APIResponse[string]{Data: "Stopped"})
 	}
 }

@@ -1,16 +1,28 @@
 package router
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
 	"github.com/rmkhl/halko/types"
 )
 
-func getAllPercentages(p *power.Controller, idMapping [shelly.NumberOfDevices]string) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		_ = err
+	}
+}
+
+func writeError(w http.ResponseWriter, statusCode int, message string) {
+	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
+}
+
+func getAllPercentages(p *power.Controller, idMapping [shelly.NumberOfDevices]string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		percentages := p.GetAllPercentages()
 
 		response := make(types.PowerStatusResponse)
@@ -18,16 +30,17 @@ func getAllPercentages(p *power.Controller, idMapping [shelly.NumberOfDevices]st
 			response[idMapping[id]] = types.PowerResponse{Percent: percentages[id]}
 		}
 
-		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerStatusResponse]{Data: response})
+		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerStatusResponse]{Data: response})
 	}
 }
 
-func setAllPercentages(p *power.Controller, powerMapping map[string]int) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var commands types.PowersCommand
 
-		if err := ctx.ShouldBind(&commands); err != nil {
-			ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: err.Error()})
+		err := json.NewDecoder(r.Body).Decode(&commands)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -36,7 +49,7 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) gin.Han
 		for powerName, command := range commands {
 			id, ok := powerMapping[powerName]
 			if !ok {
-				ctx.JSON(http.StatusBadRequest, types.APIErrorResponse{Err: "Unknown power '" + powerName + "'"})
+				writeError(w, http.StatusBadRequest, "Unknown power '"+powerName+"'")
 				return
 			}
 			percentages[id] = command.Percent
@@ -44,7 +57,7 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) gin.Han
 
 		p.SetAllPercentages(percentages)
 
-		ctx.JSON(http.StatusOK, types.APIResponse[types.PowerOperationResponse]{
+		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerOperationResponse]{
 			Data: types.PowerOperationResponse{Message: "completed"},
 		})
 	}

@@ -107,7 +107,7 @@ halkoctl --config /path/to/halko.cfg validate my-program.json --verbose
 
 ### send command
 
-The `send` command sends a POST request to the executor's `/engine/api/v1/running` endpoint with the program definition in the request body:
+The `send` command sends a POST request to the executor's `/engine/running` endpoint with the program definition in the request body:
 
 ```json
 {
@@ -120,7 +120,7 @@ The `send` command sends a POST request to the executor's `/engine/api/v1/runnin
 
 ### status command
 
-The `status` command sends a GET request to the executor's `/engine/api/v1/running` endpoint and displays the response in a user-friendly format.
+The `status` command sends a GET request to the executor's `/engine/running` endpoint and displays the response in a user-friendly format.
 
 Example response when a program is running:
 

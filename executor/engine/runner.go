@@ -40,7 +40,7 @@ type (
 	}
 )
 
-func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.FileStorage, program *types.Program) (*programRunner, error) {
+func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.FileStorage, program *types.Program, endpoints *types.APIEndpoints) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -50,21 +50,29 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.File
 		psuSensorResponses:         make(chan psuReadings),
 		currentProgram:             program,
 		programStatus:              &types.ExecutionStatus{Program: *program},
-		defaults:                   config.Defaults,
+		defaults:                   halkoConfig.ExecutorConfig.Defaults,
 	}
 
-	psuSensorReader, err := newPSUSensorReader(config.PowerUnitURL+"/api/v1", runner.psuSensorCommands, runner.psuSensorResponses)
+	powerURL, err := halkoConfig.GetPowerUnitUrl()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
+	}
+	psuSensorReader, err := newPSUSensorReader(powerURL+endpoints.Root, runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(config.SensorUnitURL+"/api/v1/temperatures", runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	sensorURL, err := halkoConfig.GetSensorUnitUrl()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sensor unit URL: %w", err)
+	}
+	temperatureSensorReader, err := newTemperatureSensorReader(sensorURL+endpoints.Temperatures, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.temperatureSensorReader = temperatureSensorReader
-	psuController, err := newPSUController(config)
+	psuController, err := newPSUController(halkoConfig, endpoints)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +118,6 @@ func (runner *programRunner) Run() {
 			runner.temperatureStatus.updated = time.Now().Unix()
 			runner.temperatureStatus.reading = temperatures
 		}
-		// Update program status
 		runner.fsmController.UpdateStatus(runner.programStatus)
 		runner.logWriter.AddLine(runner.programStatus)
 	}
