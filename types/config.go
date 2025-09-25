@@ -39,10 +39,16 @@ type (
 		BaudRate     int    `json:"baud_rate"`
 	}
 
+	StorageConfig struct {
+		BasePath string `json:"base_path"`
+		Port     int    `json:"port"`
+	}
+
 	HalkoConfig struct {
 		ExecutorConfig *ExecutorConfig   `json:"executor"`
 		PowerUnit      *PowerUnit        `json:"power_unit"`
 		SensorUnit     *SensorUnitConfig `json:"sensorunit"`
+		StorageConfig  *StorageConfig    `json:"storage"`
 	}
 )
 

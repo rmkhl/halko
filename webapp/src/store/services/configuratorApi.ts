@@ -10,7 +10,7 @@ const programsEndpoint = "programs";
 export const configuratorApi = createApi({
   reducerPath: "configuratorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8080/storage",
+    baseUrl: "http://localhost:8091/storage",
   }),
   tagTypes: [phasesTag, programsTag],
   endpoints: (builder) => ({

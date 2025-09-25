@@ -1,12 +1,10 @@
 package router
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/storage"
 	"github.com/rmkhl/halko/types"
 )
@@ -78,114 +76,4 @@ func deleteRun(storage *storage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func listAllPrograms(storage *storage.FileStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		programs, err := storage.ListStoredPrograms()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusOK, types.APIResponse[[]string]{Data: programs})
-	}
-}
-
-func getProgram(storage *storage.FileStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		programName := r.PathValue("name")
-		program, err := storage.LoadStoredProgram(programName)
-		if err != nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusOK, types.APIResponse[types.Program]{Data: *program})
-	}
-}
-
-func createProgram(storage *storage.FileStorage, engine *engine.ControlEngine) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var program types.Program
-
-		err := json.NewDecoder(r.Body).Decode(&program)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
-			return
-		}
-
-		// Create a deep copy for validation
-		programCopy, err := program.Duplicate()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "Failed to copy program: "+err.Error())
-			return
-		}
-
-		// Apply defaults to the copy and validate
-		programCopy.ApplyDefaults(engine.GetDefaults())
-		err = programCopy.Validate()
-		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		// Store the original program without defaults applied
-		err = storage.CreateStoredProgram(program.ProgramName, &program)
-		if err != nil {
-			writeError(w, http.StatusConflict, err.Error())
-			return
-		}
-
-		writeJSON(w, http.StatusCreated, types.APIResponse[types.Program]{Data: program})
-	}
-}
-
-func updateProgram(storage *storage.FileStorage, engine *engine.ControlEngine) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		programName := r.PathValue("name")
-		var program types.Program
-
-		err := json.NewDecoder(r.Body).Decode(&program)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
-			return
-		}
-
-		// Create a deep copy for validation
-		programCopy, err := program.Duplicate()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "Failed to copy program: "+err.Error())
-			return
-		}
-
-		// Apply defaults to the copy and validate
-		programCopy.ApplyDefaults(engine.GetDefaults())
-		err = programCopy.Validate()
-		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		// Store the original program without defaults applied
-		program.ProgramName = programName
-
-		err = storage.UpdateStoredProgram(programName, &program)
-		if err != nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-
-		writeJSON(w, http.StatusOK, types.APIResponse[types.Program]{Data: program})
-	}
-}
-
-func deleteProgram(storage *storage.FileStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		programName := r.PathValue("name")
-
-		err := storage.DeleteStoredProgram(programName)
-		if err != nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-
-		writeJSON(w, http.StatusOK, types.APIResponse[string]{Data: "deleted"})
-	}
-}
+// Storage-related program handlers have been moved to the independent storage service

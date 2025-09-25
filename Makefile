@@ -1,4 +1,4 @@
-MODULES = executor powerunit simulator sensorunit halkoctl
+MODULES = executor powerunit simulator sensorunit halkoctl storage
 BINDIR = bin
 
 .PHONY: all

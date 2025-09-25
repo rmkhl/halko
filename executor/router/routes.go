@@ -45,10 +45,5 @@ func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engin
 	mux.HandleFunc("POST /engine/running", startNewProgram(engine))
 	mux.HandleFunc("DELETE /engine/running", cancelRunningProgram(engine))
 
-	// Storage routes
-	mux.HandleFunc("GET /storage/programs", listAllPrograms(storage))
-	mux.HandleFunc("GET /storage/programs/{name}", getProgram(storage))
-	mux.HandleFunc("POST /storage/programs", createProgram(storage, engine))
-	mux.HandleFunc("POST /storage/programs/{name}", updateProgram(storage, engine))
-	mux.HandleFunc("DELETE /storage/programs/{name}", deleteProgram(storage))
+	// Note: /storage/ endpoints are now handled by the independent storage service
 }

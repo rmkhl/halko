@@ -147,11 +147,11 @@ example configuration:
 {
   "executor": {
     "base_path": "/var/opt/halko",
-    "port": 8089,
+    "port": 8090,
     "tick_length": 6000,
-    "sensor_unit_url": "http://localhost:8089/sensors",
-    "power_unit_url": "http://localhost:8090/powers",
-    "status_message_url": "http://localhost:8089/status",
+    "sensor_unit_url": "http://localhost:8088/sensors",
+    "power_unit_url": "http://localhost:8092/powers",
+    "status_message_url": "http://localhost:8088/status",
     "network_interface": "eth0",
     "defaults": {
       "pid_settings": {
@@ -162,7 +162,7 @@ example configuration:
     }
   },
   "power_unit": {
-    "shelly_address": "http://localhost:8091",
+    "shelly_address": "http://localhost:8088",
     "cycle_length": 60,
     "max_idle_time": 70,
     "power_mapping": {
