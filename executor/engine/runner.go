@@ -53,13 +53,13 @@ func newProgramRunner(config *types.ExecutorConfig, programStorage *storage.File
 		defaults:                   config.Defaults,
 	}
 
-	psuSensorReader, err := newPSUSensorReader(config.PowerUnitURL+"/powers", runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader("http://"+config.PowerUnitHost+"/powers", runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(config.SensorUnitURL+"/sensors/temperatures", runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader("http://"+config.SensorUnitHost+"/sensors/temperatures", runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}

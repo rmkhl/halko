@@ -20,8 +20,8 @@ type (
 		BasePath         string    `json:"base_path"`
 		Port             int       `json:"port"`
 		TickLength       int       `json:"tick_length"`
-		PowerUnitURL     string    `json:"power_unit_url"`
-		SensorUnitURL    string    `json:"sensor_unit_url"`
+		PowerUnitHost    string    `json:"power_unit_host"`
+		SensorUnitHost   string    `json:"sensor_unit_host"`
 		StatusMessageURL string    `json:"status_message_url"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
@@ -32,11 +32,13 @@ type (
 		CycleLength   int            `json:"cycle_length"`
 		PowerMapping  map[string]int `json:"power_mapping"`
 		MaxIdleTime   int            `json:"max_idle_time"`
+		Port          int            `json:"port"`
 	}
 
 	SensorUnitConfig struct {
 		SerialDevice string `json:"serial_device"`
 		BaudRate     int    `json:"baud_rate"`
+		Port         int    `json:"port"`
 	}
 
 	StorageConfig struct {
@@ -131,11 +133,11 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.ExecutorConfig.Port <= 0 {
 		return errors.New("executor port is required and must be positive")
 	}
-	if c.ExecutorConfig.SensorUnitURL == "" {
-		return errors.New("sensor unit URL is required")
+	if c.ExecutorConfig.SensorUnitHost == "" {
+		return errors.New("sensor unit host is required")
 	}
-	if c.ExecutorConfig.PowerUnitURL == "" {
-		return errors.New("power unit URL is required")
+	if c.ExecutorConfig.PowerUnitHost == "" {
+		return errors.New("power unit host is required")
 	}
 	if c.ExecutorConfig.BasePath == "" {
 		return errors.New("executor base path is required")
@@ -153,6 +155,9 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.SensorUnit.BaudRate <= 0 {
 		return errors.New("sensor unit baud rate is required and must be positive")
 	}
+	if c.SensorUnit.Port <= 0 {
+		return errors.New("sensor unit port is required and must be positive")
+	}
 
 	if c.PowerUnit == nil {
 		return errors.New("power unit configuration is required")
@@ -165,6 +170,9 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if c.PowerUnit.MaxIdleTime <= 0 {
 		return errors.New("power unit max idle time is required and must be positive")
+	}
+	if c.PowerUnit.Port <= 0 {
+		return errors.New("power unit port is required and must be positive")
 	}
 	if c.PowerUnit.PowerMapping == nil || len(c.PowerUnit.PowerMapping) == 0 {
 		return errors.New("power unit power mapping is required")
