@@ -2,8 +2,11 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type (
@@ -26,9 +29,9 @@ type (
 
 	PowerUnit struct {
 		ShellyAddress string         `json:"shelly_address"`
-		CycleLength   int            `json:"cycle_length"` // Duration of a power cycle in seconds
+		CycleLength   int            `json:"cycle_length"`
 		PowerMapping  map[string]int `json:"power_mapping"`
-		MaxIdleTime   int            `json:"max_idle_time"` // Maximum idle time in seconds before a executor is considered idle
+		MaxIdleTime   int            `json:"max_idle_time"`
 	}
 
 	SensorUnitConfig struct {
@@ -43,7 +46,56 @@ type (
 	}
 )
 
-func ReadHalkoConfig(path string) (*HalkoConfig, error) {
+// LoadConfig loads the halko configuration from the specified path or finds it in default locations
+func LoadConfig(configPath string) (*HalkoConfig, error) {
+	// If no config path provided, try to find default location
+	if configPath == "" {
+		configPath = findDefaultConfigPath()
+		if configPath == "" {
+			return nil, errors.New("no config file specified and none found in default locations")
+		}
+	}
+
+	config, err := readHalkoConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file %s: %w", configPath, err)
+	}
+
+	// Validate required configuration values
+	if err := config.ValidateRequired(); err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	return config, nil
+}
+
+// findDefaultConfigPath searches for halko.cfg in common locations
+func findDefaultConfigPath() string {
+	possiblePaths := []string{
+		"halko.cfg",
+		"/etc/halko/halko.cfg",
+		"/var/opt/halko/halko.cfg",
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	// Try to find halko.cfg relative to the executable
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		configPath := filepath.Join(exeDir, "halko.cfg")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath
+		}
+	}
+
+	return ""
+}
+
+func readHalkoConfig(path string) (*HalkoConfig, error) {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -63,4 +115,54 @@ func ReadHalkoConfig(path string) (*HalkoConfig, error) {
 	}
 
 	return &config, nil
+}
+
+// ValidateRequired validates that all required configuration values are present
+func (c *HalkoConfig) ValidateRequired() error {
+	if c.ExecutorConfig == nil {
+		return errors.New("executor configuration is required")
+	}
+	if c.ExecutorConfig.Port <= 0 {
+		return errors.New("executor port is required and must be positive")
+	}
+	if c.ExecutorConfig.SensorUnitURL == "" {
+		return errors.New("sensor unit URL is required")
+	}
+	if c.ExecutorConfig.PowerUnitURL == "" {
+		return errors.New("power unit URL is required")
+	}
+	if c.ExecutorConfig.BasePath == "" {
+		return errors.New("executor base path is required")
+	}
+	if c.ExecutorConfig.TickLength <= 0 {
+		return errors.New("executor tick length is required and must be positive")
+	}
+
+	if c.SensorUnit == nil {
+		return errors.New("sensor unit configuration is required")
+	}
+	if c.SensorUnit.SerialDevice == "" {
+		return errors.New("sensor unit serial device is required")
+	}
+	if c.SensorUnit.BaudRate <= 0 {
+		return errors.New("sensor unit baud rate is required and must be positive")
+	}
+
+	if c.PowerUnit == nil {
+		return errors.New("power unit configuration is required")
+	}
+	if c.PowerUnit.ShellyAddress == "" {
+		return errors.New("power unit shelly address is required")
+	}
+	if c.PowerUnit.CycleLength <= 0 {
+		return errors.New("power unit cycle length is required and must be positive")
+	}
+	if c.PowerUnit.MaxIdleTime <= 0 {
+		return errors.New("power unit max idle time is required and must be positive")
+	}
+	if c.PowerUnit.PowerMapping == nil || len(c.PowerUnit.PowerMapping) == 0 {
+		return errors.New("power unit power mapping is required")
+	}
+
+	return nil
 }

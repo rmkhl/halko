@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,12 +20,12 @@ import (
 )
 
 func main() {
-	var configFileName string
+	opts, err := types.ParseGlobalOptions()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	flag.StringVar(&configFileName, "c", "/etc/opt/halko.cfg", "Specify config file. Default is /etc/opt/halko.cfg")
-	flag.Parse()
-
-	configuration, err := types.ReadHalkoConfig(configFileName)
+	configuration, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +37,6 @@ func main() {
 
 	engine := engine.NewEngine(configuration.ExecutorConfig, storage)
 
-	// Create and start the heartbeat manager
 	heartbeatManager, err := heartbeat.NewManager(configuration.ExecutorConfig)
 	if err != nil {
 		log.Fatalf("Failed to create heartbeat manager: %v", err)
@@ -57,13 +55,8 @@ func main() {
 	}))
 	router.SetupRoutes(server, storage, engine)
 
-	// Determine the port to use
-	port := 8089 // Default port if not specified in config
-	if configuration.ExecutorConfig.Port > 0 {
-		port = configuration.ExecutorConfig.Port
-	}
+	port := configuration.ExecutorConfig.Port
 
-	// Create a server
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: server,
@@ -77,30 +70,21 @@ func main() {
 		}
 	}()
 
-	// Channel to listen for interrupt signals
 	quit := make(chan os.Signal, 1)
-	// Listen for SIGINT (Ctrl+C) and SIGTERM (systemctl stop)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Block until we receive a signal
 	sig := <-quit
 	log.Printf("Received signal %s, shutting down gracefully...", sig)
 
-	// Create a deadline for the shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	// Attempt graceful shutdown of the HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
-	// Stop the engine
 	if err := engine.StopEngine(); err != nil {
 		log.Printf("Error stopping engine: %s", err.Error())
 	}
-
-	// Stop the heartbeat manager
 	if err := heartbeatManager.Stop(); err != nil {
 		log.Printf("Error stopping heartbeat manager: %v", err)
 	}

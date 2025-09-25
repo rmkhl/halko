@@ -11,7 +11,7 @@ import (
 
 func TestProgramValidation(t *testing.T) {
 	// Load defaults from the template config
-	config, err := types.ReadHalkoConfig("../templates/halko.cfg")
+	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestProgramValidation(t *testing.T) {
 
 func TestProgramValidationWithCopy(t *testing.T) {
 	// Load defaults from the template config
-	config, err := types.ReadHalkoConfig("../templates/halko.cfg")
+	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}

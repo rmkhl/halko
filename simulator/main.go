@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -16,13 +15,13 @@ import (
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
 	"github.com/rmkhl/halko/simulator/router"
+	"github.com/rmkhl/halko/types"
 )
 
 func main() {
 	var wg sync.WaitGroup
 
-	port := flag.String("l", "8088", "Port to listen on (Default: 8088)")
-	flag.Parse()
+	opts := types.ParseSimulatorOptions()
 
 	fan := elements.NewPower("Fan")
 	humidifier := elements.NewPower("Humidifier")
@@ -49,7 +48,7 @@ func main() {
 	router.SetupRoutes(server, temperatureSensors, shellyControls)
 
 	srv := &http.Server{
-		Addr:    ":" + *port,
+		Addr:    ":" + opts.Port,
 		Handler: server,
 	}
 
@@ -73,7 +72,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("Server running on port %s", *port)
+		log.Printf("Server running on port %s", opts.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Error starting server: %s", err)
 		}

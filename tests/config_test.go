@@ -8,7 +8,7 @@ import (
 
 func TestConfigReading(t *testing.T) {
 	// Test reading the template configuration file
-	config, err := types.ReadHalkoConfig("../templates/halko.cfg")
+	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestConfigReading(t *testing.T) {
 
 func TestConfigStructure(t *testing.T) {
 	// Test that the new structure correctly groups temperature control settings
-	config, err := types.ReadHalkoConfig("../templates/halko.cfg")
+	config, err := types.LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
