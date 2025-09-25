@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,50 +14,35 @@ import (
 )
 
 func handleSendCommand() {
-	// Create a new FlagSet for the send command
-	sendFlags := flag.NewFlagSet("send", flag.ExitOnError)
-
-	var (
-		verbose = sendFlags.Bool("v", false, "Enable verbose output")
-		help    = sendFlags.Bool("h", false, "Show help for send command")
-	)
-
-	// Add long options
-	sendFlags.BoolVar(verbose, "verbose", false, "Enable verbose output")
-	sendFlags.BoolVar(help, "help", false, "Show help for send command")
-
-	// Parse the arguments starting from os.Args[2] (after "send")
-	if err := sendFlags.Parse(os.Args[2:]); err != nil {
+	// Parse send command options using local options
+	opts, err := ParseSendOptions()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
 		os.Exit(exitError)
 	}
 
-	if *help {
+	if opts.Help {
 		showSendHelp()
 		os.Exit(exitSuccess)
 	}
 
-	// Get the program path from remaining arguments
-	args := sendFlags.Args()
-	if len(args) == 0 {
+	if opts.ProgramPath == "" {
 		fmt.Fprintf(os.Stderr, "Error: program file path is required\n\n")
 		showSendHelp()
 		os.Exit(exitError)
 	}
 
-	programPath := args[0]
-
 	// Get the executor URL from config
 	url := getExecutorAPIURL(globalConfig)
 
-	if *verbose {
-		fmt.Printf("Sending program: %s\n", programPath)
+	if globalOpts.Verbose {
+		fmt.Printf("Sending program: %s\n", opts.ProgramPath)
 		fmt.Printf("Executor endpoint: %s\n", url)
 		fmt.Println()
 	}
 
 	// Send the program
-	err := sendProgram(programPath, url, *verbose)
+	err = sendProgram(opts.ProgramPath, url, globalOpts.Verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to send program: %v\n", err)
 		os.Exit(exitError)
@@ -74,25 +58,25 @@ func showSendHelp() {
 	fmt.Println("Sends a program.json file to the Halko executor to start execution.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Printf("  %s send <program-file> [options]\n", os.Args[0])
+	fmt.Printf("  %s [global-options] send <program-file> [options]\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("Arguments:")
 	fmt.Println("  program-file      Path to the program.json file to send (required)")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -v, --verbose")
-	fmt.Println("        Enable verbose output")
 	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
 	fmt.Println()
 	fmt.Println("Global Options:")
 	fmt.Println("  -c, --config string")
 	fmt.Println("        Path to the halko.cfg configuration file")
+	fmt.Println("  -v, --verbose")
+	fmt.Println("        Enable verbose output")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Printf("  %s send example/example-program-delta.json\n", os.Args[0])
-	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json -v\n", os.Args[0])
-	fmt.Printf("  %s send my-program.json --verbose\n", os.Args[0])
+	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json\n", os.Args[0])
+	fmt.Printf("  %s --verbose send my-program.json\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("The program will be sent to the executor's POST /engine/api/v1/running endpoint")
 	fmt.Println("to start immediate execution. The executor will validate the program.")

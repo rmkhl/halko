@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,28 +16,15 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// ConfigFilePath returns the path to the config file
-func ConfigFilePath() string {
-	if configPath := os.Getenv("HALKO_CONFIG"); configPath != "" {
-		return configPath
-	}
-	return "/etc/opt/halko/halko.cfg"
-}
-
 func main() {
-	// Parse command line flags
-	configPath := flag.String("config", ConfigFilePath(), "Path to configuration file")
-	flag.String("c", ConfigFilePath(), "Path to configuration file (shorthand)")
-	flag.Parse()
-
-	// If -c was used instead of -config, use that value
-	configPathValue := *configPath
-	if flag.Lookup("c").Value.String() != ConfigFilePath() {
-		configPathValue = flag.Lookup("c").Value.String()
+	// Parse command-line options using unified types
+	opts, err := types.ParseGlobalOptions()
+	if err != nil {
+		log.Fatalf("Failed to parse options: %v", err)
 	}
 
 	// Load configuration
-	halkoConfig, err := types.LoadConfig(configPathValue)
+	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

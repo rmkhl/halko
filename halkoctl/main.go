@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/rmkhl/halko/types"
 )
@@ -14,24 +13,12 @@ const (
 	helpFlag    = "--help"
 )
 
-func main() {
-	// Parse global flags first
-	var configPath string
-	commandIndex := -1
+var globalOpts *types.GlobalOptions
 
-	// Find command and extract config flag
-	for i := 1; i < len(os.Args); i++ {
-		arg := os.Args[i]
-		if arg == "-c" || arg == "--config" {
-			if i+1 < len(os.Args) {
-				configPath = os.Args[i+1]
-				i++ // skip the config path value
-			}
-		} else if !strings.HasPrefix(arg, "-") {
-			commandIndex = i
-			break
-		}
-	}
+func main() {
+	// Parse global flags using unified types
+	var commandIndex int
+	globalOpts, commandIndex = ParseGlobalOptions()
 
 	if commandIndex == -1 {
 		showHelp()
@@ -64,7 +51,7 @@ func main() {
 	}
 
 	// Load configuration
-	config, err := types.LoadConfig(configPath)
+	config, err := types.LoadConfig(globalOpts.ConfigPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(exitError)

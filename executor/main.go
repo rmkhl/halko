@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,12 +20,13 @@ import (
 )
 
 func main() {
-	var configFileName string
+	// Parse command-line options using unified types
+	opts, err := types.ParseGlobalOptions()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	flag.StringVar(&configFileName, "c", "/etc/opt/halko.cfg", "Specify config file. Default is /etc/opt/halko.cfg")
-	flag.Parse()
-
-	configuration, err := types.LoadConfig(configFileName)
+	configuration, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}

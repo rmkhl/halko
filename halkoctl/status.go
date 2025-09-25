@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,25 +11,14 @@ import (
 )
 
 func handleStatusCommand() {
-	// Create a new FlagSet for the status command
-	statusFlags := flag.NewFlagSet("status", flag.ExitOnError)
-
-	var (
-		verbose = statusFlags.Bool("v", false, "Enable verbose output")
-		help    = statusFlags.Bool("h", false, "Show help for status command")
-	)
-
-	// Add long options
-	statusFlags.BoolVar(verbose, "verbose", false, "Enable verbose output")
-	statusFlags.BoolVar(help, "help", false, "Show help for status command")
-
-	// Parse the arguments starting from os.Args[2] (after "status")
-	if err := statusFlags.Parse(os.Args[2:]); err != nil {
+	// Parse status command options using local options
+	opts, err := ParseStatusOptions()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
 		os.Exit(exitError)
 	}
 
-	if *help {
+	if opts.Help {
 		showStatusHelp()
 		os.Exit(exitSuccess)
 	}
@@ -42,13 +30,13 @@ func handleStatusCommand() {
 		os.Exit(exitError)
 	}
 
-	if *verbose {
+	if globalOpts.Verbose {
 		fmt.Printf("Querying executor status at: %s/engine/api/v1/running\n", executorURL)
 		fmt.Println()
 	}
 
 	// Get the status
-	err := getStatus(executorURL, *verbose)
+	err = getStatus(executorURL, globalOpts.Verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get status: %v\n", err)
 		os.Exit(exitError)
@@ -63,21 +51,22 @@ func showStatusHelp() {
 	fmt.Println("Gets the status of the currently running program from the Halko executor.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Printf("  %s status [options]\n", os.Args[0])
+	fmt.Printf("  %s [global-options] status [options]\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -v, --verbose")
-	fmt.Println("        Enable verbose output")
 	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
 	fmt.Println()
 	fmt.Println("Global Options:")
 	fmt.Println("  -c, --config string")
 	fmt.Println("        Path to the halko.cfg configuration file")
+	fmt.Println("  -v, --verbose")
+	fmt.Println("        Enable verbose output")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Printf("  %s status\n", os.Args[0])
-	fmt.Printf("  %s --config /path/to/halko.cfg status -v\n", os.Args[0])
+	fmt.Printf("  %s --config /path/to/halko.cfg status\n", os.Args[0])
+	fmt.Printf("  %s --verbose status\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("The status will be retrieved from the executor's GET /engine/api/v1/running endpoint.")
 }
