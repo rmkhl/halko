@@ -174,7 +174,7 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.PowerUnit.Port <= 0 {
 		return errors.New("power unit port is required and must be positive")
 	}
-	if c.PowerUnit.PowerMapping == nil || len(c.PowerUnit.PowerMapping) == 0 {
+	if len(c.PowerUnit.PowerMapping) == 0 {
 		return errors.New("power unit power mapping is required")
 	}
 

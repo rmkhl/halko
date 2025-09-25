@@ -29,12 +29,12 @@ func TestConfigReading(t *testing.T) {
 		t.Error("TickLength should not be zero")
 	}
 
-	// Validate URLs
-	if config.ExecutorConfig.SensorUnitURL == "" {
-		t.Error("SensorUnitURL should not be empty")
+	// Validate host addresses
+	if config.ExecutorConfig.SensorUnitHost == "" {
+		t.Error("SensorUnitHost should not be empty")
 	}
-	if config.ExecutorConfig.PowerUnitURL == "" {
-		t.Error("PowerUnitURL should not be empty")
+	if config.ExecutorConfig.PowerUnitHost == "" {
+		t.Error("PowerUnitHost should not be empty")
 	}
 	if config.ExecutorConfig.StatusMessageURL == "" {
 		t.Error("StatusMessageURL should not be empty")

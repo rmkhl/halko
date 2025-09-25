@@ -10,7 +10,7 @@ import (
 )
 
 func listAllRuns(storage *storage.FileStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		var savedPrograms []types.RunHistory
 
 		programs, err := storage.ListExecutedPrograms()

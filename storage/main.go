@@ -47,7 +47,7 @@ func main() {
 
 	// Use storage config from configuration
 	storageBasePath := "/tmp/halko" // Default fallback
-	port := 8091                   // Default port
+	port := 8091                    // Default port
 
 	if configuration.StorageConfig != nil {
 		if configuration.StorageConfig.BasePath != "" {

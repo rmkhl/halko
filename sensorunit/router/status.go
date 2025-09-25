@@ -32,7 +32,7 @@ func (api *API) setStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // getStatus handles GET requests to check the connection status
-func (api *API) getStatus(w http.ResponseWriter, r *http.Request) {
+func (api *API) getStatus(w http.ResponseWriter, _ *http.Request) {
 	isConnected := api.sensorUnit.IsConnected()
 
 	status := types.SensorStatusConnected

@@ -13,7 +13,7 @@ import (
 )
 
 func getCurrentProgram(engine *engine.ControlEngine) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		currentStatus := engine.CurrentStatus()
 		if currentStatus == nil {
 			writeError(w, http.StatusNoContent, "No program running")
@@ -69,7 +69,7 @@ func startNewProgram(engine *engine.ControlEngine) http.HandlerFunc {
 }
 
 func cancelRunningProgram(engine *engine.ControlEngine) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		err := engine.StopEngine()
 		if err != nil {
 			writeError(w, http.StatusNotFound, err.Error())

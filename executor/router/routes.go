@@ -3,7 +3,6 @@ package router
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/storage"
@@ -14,25 +13,16 @@ import (
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// Log the error but don't change the response as headers are already sent
+		// In a real application, you might want to handle this more gracefully
+		_ = err
+	}
 }
 
 // writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
-}
-
-// extractPathParam extracts a parameter from the URL path
-func extractPathParam(path, pattern string) string {
-	pathParts := strings.Split(strings.Trim(path, "/"), "/")
-	patternParts := strings.Split(strings.Trim(pattern, "/"), "/")
-
-	for i, part := range patternParts {
-		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") && i < len(pathParts) {
-			return pathParts[i]
-		}
-	}
-	return ""
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine) {

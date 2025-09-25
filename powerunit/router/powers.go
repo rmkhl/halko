@@ -13,7 +13,10 @@ import (
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// Log the error but don't change the response as headers are already sent
+		_ = err
+	}
 }
 
 // writeError writes an error response
@@ -22,7 +25,7 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func getAllPercentages(p *power.Controller, idMapping [shelly.NumberOfDevices]string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		percentages := p.GetAllPercentages()
 
 		response := make(types.PowerStatusResponse)

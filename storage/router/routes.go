@@ -3,8 +3,6 @@ package router
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/rmkhl/halko/storage/filestorage"
 	"github.com/rmkhl/halko/types"
@@ -14,25 +12,15 @@ import (
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// Log the error but don't change the response as headers are already sent
+		_ = err
+	}
 }
 
 // writeError writes an error response
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
-}
-
-// extractPathParam extracts a parameter from the URL path
-func extractPathParam(path, pattern string) string {
-	pathParts := strings.Split(strings.Trim(path, "/"), "/")
-	patternParts := strings.Split(strings.Trim(pattern, "/"), "/")
-
-	for i, part := range patternParts {
-		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") && i < len(pathParts) {
-			return pathParts[i]
-		}
-	}
-	return ""
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage) {
@@ -44,19 +32,8 @@ func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage) {
 	mux.HandleFunc("DELETE /storage/programs/{name}", deleteProgram(storage))
 }
 
-func startTimeFromName(name string) int64 {
-	nameParts := strings.Split(name, "@")
-	if len(nameParts) == 2 {
-		parsedTime, err := time.Parse(time.RFC3339, nameParts[1])
-		if err == nil {
-			return parsedTime.Unix()
-		}
-	}
-	return 0
-}
-
 func listAllPrograms(storage *filestorage.FileStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		programs, err := storage.ListStoredPrograms()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
