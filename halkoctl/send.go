@@ -20,8 +20,6 @@ func handleSendCommand() {
 
 	var (
 		programPath = sendFlags.String("program", "", "Path to the program.json file to send (required)")
-		host        = sendFlags.String("host", "localhost", "Executor host (default: localhost)")
-		port        = sendFlags.String("port", "8080", "Executor port (default: 8080)")
 		verbose     = sendFlags.Bool("verbose", false, "Enable verbose output")
 		help        = sendFlags.Bool("help", false, "Show help for send command")
 	)
@@ -43,14 +41,17 @@ func handleSendCommand() {
 		os.Exit(exitError)
 	}
 
+	// Get the executor URL from config
+	url := getExecutorAPIURL(globalConfig)
+
 	if *verbose {
 		fmt.Printf("Sending program: %s\n", *programPath)
-		fmt.Printf("Executor endpoint: http://%s:%s/engine/api/v1/running\n", *host, *port)
+		fmt.Printf("Executor endpoint: %s\n", url)
 		fmt.Println()
 	}
 
 	// Send the program
-	err := sendProgram(*programPath, *host, *port, *verbose)
+	err := sendProgram(*programPath, url, *verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to send program: %v\n", err)
 		os.Exit(exitError)
@@ -88,7 +89,7 @@ func showSendHelp() {
 	fmt.Println("to start immediate execution. The executor will validate the program.")
 }
 
-func sendProgram(programPath, host, port string, verbose bool) error {
+func sendProgram(programPath, executorURL string, verbose bool) error {
 	// Check if file exists
 	if _, err := os.Stat(programPath); os.IsNotExist(err) {
 		return fmt.Errorf("program file does not exist: %s", programPath)
@@ -145,7 +146,7 @@ func sendProgram(programPath, host, port string, verbose bool) error {
 	}
 
 	// Construct the URL
-	url := fmt.Sprintf("http://%s:%s/engine/api/v1/running", host, port)
+	url := executorURL + "/engine/api/v1/running"
 
 	// Create the HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))

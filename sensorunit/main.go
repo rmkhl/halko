@@ -38,7 +38,7 @@ func main() {
 	}
 
 	// Load configuration
-	halkoConfig, err := types.ReadHalkoConfig(configPathValue)
+	halkoConfig, err := types.LoadConfig(configPathValue)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

@@ -16,8 +16,6 @@ func handleStatusCommand() {
 	statusFlags := flag.NewFlagSet("status", flag.ExitOnError)
 
 	var (
-		host    = statusFlags.String("host", "localhost", "Executor host (default: localhost)")
-		port    = statusFlags.String("port", "8080", "Executor port (default: 8080)")
 		verbose = statusFlags.Bool("verbose", false, "Enable verbose output")
 		help    = statusFlags.Bool("help", false, "Show help for status command")
 	)
@@ -33,13 +31,20 @@ func handleStatusCommand() {
 		os.Exit(exitSuccess)
 	}
 
+	// Get executor URL from config
+	executorURL := getExecutorAPIURL(globalConfig)
+	if executorURL == "" {
+		fmt.Fprintf(os.Stderr, "Error: Could not determine executor URL from config\n")
+		os.Exit(exitError)
+	}
+
 	if *verbose {
-		fmt.Printf("Querying executor status at: http://%s:%s/engine/api/v1/running\n", *host, *port)
+		fmt.Printf("Querying executor status at: %s/engine/api/v1/running\n", executorURL)
 		fmt.Println()
 	}
 
 	// Get the status
-	err := getStatus(*host, *port, *verbose)
+	err := getStatus(executorURL, *verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get status: %v\n", err)
 		os.Exit(exitError)
@@ -73,9 +78,9 @@ func showStatusHelp() {
 	fmt.Println("The status will be retrieved from the executor's GET /engine/api/v1/running endpoint.")
 }
 
-func getStatus(host, port string, verbose bool) error {
+func getStatus(executorURL string, verbose bool) error {
 	if verbose {
-		fmt.Printf("Querying status from: %s:%s\n", host, port)
+		fmt.Printf("Querying status from: %s\n", executorURL)
 	}
 
 	// Create HTTP client with timeout
@@ -84,7 +89,7 @@ func getStatus(host, port string, verbose bool) error {
 	}
 
 	// Construct the URL
-	url := fmt.Sprintf("http://%s:%s/engine/api/v1/running", host, port)
+	url := executorURL + "/engine/api/v1/running"
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)

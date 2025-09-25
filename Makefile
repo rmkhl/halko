@@ -1,4 +1,4 @@
-MODULES = executor powerunit simulator sensorunit validator halkoctl
+MODULES = executor powerunit simulator sensorunit halkoctl
 BINDIR = bin
 
 .PHONY: all
@@ -84,10 +84,10 @@ update-modules:
 
 .PHONY: install
 install: clean all
-	@echo "Installing binaries to /opt/halko (excluding simulator and validator)..."
+	@echo "Installing binaries to /opt/halko (excluding simulator)..."
 	sudo install -d /opt/halko
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ] && [ "$$bin" != "validator" ]; then \
+		if [ "$$bin" != "simulator" ]; then \
 			sudo install -m 755 $(BINDIR)/$$bin /opt/halko/; \
 		fi; \
 	done
@@ -104,9 +104,9 @@ install: clean all
 
 .PHONY: systemd-units
 systemd-units: install
-	@echo "Creating and installing systemd unit files for all binaries except simulator and validator..."
+	@echo "Creating and installing systemd unit files for all binaries except simulator..."
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ] && [ "$$bin" != "validator" ]; then \
+		if [ "$$bin" != "simulator" ]; then \
 			sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
 			sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
 			sudo systemctl daemon-reload; \
@@ -160,12 +160,12 @@ validate:
 		echo "Example: make validate PROGRAM=example/example-program-delta.json"; \
 		exit 1; \
 	fi
-	@if [ ! -f $(BINDIR)/validator ]; then \
-		echo "Building validator..."; \
-		$(MAKE) $(BINDIR)/validator; \
+	@if [ ! -f $(BINDIR)/halkoctl ]; then \
+		echo "Building halkoctl..."; \
+		$(MAKE) $(BINDIR)/halkoctl; \
 	fi
 	@echo "Validating program: $(PROGRAM)"
-	@$(BINDIR)/validator -program $(PROGRAM) -verbose
+	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
 
 .PHONY: help
 help:

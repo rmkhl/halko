@@ -2,8 +2,11 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type (
@@ -43,7 +46,52 @@ type (
 	}
 )
 
-func ReadHalkoConfig(path string) (*HalkoConfig, error) {
+// LoadConfig loads the halko configuration from the specified path or finds it in default locations
+func LoadConfig(configPath string) (*HalkoConfig, error) {
+	// If no config path provided, try to find default location
+	if configPath == "" {
+		configPath = findDefaultConfigPath()
+		if configPath == "" {
+			return nil, errors.New("no config file specified and none found in default locations")
+		}
+	}
+
+	config, err := readHalkoConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file %s: %w", configPath, err)
+	}
+
+	return config, nil
+}
+
+// findDefaultConfigPath searches for halko.cfg in common locations
+func findDefaultConfigPath() string {
+	possiblePaths := []string{
+		"halko.cfg",
+		"/etc/halko/halko.cfg",
+		"/var/opt/halko/halko.cfg",
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	// Try to find halko.cfg relative to the executable
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		configPath := filepath.Join(exeDir, "halko.cfg")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath
+		}
+	}
+
+	return ""
+}
+
+// readHalkoConfig reads the halko configuration from the specified path (private function)
+func readHalkoConfig(path string) (*HalkoConfig, error) {
 	jsonFile, err := os.Open(path)
 	if err != nil {
 		return nil, err

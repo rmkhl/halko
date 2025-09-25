@@ -26,7 +26,7 @@ func main() {
 	flag.StringVar(&configFileName, "c", "/etc/opt/halko.cfg", "Specify config file. Default is /etc/opt/halko.cfg")
 	flag.Parse()
 
-	configuration, err := types.ReadHalkoConfig(configFileName)
+	configuration, err := types.LoadConfig(configFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
