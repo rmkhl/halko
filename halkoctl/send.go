@@ -78,7 +78,7 @@ func showSendHelp() {
 	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json\n", os.Args[0])
 	fmt.Printf("  %s --verbose send my-program.json\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The program will be sent to the executor's POST /engine/api/v1/running endpoint")
+	fmt.Println("The program will be sent to the executor's POST /engine/running endpoint")
 	fmt.Println("to start immediate execution. The executor will validate the program.")
 }
 
@@ -139,7 +139,7 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 	}
 
 	// Construct the URL
-	url := executorURL + "/engine/api/v1/running"
+	url := executorURL + "/engine/running"
 
 	// Create the HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))

@@ -31,7 +31,7 @@ type (
 func newPSUController(config *types.ExecutorConfig) (*psuController, error) {
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURL: config.PowerUnitURL + "/api/v1/powers",
+		powerControlURL: config.PowerUnitURL + "/powers",
 	}, nil
 }
 

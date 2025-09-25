@@ -5,7 +5,7 @@ component of the Halko wood drying kiln control system.
 
 ## 1. SensorUnit API
 
-Base Path: `/sensors/api/v1`
+Base Path: `/sensors`
 
 ### Temperature Endpoints
 
@@ -79,7 +79,7 @@ Updates the status text displayed on the sensor unit's LCD.
 
 ## 2. PowerUnit API
 
-Base Path: `/powers/api/v1`
+Base Path: `/powers`
 
 ### GET `/`
 
@@ -151,7 +151,7 @@ Operates a specific power channel.
 
 ## 3. Executor API
 
-Base Path: `/engine/api/v1`
+Base Path: `/engine`
 
 ### Program Storage Endpoints
 
@@ -305,7 +305,7 @@ The simulator mimics endpoints from the SensorUnit and Shelly devices.
 
 ### Simulated SensorUnit API
 
-Base Path: `/sensors/api/v1`
+Base Path: `/sensors`
 
 #### Simulated GET `/temperatures`
 

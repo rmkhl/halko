@@ -31,7 +31,7 @@ func handleStatusCommand() {
 	}
 
 	if globalOpts.Verbose {
-		fmt.Printf("Querying executor status at: %s/engine/api/v1/running\n", executorURL)
+		fmt.Printf("Querying executor status at: %s/engine/running\n", executorURL)
 		fmt.Println()
 	}
 
@@ -68,7 +68,7 @@ func showStatusHelp() {
 	fmt.Printf("  %s --config /path/to/halko.cfg status\n", os.Args[0])
 	fmt.Printf("  %s --verbose status\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The status will be retrieved from the executor's GET /engine/api/v1/running endpoint.")
+	fmt.Println("The status will be retrieved from the executor's GET /engine/running endpoint.")
 }
 
 func getStatus(executorURL string, verbose bool) error {
@@ -82,7 +82,7 @@ func getStatus(executorURL string, verbose bool) error {
 	}
 
 	// Construct the URL
-	url := executorURL + "/engine/api/v1/running"
+	url := executorURL + "/engine/running"
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)

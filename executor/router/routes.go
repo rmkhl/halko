@@ -7,24 +7,22 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, storage *storage.FileStorage, engine *engine.ControlEngine) {
-	engineAPI := r.Group("engine/api")
-	engineAPIV1 := engineAPI.Group("v1")
+	engineGroup := r.Group("engine")
 
-	runStorage := engineAPIV1.Group("programs")
+	runStorage := engineGroup.Group("programs")
 	runStorage.GET("", listAllRuns(storage))
 	runStorage.GET(":name", getRun(storage))
 	runStorage.DELETE(":name", deleteRun(storage))
 
-	engineControl := engineAPIV1.Group("running")
+	engineControl := engineGroup.Group("running")
 	engineControl.GET("", getCurrentProgram(engine))
 	engineControl.POST("", startNewProgram(engine))
 	engineControl.DELETE("", cancelRunningProgram(engine))
 
-	storageAPI := r.Group("storage/api")
-	storageAPIV1 := storageAPI.Group("v1")
-	storageAPIV1.GET("programs", listAllPrograms(storage))
-	storageAPIV1.GET("programs/:name", getProgram(storage))
-	storageAPIV1.POST("programs", createProgram(storage, engine))
-	storageAPIV1.POST("programs/:name", updateProgram(storage, engine))
-	storageAPIV1.DELETE("programs/:name", deleteProgram(storage))
+	storageGroup := r.Group("storage")
+	storageGroup.GET("programs", listAllPrograms(storage))
+	storageGroup.GET("programs/:name", getProgram(storage))
+	storageGroup.POST("programs", createProgram(storage, engine))
+	storageGroup.POST("programs/:name", updateProgram(storage, engine))
+	storageGroup.DELETE("programs/:name", deleteProgram(storage))
 }

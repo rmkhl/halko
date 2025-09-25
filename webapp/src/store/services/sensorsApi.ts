@@ -4,7 +4,7 @@ import { fetchSingleQuery } from "./queryBuilders";
 export const sensorApi = createApi({
   reducerPath: "sensorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8088/sensors/api/v1",
+    baseUrl: "http://localhost:8088/sensors",
   }),
   endpoints: (builder) => ({
     getTemperatures: builder.query({
