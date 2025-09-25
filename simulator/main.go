@@ -15,13 +15,10 @@ import (
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
 	"github.com/rmkhl/halko/simulator/router"
-	"github.com/rmkhl/halko/types"
 )
 
 func main() {
 	var wg sync.WaitGroup
-
-	opts := types.ParseSimulatorOptions()
 
 	fan := elements.NewPower("Fan")
 	humidifier := elements.NewPower("Humidifier")
@@ -37,19 +34,36 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	server := gin.Default()
-	server.Use(cors.New(cors.Config{
+	// Sensor unit emulation on port 8088
+	sensorServer := gin.Default()
+	sensorServer.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"http://localhost:1234"},
+		AllowMethods:  []string{"GET", "POST"},
+		AllowHeaders:  []string{"Origin", "Content-Type"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge:        12 * time.Hour,
+	}))
+	router.SetupSensorRoutes(sensorServer, temperatureSensors)
+
+	sensorSrv := &http.Server{
+		Addr:    ":8088",
+		Handler: sensorServer,
+	}
+
+	// Shelly device emulation on port 8087
+	shellyServer := gin.Default()
+	shellyServer.Use(cors.New(cors.Config{
 		AllowOrigins:  []string{"http://localhost:1234"},
 		AllowMethods:  []string{"GET"},
 		AllowHeaders:  []string{"Origin", "Content-Type"},
 		ExposeHeaders: []string{"Content-Length"},
 		MaxAge:        12 * time.Hour,
 	}))
-	router.SetupRoutes(server, temperatureSensors, shellyControls)
+	router.SetupShellyRoutes(shellyServer, shellyControls)
 
-	srv := &http.Server{
-		Addr:    ":" + opts.Port,
-		Handler: server,
+	shellySrv := &http.Server{
+		Addr:    ":8087",
+		Handler: shellyServer,
 	}
 
 	wg.Add(1)
@@ -72,9 +86,16 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("Server running on port %s", opts.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error starting server: %s", err)
+		log.Println("Starting sensor unit server on port 8088")
+		if err := sensorSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error starting sensor server: %s", err)
+		}
+	}()
+
+	go func() {
+		log.Println("Starting Shelly device server on port 8087")
+		if err := shellySrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Error starting Shelly server: %s", err)
 		}
 	}()
 
@@ -86,8 +107,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
+	if err := sensorSrv.Shutdown(ctx); err != nil {
+		log.Printf("Sensor server forced to shutdown: %v", err)
+	}
+	if err := shellySrv.Shutdown(ctx); err != nil {
+		log.Printf("Shelly server forced to shutdown: %v", err)
 	}
 
 	log.Println("Waiting for simulation to complete...")

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rmkhl/halko/types"
 )
 
 type PowerInfo interface {
@@ -30,18 +29,16 @@ func readSwitchStatus(powers map[int8]interface{}) gin.HandlerFunc {
 			if powerInfo, ok := power.(PowerInfo); ok {
 				_, turnedOn := powerInfo.Info()
 
-				ctx.JSON(http.StatusOK, types.ShellySwitchGetStatusResponse{
-					ID:     strconv.Itoa(id),
-					Source: "HTTP_in",
-					Output: turnedOn,
-					Temperature: struct {
-						TC float32 `json:"tC"`
-						TF float32 `json:"tF"`
-					}{
-						TC: 20.0,
-						TF: 68.0,
-					},
-				})
+				response := struct {
+					Code    int  `json:"code"`
+					Message string `json:"message"`
+					Output  bool `json:"output"`
+				}{
+					Code:    0,
+					Message: "",
+					Output:  turnedOn,
+				}
+				ctx.JSON(http.StatusOK, response)
 			} else {
 				ctx.String(http.StatusInternalServerError, "Switch %d does not implement required interface", id)
 			}
@@ -72,24 +69,23 @@ func setSwitchState(powers map[int8]interface{}) gin.HandlerFunc {
 		}
 
 		if power, exists := powers[int8(id)]; exists {
-			if powerInfo, ok := power.(PowerInfo); ok {
-				_, previousState := powerInfo.Info()
+			if switcher, ok := power.(interface{ SwitchTo(bool) }); ok {
+				newState := turnOn == "true"
 
-				if switcher, ok := power.(interface{ SwitchTo(bool) }); ok {
-					newState := turnOn == "true"
+				switcher.SwitchTo(newState)
 
-					switcher.SwitchTo(newState)
-
-					wasOn := previousState
-
-					ctx.JSON(http.StatusOK, types.ShellySwitchSetResponse{
-						WasOn: wasOn,
-					})
-				} else {
-					ctx.String(http.StatusInternalServerError, "Switch %d does not support state changes", id)
+				response := struct {
+					Code    int  `json:"code"`
+					Message string `json:"message"`
+					Output  bool `json:"output"`
+				}{
+					Code:    0,
+					Message: "",
+					Output:  newState,
 				}
+				ctx.JSON(http.StatusOK, response)
 			} else {
-				ctx.String(http.StatusInternalServerError, "Switch %d does not implement required interface", id)
+				ctx.String(http.StatusInternalServerError, "Switch %d does not support state changes", id)
 			}
 		} else {
 			ctx.String(http.StatusNotFound, "Switch %d not found", id)

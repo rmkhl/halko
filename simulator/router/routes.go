@@ -8,17 +8,18 @@ import (
 type Router struct{}
 
 func SetupRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor, shellyControls map[int8]interface{}) {
+	SetupSensorRoutes(r, temperatureSensors)
+	SetupShellyRoutes(r, shellyControls)
+}
+
+func SetupSensorRoutes(r *gin.Engine, temperatureSensors map[string]engine.TemperatureSensor) {
 	router := &Router{}
-	sensorAPI := r.Group("sensors/api")
-	sensorAPIV1 := sensorAPI.Group("v1")
+	r.GET("/temperatures", readAllTemperatureSensors(temperatureSensors))
+	r.GET("/status", router.getStatus)
+	r.POST("/status", router.setStatus)
+}
 
-	tempSensors := sensorAPIV1.Group("temperatures")
-	tempSensors.GET("", readAllTemperatureSensors(temperatureSensors))
-
-	statusAPI := sensorAPIV1.Group("status")
-	statusAPI.GET("", router.getStatus)
-	statusAPI.POST("", router.setStatus)
-
+func SetupShellyRoutes(r *gin.Engine, shellyControls map[int8]interface{}) {
 	shellyAPI := r.Group("rpc")
 	shellyRead := shellyAPI.Group("Switch.GetStatus")
 	shellyRead.GET("", readSwitchStatus(shellyControls))
