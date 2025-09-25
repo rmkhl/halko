@@ -1,14 +1,13 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
 )
 
-func setupRoutes(r *gin.Engine, p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) {
-	powers := r.Group("powers")
-
-	powers.GET("", getAllPercentages(p, idMapping))
-	powers.POST("", setAllPercentages(p, powerMapping))
+func setupRoutes(mux *http.ServeMux, p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string) {
+	mux.HandleFunc("GET /powers", getAllPercentages(p, idMapping))
+	mux.HandleFunc("POST /powers", setAllPercentages(p, powerMapping))
 }

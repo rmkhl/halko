@@ -1,7 +1,8 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
 	"github.com/rmkhl/halko/sensorunit/serial"
 )
 
@@ -17,27 +18,33 @@ func NewAPI(sensorUnit *serial.SensorUnit) *API {
 	}
 }
 
-// SetupRouter configures the Gin router with the API routes
-func SetupRouter(api *API) *gin.Engine {
-	router := gin.Default()
+// SetupRouter configures the HTTP router with the API routes
+func SetupRouter(api *API) http.Handler {
+	mux := http.NewServeMux()
 
-	// Add CORS headers
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+	// Setup routes
+	SetupRoutes(mux, api)
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+	// Add CORS middleware wrapper
+	return addCORSHeaders(mux)
+}
+
+// addCORSHeaders wraps the mux with CORS headers
+func addCORSHeaders(mux *http.ServeMux) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		c.Next()
+		// Forward to original mux
+		mux.ServeHTTP(w, r)
 	})
-
-	// Setup routes
-	SetupRoutes(router, api) // New grouped setup
-
-	return router
 }

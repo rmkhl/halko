@@ -1,22 +1,30 @@
 package router
 
 import (
+	"encoding/json"
 	"log"
-
 	"net/http"
 
 	"github.com/rmkhl/halko/types"
-
-	"github.com/gin-gonic/gin"
 )
 
+// writeJSON writes a JSON response
+func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+// writeError writes an error response
+func writeError(w http.ResponseWriter, statusCode int, message string) {
+	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
+}
+
 // getTemperatures handles GET requests to fetch temperature data
-func (api *API) getTemperatures(c *gin.Context) {
+func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 	temperatures, err := api.sensorUnit.GetTemperatures()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, types.APIErrorResponse{
-			Err: err.Error(),
-		})
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -60,7 +68,7 @@ func (api *API) getTemperatures(c *gin.Context) {
 		log.Println("Wood temperature reading is invalid.")
 	}
 
-	c.JSON(http.StatusOK, types.APIResponse[types.TemperatureResponse]{
+	writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
 		Data: response,
 	})
 }
