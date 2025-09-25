@@ -27,29 +27,15 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	serialDevice := "/dev/ttyUSB0"
-	baudRate := 9600
-	port := 8089
+	serialDevice := halkoConfig.SensorUnit.SerialDevice
+	baudRate := halkoConfig.SensorUnit.BaudRate
 
-	// Extract sensorunit specific configuration if available
-	if halkoConfig.SensorUnit != nil {
-		if halkoConfig.SensorUnit.SerialDevice != "" {
-			serialDevice = halkoConfig.SensorUnit.SerialDevice
-		}
-		if halkoConfig.SensorUnit.BaudRate != 0 {
-			baudRate = halkoConfig.SensorUnit.BaudRate
-		}
-	}
-
-	if halkoConfig.ExecutorConfig != nil && halkoConfig.ExecutorConfig.SensorUnitURL != "" {
-		parts := strings.Split(halkoConfig.ExecutorConfig.SensorUnitURL, ":")
-		if len(parts) == 3 {
-			var extractedPort int
-			_, err := fmt.Sscanf(parts[2], "%d", &extractedPort)
-			if err == nil {
-				port = extractedPort
-			}
-		}
+	// Extract port from executor config
+	parts := strings.Split(halkoConfig.ExecutorConfig.SensorUnitURL, ":")
+	var port int
+	_, err = fmt.Sscanf(parts[2], "%d", &port)
+	if err != nil {
+		log.Fatalf("Failed to parse port from sensor unit URL: %v", err)
 	}
 
 	sensorUnit, err := serial.NewSensorUnit(serialDevice, baudRate)

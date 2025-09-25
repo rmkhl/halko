@@ -55,10 +55,7 @@ func main() {
 	}))
 	router.SetupRoutes(server, storage, engine)
 
-	port := 8089
-	if configuration.ExecutorConfig.Port > 0 {
-		port = configuration.ExecutorConfig.Port
-	}
+	port := configuration.ExecutorConfig.Port
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
