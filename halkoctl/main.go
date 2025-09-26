@@ -43,6 +43,9 @@ func main() {
 			case "validate":
 				showValidateHelp()
 				os.Exit(exitSuccess)
+			case "display":
+				showDisplayHelp()
+				os.Exit(exitSuccess)
 			}
 		}
 	}
@@ -65,6 +68,8 @@ func main() {
 		handleStatusCommand()
 	case "validate":
 		handleValidateCommand()
+	case "display":
+		handleDisplayCommand()
 	case "help", "-help", helpFlag:
 		showHelp()
 		os.Exit(exitSuccess)

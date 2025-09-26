@@ -30,6 +30,12 @@ type ValidateOptions struct {
 	ProgramPath string // Path to the program.json file (positional argument)
 }
 
+// DisplayOptions represents options specific to the display command
+type DisplayOptions struct {
+	CommonOptions
+	Message string // Text message to display (positional argument)
+}
+
 // ParseGlobalOptions parses global options from command line arguments
 // Returns the parsed options and the index where the command starts
 func ParseGlobalOptions() (*types.GlobalOptions, int) {
@@ -132,6 +138,26 @@ func ParseValidateOptions() (*ValidateOptions, error) {
 	args := validateFlags.Args()
 	if len(args) > 0 {
 		opts.ProgramPath = args[0]
+	}
+
+	return opts, nil
+}
+
+// ParseDisplayOptions parses command-line options for the display command
+func ParseDisplayOptions() (*DisplayOptions, error) {
+	opts := &DisplayOptions{}
+	displayFlags := flag.NewFlagSet("display", flag.ExitOnError)
+
+	SetupCommonFlags(displayFlags, &opts.CommonOptions)
+
+	if err := displayFlags.Parse(os.Args[2:]); err != nil {
+		return nil, err
+	}
+
+	// Get the message text from remaining arguments
+	args := displayFlags.Args()
+	if len(args) > 0 {
+		opts.Message = args[0]
 	}
 
 	return opts, nil
