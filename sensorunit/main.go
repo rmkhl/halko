@@ -25,6 +25,9 @@ func main() {
 	}
 	log.Trace("Global options parsed successfully")
 
+	// Apply log level from command line
+	opts.ApplyLogLevel()
+
 	log.Trace("Loading configuration from %s", opts.ConfigPath)
 	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {

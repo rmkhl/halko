@@ -11,11 +11,11 @@ import (
 type LogLevel int
 
 const (
-	TRACE LogLevel = iota
-	DEBUG
-	INFO
+	ERROR LogLevel = iota
 	WARN
-	ERROR
+	INFO
+	DEBUG
+	TRACE
 )
 
 var (
@@ -47,17 +47,17 @@ func SetLevel(l LogLevel) {
 	warnLog = nullLog
 	errorLog = log.New(output, "[ERROR] ", log.LstdFlags)
 
-	if l <= TRACE {
-		traceLog = log.New(output, "[TRACE] ", log.LstdFlags)
+	if l >= WARN {
+		warnLog = log.New(output, "[WARN]  ", log.LstdFlags)
 	}
-	if l <= DEBUG {
-		debugLog = log.New(output, "[DEBUG] ", log.LstdFlags)
-	}
-	if l <= INFO {
+	if l >= INFO {
 		infoLog = log.New(output, "[INFO]  ", log.LstdFlags)
 	}
-	if l <= WARN {
-		warnLog = log.New(output, "[WARN]  ", log.LstdFlags)
+	if l >= DEBUG {
+		debugLog = log.New(output, "[DEBUG] ", log.LstdFlags)
+	}
+	if l >= TRACE {
+		traceLog = log.New(output, "[TRACE] ", log.LstdFlags)
 	}
 }
 
