@@ -55,23 +55,17 @@ func main() {
 		defer sensorUnit.Close()
 	}
 
-	log.Trace("Creating API instance")
 	api := router.NewAPI(sensorUnit)
-	log.Trace("Setting up HTTP router")
 	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
-
-	log.Trace("Creating HTTP server on port %d", halkoConfig.SensorUnit.Port)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", halkoConfig.SensorUnit.Port),
 		Handler: r,
 	}
-
-	log.Trace("Setting up signal handling for graceful shutdown")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
-		log.Info("Sensorunit HTTP server starting on port %d", port)
+		log.Info("Sensorunit HTTP server starting on port %d", halkoConfig.SensorUnit.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server: %s", err)
 		}

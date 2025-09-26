@@ -26,12 +26,11 @@ var (
 
 func NewEngine(halkoConfig *types.HalkoConfig, storage *storage.FileStorage, endpoints *types.APIEndpoints) *ControlEngine {
 	engine := ControlEngine{
-		config:      halkoConfig.ExecutorConfig,
 		halkoConfig: halkoConfig,
 		runner:      nil,
 		storage:     storage,
-		endpoints: endpoints,
-		wg:        new(sync.WaitGroup),
+		endpoints:   endpoints,
+		wg:          new(sync.WaitGroup),
 	}
 
 	return &engine

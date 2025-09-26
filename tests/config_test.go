@@ -9,6 +9,8 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
+const testHost = "localhost"
+
 func TestConfigReading(t *testing.T) {
 	// Test reading the template configuration file
 	// LoadConfig already validates the configuration, so we just need to ensure it loads successfully
@@ -140,10 +142,10 @@ func TestServiceEndpointEmbedding(t *testing.T) {
 		actualHost   string
 		actualPort   int
 	}{
-		{"ExecutorConfig", "localhost", 8090, config.ExecutorConfig.Host, config.ExecutorConfig.Port},
-		{"PowerUnit", "localhost", 8092, config.PowerUnit.Host, config.PowerUnit.Port},
-		{"SensorUnit", "localhost", 8093, config.SensorUnit.Host, config.SensorUnit.Port},
-		{"StorageConfig", "localhost", 8091, config.StorageConfig.Host, config.StorageConfig.Port},
+		{"ExecutorConfig", testHost, 8090, config.ExecutorConfig.Host, config.ExecutorConfig.Port},
+		{"PowerUnit", testHost, 8092, config.PowerUnit.Host, config.PowerUnit.Port},
+		{"SensorUnit", testHost, 8093, config.SensorUnit.Host, config.SensorUnit.Port},
+		{"StorageConfig", testHost, 8091, config.StorageConfig.Host, config.StorageConfig.Port},
 	}
 
 	for _, tt := range tests {
@@ -158,7 +160,7 @@ func TestServiceEndpointEmbedding(t *testing.T) {
 	}
 }
 
-func TestGetBaseUrl(t *testing.T) {
+func TestGetBaseURL(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
 	config, err := types.LoadConfig(configPath)
@@ -180,7 +182,7 @@ func TestGetBaseUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.service), func(t *testing.T) {
-			url, err := config.GetBaseUrl(tt.service)
+			url, err := config.GetBaseURL(tt.service)
 
 			if tt.expectError {
 				if err == nil {
@@ -198,7 +200,7 @@ func TestGetBaseUrl(t *testing.T) {
 	}
 }
 
-func TestGetBaseUrlHelperMethods(t *testing.T) {
+func TestGetBaseURLHelperMethods(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
 	config, err := types.LoadConfig(configPath)
@@ -211,10 +213,10 @@ func TestGetBaseUrlHelperMethods(t *testing.T) {
 		method      func() (string, error)
 		expectedURL string
 	}{
-		{"GetExecutorUrl", config.GetExecutorUrl, "http://localhost:8090"},
-		{"GetPowerUnitUrl", config.GetPowerUnitUrl, "http://localhost:8092"},
-		{"GetSensorUnitUrl", config.GetSensorUnitUrl, "http://localhost:8093"},
-		{"GetStorageUrl", config.GetStorageUrl, "http://localhost:8091"},
+		{"GetExecutorURL", config.GetExecutorURL, "http://localhost:8090"},
+		{"GetPowerUnitURL", config.GetPowerUnitURL, "http://localhost:8092"},
+		{"GetSensorUnitURL", config.GetSensorUnitURL, "http://localhost:8093"},
+		{"GetStorageURL", config.GetStorageURL, "http://localhost:8091"},
 	}
 
 	for _, tt := range tests {
@@ -277,10 +279,10 @@ func TestJSONMarshaling(t *testing.T) {
 	}
 
 	// Verify that the embedded ServiceEndpoint fields are preserved
-	if newConfig.ExecutorConfig.Host != "localhost" || newConfig.ExecutorConfig.Port != 8090 {
+	if newConfig.ExecutorConfig.Host != testHost || newConfig.ExecutorConfig.Port != 8090 {
 		t.Error("ExecutorConfig ServiceEndpoint fields not preserved after JSON round-trip")
 	}
-	if newConfig.PowerUnit.Host != "localhost" || newConfig.PowerUnit.Port != 8092 {
+	if newConfig.PowerUnit.Host != testHost || newConfig.PowerUnit.Port != 8092 {
 		t.Error("PowerUnit ServiceEndpoint fields not preserved after JSON round-trip")
 	}
 	if newConfig.SensorUnit.Host != "localhost" || newConfig.SensorUnit.Port != 8093 {

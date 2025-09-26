@@ -12,7 +12,7 @@ func getExecutorAPIURL(config *types.HalkoConfig) string {
 		return "http://localhost:8080"
 	}
 
-	url, err := config.GetExecutorUrl()
+	url, err := config.GetExecutorURL()
 	if err != nil {
 		// Fallback to default if there's an error
 		return "http://localhost:8080"

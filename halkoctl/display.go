@@ -157,7 +157,7 @@ func getSensorunitAPIURL(config *types.HalkoConfig) string {
 		return "http://localhost:8081"
 	}
 
-	url, err := config.GetSensorUnitUrl()
+	url, err := config.GetSensorUnitURL()
 	if err != nil {
 		// Fallback to default if there's an error
 		return "http://localhost:8081"

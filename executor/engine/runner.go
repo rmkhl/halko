@@ -53,7 +53,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.Fi
 		defaults:                   halkoConfig.ExecutorConfig.Defaults,
 	}
 
-	powerURL, err := halkoConfig.GetPowerUnitUrl()
+	powerURL, err := halkoConfig.GetPowerUnitURL()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
 	}
@@ -63,7 +63,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.Fi
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	sensorURL, err := halkoConfig.GetSensorUnitUrl()
+	sensorURL, err := halkoConfig.GetSensorUnitURL()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sensor unit URL: %w", err)
 	}

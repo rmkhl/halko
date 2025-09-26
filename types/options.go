@@ -11,9 +11,9 @@ import (
 
 // GlobalOptions represents options common to all modules (executor, powerunit, sensorunit, halkoctl)
 type GlobalOptions struct {
-	ConfigPath string        // Path to halko.cfg configuration file
-	Verbose    bool          // Enable verbose output
-	LogLevel   log.LogLevel  // Log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
+	ConfigPath string       // Path to halko.cfg configuration file
+	Verbose    bool         // Enable verbose output
+	LogLevel   log.LogLevel // Log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
 }
 
 // SimulatorOptions represents options specific to the simulator module

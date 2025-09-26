@@ -78,8 +78,8 @@ const (
 	ServiceStorage    ServiceType = "storage"
 )
 
-// GetBaseUrl returns the complete base URL for the specified service
-func (c *HalkoConfig) GetBaseUrl(service ServiceType) (string, error) {
+// GetBaseURL returns the complete base URL for the specified service
+func (c *HalkoConfig) GetBaseURL(service ServiceType) (string, error) {
 	switch service {
 	case ServiceExecutor:
 		return fmt.Sprintf("http://%s:%d", c.ExecutorConfig.Host, c.ExecutorConfig.Port), nil
@@ -94,24 +94,24 @@ func (c *HalkoConfig) GetBaseUrl(service ServiceType) (string, error) {
 	}
 }
 
-// GetExecutorUrl returns the complete base URL for the executor service
-func (c *HalkoConfig) GetExecutorUrl() (string, error) {
-	return c.GetBaseUrl(ServiceExecutor)
+// GetExecutorURL returns the complete base URL for the executor service
+func (c *HalkoConfig) GetExecutorURL() (string, error) {
+	return c.GetBaseURL(ServiceExecutor)
 }
 
-// GetPowerUnitUrl returns the complete base URL for the power unit service
-func (c *HalkoConfig) GetPowerUnitUrl() (string, error) {
-	return c.GetBaseUrl(ServicePowerUnit)
+// GetPowerUnitURL returns the complete base URL for the power unit service
+func (c *HalkoConfig) GetPowerUnitURL() (string, error) {
+	return c.GetBaseURL(ServicePowerUnit)
 }
 
-// GetSensorUnitUrl returns the complete base URL for the sensor unit service
-func (c *HalkoConfig) GetSensorUnitUrl() (string, error) {
-	return c.GetBaseUrl(ServiceSensorUnit)
+// GetSensorUnitURL returns the complete base URL for the sensor unit service
+func (c *HalkoConfig) GetSensorUnitURL() (string, error) {
+	return c.GetBaseURL(ServiceSensorUnit)
 }
 
-// GetStorageUrl returns the complete base URL for the storage service
-func (c *HalkoConfig) GetStorageUrl() (string, error) {
-	return c.GetBaseUrl(ServiceStorage)
+// GetStorageURL returns the complete base URL for the storage service
+func (c *HalkoConfig) GetStorageURL() (string, error) {
+	return c.GetBaseURL(ServiceStorage)
 }
 
 func LoadConfig(configPath string) (*HalkoConfig, error) {

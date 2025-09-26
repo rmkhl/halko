@@ -29,7 +29,7 @@ type (
 )
 
 func newPSUController(halkoConfig *types.HalkoConfig, endpoints *types.APIEndpoints) (*psuController, error) {
-	powerURL, err := halkoConfig.GetPowerUnitUrl()
+	powerURL, err := halkoConfig.GetPowerUnitURL()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
 	}
