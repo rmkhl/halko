@@ -25,27 +25,19 @@ func main() {
 	}
 	log.Trace("Global options parsed successfully")
 
-	// Apply log level from command line
 	opts.ApplyLogLevel()
+	log.Info("Sensorunit service starting")
 
 	log.Trace("Loading configuration from %s", opts.ConfigPath)
 	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatal("Failed to load configuration: %v", err)
 	}
-	log.Trace("Configuration loaded successfully")
+	log.Info("Configuration loaded from: %s", opts.ConfigPath)
 
 	serialDevice := halkoConfig.SensorUnit.SerialDevice
 	baudRate := halkoConfig.SensorUnit.BaudRate
 	log.Trace("Serial device configuration: device=%s, baudRate=%d", serialDevice, baudRate)
-
-	port := halkoConfig.SensorUnit.Port
-	if port == 0 {
-		port = 8093 // Default port
-		log.Trace("Using default port %d", port)
-	} else {
-		log.Trace("Using configured port %d", port)
-	}
 
 	log.Trace("Creating new sensor unit instance")
 	sensorUnit, err := serial.NewSensorUnit(serialDevice, baudRate)
@@ -54,14 +46,12 @@ func main() {
 	}
 	log.Trace("Sensor unit instance created successfully")
 
-	log.Trace("Attempting initial connection to sensor unit")
+	log.Info("Initializing sensor unit connection on device: %s (baud: %d)", serialDevice, baudRate)
 	if err := sensorUnit.Connect(); err != nil {
-		log.Warning("Failed to connect to sensor unit: %v", err)
-		log.Info("Will retry connection when handling requests")
-		log.Trace("Initial connection failed, continuing with startup")
+		log.Warning("Failed initial connection to sensor unit: %v", err)
+		log.Info("Sensor unit connection will be established on demand")
 	} else {
-		log.Info("Connected to sensor unit on %s", serialDevice)
-		log.Trace("Initial connection successful, deferring close")
+		log.Info("Sensor unit connected successfully on %s", serialDevice)
 		defer sensorUnit.Close()
 	}
 
@@ -70,9 +60,9 @@ func main() {
 	log.Trace("Setting up HTTP router")
 	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
 
-	log.Trace("Creating HTTP server on port %d", port)
+	log.Trace("Creating HTTP server on port %d", halkoConfig.SensorUnit.Port)
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    fmt.Sprintf(":%d", halkoConfig.SensorUnit.Port),
 		Handler: r,
 	}
 
@@ -81,15 +71,14 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
-		log.Info("Starting sensorunit service on port %d", port)
-		log.Trace("HTTP server listening and serving requests")
+		log.Info("Sensorunit HTTP server starting on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server: %s", err)
 		}
-		log.Trace("HTTP server stopped")
+		log.Info("HTTP server stopped")
 	}()
 
-	log.Trace("Waiting for shutdown signal")
+	log.Info("Sensorunit service ready - waiting for requests")
 	sig := <-sigs
 	log.Info("Shutdown signal received: %v", sig)
 
@@ -97,24 +86,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	log.Info("Shutting down HTTP server...")
-	log.Trace("Initiating graceful HTTP server shutdown")
+	log.Info("Initiating graceful shutdown...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Error("Server forced to shutdown: %v", err)
-		log.Trace("HTTP server shutdown completed with error")
+		log.Error("HTTP server forced shutdown: %v", err)
 	} else {
-		log.Trace("HTTP server shutdown completed successfully")
+		log.Info("HTTP server shutdown completed")
 	}
 
 	log.Info("Closing sensor unit connection...")
-	log.Trace("Closing sensor unit connection")
 	if err := sensorUnit.Close(); err != nil {
 		log.Error("Error closing sensor unit connection: %v", err)
-		log.Trace("Sensor unit connection closed with error")
 	} else {
-		log.Trace("Sensor unit connection closed successfully")
+		log.Info("Sensor unit connection closed")
 	}
 
-	log.Info("Sensorunit service exited gracefully")
+	log.Info("Sensorunit service shutdown complete")
 	log.Trace("Main function completed")
 }

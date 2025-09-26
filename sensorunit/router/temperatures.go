@@ -9,32 +9,29 @@ import (
 )
 
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
-	log.Trace("Writing JSON response with status code %d", statusCode)
+	log.Debug("HTTP Response: %d", statusCode)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Trace("Failed to encode JSON response: %v", err)
+		log.Error("Failed to encode JSON response: %v", err)
 		_ = err
-	} else {
-		log.Trace("JSON response written successfully")
 	}
 }
 
 func writeError(w http.ResponseWriter, statusCode int, message string) {
-	log.Trace("Writing error response: status=%d, message=%q", statusCode, message)
+	log.Debug("HTTP Error Response: %d - %s", statusCode, message)
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
-	log.Trace("Handling GET temperatures request")
-	log.Trace("Getting temperatures from sensor unit")
+func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Processing temperature request from %s", r.RemoteAddr)
 	temperatures, err := api.sensorUnit.GetTemperatures()
 	if err != nil {
-		log.Trace("Failed to get temperatures: %v", err)
+		log.Error("Failed to get temperatures from sensor unit: %v", err)
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	log.Trace("Retrieved %d temperature readings", len(temperatures))
+	log.Debug("Retrieved %d temperature readings from sensor unit", len(temperatures))
 
 	response := make(types.TemperatureResponse)
 
@@ -42,53 +39,50 @@ func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
 	var ovenSecondary float32
 
 	for _, temp := range temperatures {
-		log.Info("Temperature %s: %.2f", temp.Name, temp.Value)
-		log.Trace("Processing temperature reading: %s = %.2f", temp.Name, temp.Value)
 		switch temp.Name {
 		case "OvenPrimary":
 			ovenPrimary = temp.Value
-			log.Trace("Set oven primary temperature: %.2f", temp.Value)
 		case "OvenSecondary":
 			ovenSecondary = temp.Value
-			log.Trace("Set oven secondary temperature: %.2f", temp.Value)
 		case "Wood":
 			response["material"] = temp.Value
-			log.Trace("Set material temperature: %.2f", temp.Value)
 		}
 	}
+	log.Debug("Temperature readings processed: OvenPrimary=%.2f°C, OvenSecondary=%.2f°C, Material=%.2f°C",
+		ovenPrimary, ovenSecondary, response["material"])
 	// in case the primary or secondary temperature is not available we only use the other one
 	// if both are available we use the higher one
-	log.Trace("Processing oven temperature logic: primary=%.2f, secondary=%.2f", ovenPrimary, ovenSecondary)
+	var selectedOvenTemp string
 	switch {
 	case ovenPrimary != types.InvalidTemperatureReading && ovenSecondary != types.InvalidTemperatureReading:
 		if ovenPrimary > ovenSecondary {
 			response["oven"] = ovenPrimary
-			log.Trace("Using primary oven temperature (higher): %.2f", ovenPrimary)
+			selectedOvenTemp = "primary (higher)"
 		} else {
 			response["oven"] = ovenSecondary
-			log.Trace("Using secondary oven temperature (higher): %.2f", ovenSecondary)
+			selectedOvenTemp = "secondary (higher)"
 		}
 	case ovenPrimary != types.InvalidTemperatureReading:
-		log.Info("Secondary oven temperature reading is invalid.")
+		log.Warning("Secondary oven temperature reading is invalid, using primary only")
 		response["oven"] = ovenPrimary
-		log.Trace("Using only primary oven temperature: %.2f", ovenPrimary)
+		selectedOvenTemp = "primary only"
 	case ovenSecondary != types.InvalidTemperatureReading:
-		log.Info("Primary oven temperature reading is invalid.")
+		log.Warning("Primary oven temperature reading is invalid, using secondary only")
 		response["oven"] = ovenSecondary
-		log.Trace("Using only secondary oven temperature: %.2f", ovenSecondary)
+		selectedOvenTemp = "secondary only"
 	default:
-		log.Info("Oven temperature reading is invalid.")
+		log.Warning("Both oven temperature readings are invalid")
 		response["oven"] = types.InvalidTemperatureReading
-		log.Trace("Both oven temperatures invalid, setting to invalid reading")
+		selectedOvenTemp = "invalid"
 	}
 	if response["material"] == types.InvalidTemperatureReading {
-		log.Info("Wood temperature reading is invalid.")
-		log.Trace("Material temperature is invalid")
-	} else {
-		log.Trace("Material temperature is valid: %.2f", response["material"])
+		log.Warning("Material temperature reading is invalid")
 	}
 
-	log.Trace("Sending temperature response with %d values", len(response))
+	log.Debug("Temperature selection complete: oven=%.1f°C (%s), material=%.1f°C",
+		response["oven"], selectedOvenTemp, response["material"])
+
+	log.Debug("Returning temperature data: oven=%.1f°C, material=%.1f°C", response["oven"], response["material"])
 	writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
 		Data: response,
 	})
