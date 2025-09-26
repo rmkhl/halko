@@ -24,13 +24,13 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
-	mux.HandleFunc("GET "+endpoints.Programs, listAllRuns(storage))
-	mux.HandleFunc("GET "+endpoints.Programs+"/{name}", getRun(storage))
-	mux.HandleFunc("DELETE "+endpoints.Programs+"/{name}", deleteRun(storage))
+	mux.HandleFunc("GET "+endpoints.Executor.Programs, listAllRuns(storage))
+	mux.HandleFunc("GET "+endpoints.Executor.Programs+"/{name}", getRun(storage))
+	mux.HandleFunc("DELETE "+endpoints.Executor.Programs+"/{name}", deleteRun(storage))
 
-	mux.HandleFunc("GET "+endpoints.Running, getCurrentProgram(engine))
-	mux.HandleFunc("POST "+endpoints.Running, startNewProgram(engine))
-	mux.HandleFunc("DELETE "+endpoints.Running, cancelRunningProgram(engine))
+	mux.HandleFunc("GET "+endpoints.Executor.Running, getCurrentProgram(engine))
+	mux.HandleFunc("POST "+endpoints.Executor.Running, startNewProgram(engine))
+	mux.HandleFunc("DELETE "+endpoints.Executor.Running, cancelRunningProgram(engine))
 
 	// Note: /storage/ endpoints are now handled by the independent storage service
 }

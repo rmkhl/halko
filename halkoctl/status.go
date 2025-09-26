@@ -99,7 +99,13 @@ func getExecutorStatus(executorURL string, verbose bool) {
 		Timeout: 10 * time.Second,
 	}
 
-	url := executorURL + "/engine/running"
+	// Construct the full URL using the running endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.Executor.GetRunningURL()
+	} else {
+		url = executorURL + "/engine/running"
+	}
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)
@@ -137,11 +143,23 @@ func getExecutorStatus(executorURL string, verbose bool) {
 		fmt.Println()
 	}
 
+	// Handle 204 No Content - means no program is running
+	if resp.StatusCode == http.StatusNoContent {
+		fmt.Printf("Executor Status: idle (no program running)\n")
+		return
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		fmt.Printf("Executor Status: unavailable (HTTP %d)\n", resp.StatusCode)
 		if verbose && len(respBody) > 0 {
 			fmt.Printf("  Error: %s\n", strings.TrimSpace(string(respBody)))
 		}
+		return
+	}
+
+	// Only try to parse JSON if we have a body
+	if len(respBody) == 0 {
+		fmt.Printf("Executor Status: unavailable (empty response body)\n")
 		return
 	}
 
@@ -232,7 +250,13 @@ func getSensorUnitStatus(sensorUnitURL string, verbose bool) {
 		Timeout: 10 * time.Second,
 	}
 
-	url := sensorUnitURL + "/status"
+	// Construct the full URL using the status endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.SensorUnit.GetStatusURL()
+	} else {
+		url = sensorUnitURL + "/status"
+	}
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)

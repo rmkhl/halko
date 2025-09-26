@@ -9,6 +9,6 @@ import (
 )
 
 func setupRoutes(mux *http.ServeMux, p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string, endpoints *types.APIEndpoints) {
-	mux.HandleFunc("GET "+endpoints.Root, getAllPercentages(p, idMapping))
-	mux.HandleFunc("POST "+endpoints.Root, setAllPercentages(p, powerMapping))
+	mux.HandleFunc("GET "+endpoints.PowerUnit.Power, getAllPercentages(p, idMapping))
+	mux.HandleFunc("POST "+endpoints.PowerUnit.Power, setAllPercentages(p, powerMapping))
 }

@@ -21,11 +21,11 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage, endpoints *types.APIEndpoints) {
-	mux.HandleFunc("GET "+endpoints.Programs, listAllPrograms(storage))
-	mux.HandleFunc("GET "+endpoints.Programs+"/{name}", getProgram(storage))
-	mux.HandleFunc("POST "+endpoints.Programs, createProgram(storage))
-	mux.HandleFunc("POST "+endpoints.Programs+"/{name}", updateProgram(storage))
-	mux.HandleFunc("DELETE "+endpoints.Programs+"/{name}", deleteProgram(storage))
+	mux.HandleFunc("GET "+endpoints.Storage.Programs, listAllPrograms(storage))
+	mux.HandleFunc("GET "+endpoints.Storage.Programs+"/{name}", getProgram(storage))
+	mux.HandleFunc("POST "+endpoints.Storage.Programs, createProgram(storage))
+	mux.HandleFunc("POST "+endpoints.Storage.Programs+"/{name}", updateProgram(storage))
+	mux.HandleFunc("DELETE "+endpoints.Storage.Programs+"/{name}", deleteProgram(storage))
 }
 
 func listAllPrograms(storage *filestorage.FileStorage) http.HandlerFunc {
