@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,12 +27,10 @@ func main() {
 	opts.ApplyLogLevel()
 	log.Info("Sensorunit service starting")
 
-	log.Trace("Loading configuration from %s", opts.ConfigPath)
 	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatal("Failed to load configuration: %v", err)
 	}
-	log.Info("Configuration loaded from: %s", opts.ConfigPath)
 
 	serialDevice := halkoConfig.SensorUnit.SerialDevice
 	baudRate := halkoConfig.SensorUnit.BaudRate
@@ -65,14 +62,14 @@ func main() {
 	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    ":" + port,
 		Handler: r,
 	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
-		log.Info("Sensorunit HTTP server starting on port %d", port)
+		log.Info("Sensorunit HTTP server starting on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server: %s", err)
 		}

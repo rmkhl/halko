@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -44,7 +43,7 @@ func main() {
 	}
 
 	storageBasePath := "/tmp/halko" // Default fallback
-	port := 8091                    // Default port
+	port := "8091"                  // Default port
 
 	if configuration.StorageConfig != nil {
 		if configuration.StorageConfig.BasePath != "" {
@@ -73,12 +72,12 @@ func main() {
 	corsHandler := addCORSHeaders(mux)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    ":" + port,
 		Handler: corsHandler,
 	}
 
 	go func() {
-		log.Printf("Starting storage server on port %d", port)
+		log.Printf("Starting storage server on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
