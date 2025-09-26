@@ -38,10 +38,18 @@ type Temperature struct {
 
 // NewSensorUnit creates a new connection to the sensor unit
 func NewSensorUnit(device string, baudRate int) (*SensorUnit, error) {
+	// Calculate timeout based on character transmission time:
+	// 8 data bits + 2 stop bits = 10 bits per character
+	// Time per character = 10 bits / baud_rate seconds
+	// Cover time for 2 characters with 20% safety margin
+	charTimeMs := float64(10*1000) / float64(baudRate) // milliseconds per character
+	timeoutMs := 2 * charTimeMs * 1.2                  // 2 characters + 20% safety margin
+	timeout := time.Duration(timeoutMs) * time.Millisecond
+
 	config := &serial.Config{
 		Name:        device,
 		Baud:        baudRate,
-		ReadTimeout: time.Second * 5,
+		ReadTimeout: timeout,
 	}
 
 	return &SensorUnit{
@@ -70,7 +78,12 @@ func (s *SensorUnit) Connect() error {
 
 	s.port = port
 	s.connected = true
-	log.Trace("Serial port opened successfully, sending hello command")
+	log.Trace("Serial port opened successfully, clearing any initialization garbage")
+
+	// Clear any initialization garbage from the Arduino before sending commands
+	s.clearInputBuffer()
+
+	log.Trace("Buffer cleared, sending hello command")
 
 	// We need to unlock the mutex before calling sendCommand to avoid deadlock
 	s.mutex.Unlock()
@@ -248,9 +261,6 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		log.Trace("Cannot send command: not connected to sensor unit")
 		return "", errors.New("not connected to sensor unit")
 	}
-
-	// Clear any pending data that might be initialization garbage
-	s.clearInputBuffer()
 
 	// Send command
 	log.Trace("Writing command bytes to serial port")
