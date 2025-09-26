@@ -2,11 +2,11 @@ package power
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/rmkhl/halko/powerunit/shelly"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -30,18 +30,23 @@ type (
 )
 
 func New(maxIdleTimeS int, cycleLengthS int, shellyCtrl *shelly.Shelly) *Controller {
+	log.Trace("Creating new power controller")
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cycleLength := time.Duration(cycleLengthS) * time.Second
 	maxIdleTime := time.Duration(maxIdleTimeS) * time.Second
 	tickDuration := cycleLength / 100
 
+	log.Debug("Power controller config: cycle=%v, maxIdle=%v, tick=%v",
+		cycleLength, maxIdleTime, tickDuration)
+
 	var powerStates [shelly.NumberOfDevices]*powerTracker
 	for i := range shelly.NumberOfDevices {
 		powerStates[i] = &powerTracker{percentage: 0, currentState: shelly.On}
 	}
+	log.Trace("Initialized %d power trackers", shelly.NumberOfDevices)
 
-	return &Controller{
+	controller := &Controller{
 		powerStates:  powerStates,
 		ctx:          ctx,
 		cancel:       cancel,
@@ -52,13 +57,17 @@ func New(maxIdleTimeS int, cycleLengthS int, shellyCtrl *shelly.Shelly) *Control
 		lastCommand:  time.Now(),
 		shelly:       shellyCtrl,
 	}
+	log.Debug("Power controller created successfully")
+	return controller
 }
 
 func (c *Controller) Start() error {
+	log.Info("Starting power controller with tick duration %v", c.tickDuration)
 	defer c.cancel()
 
 	ticker := time.NewTicker(c.tickDuration)
 	defer ticker.Stop()
+	log.Debug("Created ticker for power control loop")
 
 	c.mu.Lock()
 	for i := range shelly.NumberOfDevices {
@@ -67,15 +76,17 @@ func (c *Controller) Start() error {
 	}
 	c.lastCommand = time.Now()
 	c.mu.Unlock()
+	log.Debug("Initialized power states to 0%% and On")
 
 	for {
 		select {
 		case <-c.ctx.Done():
-			log.Println("Power controller stopped")
+			log.Info("Power controller stopped")
 			return nil
 		case <-ticker.C:
+			log.Trace("Processing tick %d", c.tickCount)
 			if err := c.processTick(); err != nil {
-				log.Printf("Error processing tick: %v", err)
+				log.Error("Error processing tick: %v", err)
 			}
 		}
 	}
@@ -86,11 +97,13 @@ func (c *Controller) processTick() error {
 	defer c.mu.Unlock()
 
 	if c.tickCount == 0 {
+		log.Trace("Beginning of cycle (tick 0) - checking devices to turn on")
 		for id := range shelly.NumberOfDevices {
 			tracker := c.powerStates[id]
 			if tracker.percentage > 0 && tracker.currentState == shelly.Off {
+				log.Debug("Turning on device %d (percentage: %d%%)", id, tracker.percentage)
 				if _, err := c.shelly.SetState(shelly.On, id); err != nil {
-					log.Printf("Error turning on %d: %v", id, err)
+					log.Error("Error turning on %d: %v", id, err)
 					continue
 				}
 				tracker.currentState = shelly.On
@@ -101,9 +114,10 @@ func (c *Controller) processTick() error {
 
 	for id := range shelly.NumberOfDevices {
 		tracker := c.powerStates[id]
-		if c.tickCount >= int(tracker.percentage) && tracker.currentState == shelly.On {
+		if c.tickCount >= int(tracker.percentage) && tracker.currentState == shelly.On && tracker.percentage > 0 {
+			log.Debug("Turning off device %d at tick %d (percentage: %d%%)", id, c.tickCount, tracker.percentage)
 			if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
-				log.Printf("Error turning off %d at tick %d: %v", id, c.tickCount, err)
+				log.Error("Error turning off %d at tick %d: %v", id, c.tickCount, err)
 				continue
 			}
 			tracker.currentState = shelly.Off
@@ -111,10 +125,14 @@ func (c *Controller) processTick() error {
 		}
 	}
 
-	// If more than five minutes have passed since the last command, set all percentages to 0
-	if time.Since(c.lastCommand) > c.maxIdleTime {
-		log.Printf("Idle for %s, setting all percentages to 0", c.maxIdleTime.String())
+	// If more than max idle time has passed since the last command, set all percentages to 0
+	timeSinceLastCommand := time.Since(c.lastCommand)
+	if timeSinceLastCommand > c.maxIdleTime {
+		log.Warning("Idle for %v (max: %v), resetting all percentages to 0", timeSinceLastCommand, c.maxIdleTime)
 		for id := range shelly.NumberOfDevices {
+			if c.powerStates[id].percentage > 0 {
+				log.Debug("Resetting device %d percentage from %d%% to 0%%", id, c.powerStates[id].percentage)
+			}
 			c.powerStates[id].percentage = 0
 		}
 		c.lastCommand = time.Now()
@@ -127,10 +145,13 @@ func (c *Controller) processTick() error {
 
 // Stop halts the power controller and turns off all devices
 func (c *Controller) Stop() {
+	log.Info("Stopping power controller and shutting down all devices")
 	c.cancel()
 
 	if err := c.shelly.Shutdown(); err != nil {
-		log.Printf("Error shutting down devices: %v", err)
+		log.Error("Error shutting down devices: %v", err)
+	} else {
+		log.Debug("All devices shut down successfully")
 	}
 }
 
@@ -145,6 +166,7 @@ func (c *Controller) GetAllPercentages() [shelly.NumberOfDevices]uint8 {
 		percentages[id] = c.powerStates[id].percentage
 	}
 
+	log.Trace("Retrieved percentages: %v", percentages)
 	return percentages
 }
 
@@ -155,7 +177,12 @@ func (c *Controller) SetAllPercentages(percentages [shelly.NumberOfDevices]uint8
 
 	c.lastCommand = time.Now()
 
+	log.Debug("Setting new percentages: %v", percentages)
 	for id := range shelly.NumberOfDevices {
+		oldPercentage := c.powerStates[id].percentage
 		c.powerStates[id].percentage = percentages[id]
+		if oldPercentage != percentages[id] {
+			log.Debug("Device %d percentage changed: %d%% -> %d%%", id, oldPercentage, percentages[id])
+		}
 	}
 }
