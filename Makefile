@@ -51,8 +51,8 @@ prepare:
 	done
 	@echo "Updated go.work file to include all modules."
 
-.PHONY: rebuild
-rebuild: clean $(MODULES:%=$(BINDIR)/%)
+.PHONY: build
+build: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All binaries have been rebuilt."
 
 .PHONY: lint
@@ -72,6 +72,16 @@ lint-markdown:
 	else \
 		echo "Warning: mdl is not installed. Skipping markdown linting."; \
 	fi
+
+.PHONY: go-tidy
+go-tidy:
+	@echo "Running go mod tidy on all modules..."
+	@find . -name "go.mod" -type f | while read modfile; do \
+		moddir=$$(dirname "$$modfile"); \
+		echo "Tidying $$moddir..."; \
+		(cd "$$moddir" && go mod tidy); \
+	done
+	@echo "All modules have been tidied."
 
 .PHONY: update-modules
 update-modules:
@@ -173,10 +183,11 @@ help:
 	@echo "  help                  Show this help message. (default)"
 	@echo "  all                   Build all Go executables to bin/ directory."
 	@echo "  prepare               Check for required tools and create/update go.work file to include all modules."
-	@echo "  rebuild               Clean and rebuild all executables from scratch."
+	@echo "  build                 Clean and rebuild all executables from scratch."
 	@echo "  clean                 Remove the bin/ directory and all built executables."
 	@echo "  lint                  Run golangci-lint on all modules."
 	@echo "  lint-markdown         Run mdl (markdown linter) on all markdown files."
+	@echo "  go-tidy               Run go mod tidy on all modules with go.mod files."
 	@echo "  update-modules        Update all go.mod dependencies and tidy them."
 	@echo "  install               Install all binaries except simulator to /opt/halko and copy templates/halko.cfg to /etc/opt/halko.cfg if not present."
 	@echo "  systemd-units         Create, install, and enable systemd unit files for all binaries except simulator."
