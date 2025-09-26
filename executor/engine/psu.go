@@ -3,6 +3,7 @@ package engine
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -29,14 +30,13 @@ type (
 )
 
 func newPSUController(halkoConfig *types.HalkoConfig, endpoints *types.APIEndpoints) (*psuController, error) {
-	powerURL, err := halkoConfig.GetPowerUnitURL()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
+	if halkoConfig.APIEndpoints == nil {
+		return nil, errors.New("API endpoints not configured")
 	}
 
 	return &psuController{
 		client:          &http.Client{},
-		powerControlURL: powerURL + endpoints.Root,
+		powerControlURL: endpoints.PowerUnit.GetPowerURL(),
 	}, nil
 }
 

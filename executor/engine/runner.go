@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -53,21 +54,17 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.Fi
 		defaults:                   halkoConfig.ExecutorConfig.Defaults,
 	}
 
-	powerURL, err := halkoConfig.GetPowerUnitURL()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get power unit URL: %w", err)
+	if halkoConfig.APIEndpoints == nil {
+		return nil, errors.New("API endpoints not configured")
 	}
-	psuSensorReader, err := newPSUSensorReader(powerURL+endpoints.Root, runner.psuSensorCommands, runner.psuSensorResponses)
+
+	psuSensorReader, err := newPSUSensorReader(endpoints.PowerUnit.GetPowerURL(), runner.psuSensorCommands, runner.psuSensorResponses)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	sensorURL, err := halkoConfig.GetSensorUnitURL()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get sensor unit URL: %w", err)
-	}
-	temperatureSensorReader, err := newTemperatureSensorReader(sensorURL+endpoints.Temperatures, runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader(endpoints.SensorUnit.GetTemperaturesURL(), runner.temperatureSensorCommands, runner.temperatureSensorResponses)
 	if err != nil {
 		return nil, err
 	}

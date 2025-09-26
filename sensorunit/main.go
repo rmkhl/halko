@@ -55,17 +55,24 @@ func main() {
 		defer sensorUnit.Close()
 	}
 
+	port, err := halkoConfig.APIEndpoints.SensorUnit.GetPort()
+	if err != nil {
+		log.Error("Failed to get sensorunit port: %v", err)
+		return
+	}
+
 	api := router.NewAPI(sensorUnit)
 	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
+
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", halkoConfig.SensorUnit.Port),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: r,
 	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
-		log.Info("Sensorunit HTTP server starting on port %d", halkoConfig.SensorUnit.Port)
+		log.Info("Sensorunit HTTP server starting on port %d", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Error starting server: %s", err)
 		}

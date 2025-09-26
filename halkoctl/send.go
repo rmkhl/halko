@@ -129,7 +129,13 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 		Timeout: 10 * time.Second,
 	}
 
-	url := executorURL + "/engine/running"
+	// Construct the full URL using the running endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.Executor.GetRunningURL()
+	} else {
+		url = executorURL + "/engine/running"
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {

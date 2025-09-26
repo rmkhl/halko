@@ -37,9 +37,9 @@ func main() {
 		idMapping[id] = name
 	}
 
-	port := configuration.PowerUnit.Port
-	if port == 0 {
-		port = 8092 // Default port
+	port, err := configuration.APIEndpoints.PowerUnit.GetPort()
+	if err != nil {
+		log.Fatalf("Failed to get powerunit port: %v", err)
 	}
 	serverAddr := fmt.Sprintf(":%d", port)
 

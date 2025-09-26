@@ -50,11 +50,16 @@ func main() {
 		if configuration.StorageConfig.BasePath != "" {
 			storageBasePath = configuration.StorageConfig.BasePath
 		}
-		if configuration.StorageConfig.Port != 0 {
-			port = configuration.StorageConfig.Port
-		}
 	} else if configuration.ExecutorConfig != nil && configuration.ExecutorConfig.BasePath != "" {
 		storageBasePath = configuration.ExecutorConfig.BasePath
+	}
+
+	// Get port from storage endpoint
+	if configuration.APIEndpoints != nil {
+		endpointPort, err := configuration.APIEndpoints.Storage.GetPort()
+		if err == nil {
+			port = endpointPort
+		}
 	}
 
 	storage, err := filestorage.NewFileStorage(storageBasePath)

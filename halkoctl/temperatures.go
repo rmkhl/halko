@@ -80,12 +80,12 @@ func getTemperatures(sensorunitURL string, verbose bool) error {
 	}
 
 	// Get temperatures endpoint from config
-	temperaturesEndpoint := "/temperatures"
-	if globalConfig != nil && globalConfig.APIEndpoints != nil && globalConfig.APIEndpoints.Temperatures != "" {
-		temperaturesEndpoint = globalConfig.APIEndpoints.Temperatures
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.SensorUnit.GetTemperaturesURL()
+	} else {
+		url = sensorunitURL + "/temperatures"
 	}
-
-	url := sensorunitURL + temperaturesEndpoint
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)

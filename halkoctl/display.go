@@ -105,12 +105,12 @@ func sendDisplayMessage(message, sensorunitURL string, verbose bool) error {
 	}
 
 	// Construct the full URL using the display endpoint
-	displayEndpoint := "/display"
-	if globalConfig != nil && globalConfig.APIEndpoints != nil && globalConfig.APIEndpoints.Display != "" {
-		displayEndpoint = globalConfig.APIEndpoints.Display
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.SensorUnit.GetDisplayURL()
+	} else {
+		url = sensorunitURL + "/display"
 	}
-
-	url := sensorunitURL + displayEndpoint
 
 	if verbose {
 		fmt.Printf("POST %s\n", url)
@@ -153,15 +153,9 @@ func sendDisplayMessage(message, sensorunitURL string, verbose bool) error {
 
 // getSensorunitAPIURL returns the base API URL for sensorunit
 func getSensorunitAPIURL(config *types.HalkoConfig) string {
-	if config == nil {
+	if config == nil || config.APIEndpoints == nil {
 		return "http://localhost:8081"
 	}
 
-	url, err := config.GetSensorUnitURL()
-	if err != nil {
-		// Fallback to default if there's an error
-		return "http://localhost:8081"
-	}
-
-	return url
+	return config.APIEndpoints.SensorUnit.GetURL()
 }

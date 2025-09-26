@@ -65,7 +65,10 @@ func main() {
 
 	corsHandler := addCORSHeaders(mux)
 
-	port := configuration.ExecutorConfig.Port
+	port, err := configuration.APIEndpoints.Executor.GetPort()
+	if err != nil {
+		log.Fatalf("Failed to get executor port: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),

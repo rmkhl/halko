@@ -8,30 +8,18 @@ var globalConfig *types.HalkoConfig
 
 // getExecutorAPIURL returns the base API URL for executor
 func getExecutorAPIURL(config *types.HalkoConfig) string {
-	if config == nil {
+	if config == nil || config.APIEndpoints == nil {
 		return "http://localhost:8080"
 	}
 
-	url, err := config.GetExecutorURL()
-	if err != nil {
-		// Fallback to default if there's an error
-		return "http://localhost:8080"
-	}
-
-	return url
+	return config.APIEndpoints.Executor.GetURL()
 }
 
 // getSensorUnitAPIURL returns the base API URL for sensorunit
 func getSensorUnitAPIURL(config *types.HalkoConfig) string {
-	if config == nil {
+	if config == nil || config.APIEndpoints == nil {
 		return "http://localhost:8081"
 	}
 
-	url, err := config.GetSensorUnitURL()
-	if err != nil {
-		// Fallback to default if there's an error
-		return "http://localhost:8081"
-	}
-
-	return url
+	return config.APIEndpoints.SensorUnit.GetURL()
 }

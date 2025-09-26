@@ -99,7 +99,13 @@ func getExecutorStatus(executorURL string, verbose bool) {
 		Timeout: 10 * time.Second,
 	}
 
-	url := executorURL + "/engine/running"
+	// Construct the full URL using the running endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.Executor.GetRunningURL()
+	} else {
+		url = executorURL + "/engine/running"
+	}
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)
@@ -232,7 +238,13 @@ func getSensorUnitStatus(sensorUnitURL string, verbose bool) {
 		Timeout: 10 * time.Second,
 	}
 
-	url := sensorUnitURL + "/status"
+	// Construct the full URL using the status endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.SensorUnit.GetStatusURL()
+	} else {
+		url = sensorUnitURL + "/status"
+	}
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)

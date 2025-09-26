@@ -9,14 +9,12 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-const testHost = "localhost"
-
 func TestConfigReading(t *testing.T) {
-	// Test reading the template configuration file
-	// LoadConfig already validates the configuration, so we just need to ensure it loads successfully
-	config, err := types.LoadConfig("../templates/halko.cfg")
+	// Test business logic validation using a valid config
+	configPath := createTestConfigFile(t)
+	config, err := types.LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("Failed to read template config: %v", err)
+		t.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Test specific business logic that's not covered by basic validation
@@ -36,9 +34,10 @@ func TestConfigReading(t *testing.T) {
 
 func TestConfigStructure(t *testing.T) {
 	// Test that the configuration structure groups temperature control settings correctly
-	config, err := types.LoadConfig("../templates/halko.cfg")
+	configPath := createTestConfigFile(t)
+	config, err := types.LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("Failed to read template config: %v", err)
+		t.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Test business logic constraints that go beyond basic validation
@@ -59,10 +58,9 @@ func TestConfigStructure(t *testing.T) {
 }
 
 // Test configuration data - represents a complete valid Halko configuration
-// This configuration includes host attributes for all services to test the ServiceEndpoint refactoring
+// This configuration matches the new endpoint structure
 var testConfigData = `{
   "executor": {
-    "host": "localhost",
     "port": 8090,
     "base_path": "/tmp/test/halko",
     "tick_length": 6000,
@@ -83,7 +81,6 @@ var testConfigData = `{
     }
   },
   "power_unit": {
-    "host": "localhost",
     "port": 8092,
     "shelly_address": "http://localhost:8088",
     "cycle_length": 60,
@@ -95,22 +92,38 @@ var testConfigData = `{
     }
   },
   "storage": {
-    "host": "localhost",
     "port": 8091,
     "base_path": "/tmp/test/halko"
   },
   "sensorunit": {
-    "host": "localhost",
     "port": 8093,
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
   },
   "api_endpoints": {
-    "programs": "/programs",
-    "running": "/running",
-    "temperatures": "/temperatures",
-    "status": "/status",
-    "root": "/"
+    "executor": {
+      "url": "http://localhost:8090",
+      "status": "/status",
+      "programs": "/programs",
+      "running": "/running"
+    },
+    "sensorunit": {
+      "url": "http://localhost:8088",
+      "status": "/status",
+      "temperatures": "/temperatures",
+      "display": "/display"
+    },
+    "powerunit": {
+      "url": "http://localhost:8092",
+      "status": "/status",
+      "power": "/power"
+    },
+    "storage": {
+      "url": "http://localhost:8091",
+      "status": "/status",
+      "programs": "/programs",
+      "execution_log": "/execution_log"
+    }
   }
 }`
 
@@ -134,126 +147,86 @@ func TestServiceEndpointEmbedding(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test that embedded ServiceEndpoint fields are properly accessible
+	// Test that the embedded Endpoint struct methods work correctly
+	// This tests the actual functionality, not just configuration presence
+	expectedExecutorStatusURL := "http://localhost:8090/status"
+	if config.APIEndpoints.Executor.GetStatusURL() != expectedExecutorStatusURL {
+		t.Errorf("Expected Executor status URL %s, got %s", expectedExecutorStatusURL, config.APIEndpoints.Executor.GetStatusURL())
+	}
+
+	expectedPowerUnitStatusURL := "http://localhost:8092/status"
+	if config.APIEndpoints.PowerUnit.GetStatusURL() != expectedPowerUnitStatusURL {
+		t.Errorf("Expected PowerUnit status URL %s, got %s", expectedPowerUnitStatusURL, config.APIEndpoints.PowerUnit.GetStatusURL())
+	}
+}
+
+func TestGetServiceURLs(t *testing.T) {
+	configPath := createTestConfigFile(t)
+
+	config, err := types.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Test endpoint URL methods
+	if config.APIEndpoints.Executor.GetURL() != "http://localhost:8090" {
+		t.Errorf("Expected Executor URL http://localhost:8090, got %s", config.APIEndpoints.Executor.GetURL())
+	}
+
+	if config.APIEndpoints.Storage.GetURL() != "http://localhost:8091" {
+		t.Errorf("Expected Storage URL http://localhost:8091, got %s", config.APIEndpoints.Storage.GetURL())
+	}
+
+	if config.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
+		t.Errorf("Expected PowerUnit URL http://localhost:8092, got %s", config.APIEndpoints.PowerUnit.GetURL())
+	}
+
+	if config.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
+		t.Errorf("Expected SensorUnit URL http://localhost:8088, got %s", config.APIEndpoints.SensorUnit.GetURL())
+	}
+
+	// Test specific endpoint methods
+	expectedProgramsURL := "http://localhost:8090/programs"
+	if config.APIEndpoints.Executor.GetProgramsURL() != expectedProgramsURL {
+		t.Errorf("Expected Programs URL %s, got %s", expectedProgramsURL, config.APIEndpoints.Executor.GetProgramsURL())
+	}
+
+	expectedTemperaturesURL := "http://localhost:8088/temperatures"
+	if config.APIEndpoints.SensorUnit.GetTemperaturesURL() != expectedTemperaturesURL {
+		t.Errorf("Expected Temperatures URL %s, got %s", expectedTemperaturesURL, config.APIEndpoints.SensorUnit.GetTemperaturesURL())
+	}
+}
+
+func TestGetPortMethod(t *testing.T) {
+	configPath := createTestConfigFile(t)
+
+	config, err := types.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Test GetPort method with explicit ports
 	tests := []struct {
 		name         string
-		expectedHost string
+		endpoint     *types.Endpoint
 		expectedPort int
-		actualHost   string
-		actualPort   int
 	}{
-		{"ExecutorConfig", testHost, 8090, config.ExecutorConfig.Host, config.ExecutorConfig.Port},
-		{"PowerUnit", testHost, 8092, config.PowerUnit.Host, config.PowerUnit.Port},
-		{"SensorUnit", testHost, 8093, config.SensorUnit.Host, config.SensorUnit.Port},
-		{"StorageConfig", testHost, 8091, config.StorageConfig.Host, config.StorageConfig.Port},
+		{"Executor", &config.APIEndpoints.Executor.Endpoint, 8090},
+		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, 8092},
+		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, 8088},
+		{"Storage", &config.APIEndpoints.Storage.Endpoint, 8091},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.actualHost != tt.expectedHost {
-				t.Errorf("Expected %s host to be %s, got %s", tt.name, tt.expectedHost, tt.actualHost)
-			}
-			if tt.actualPort != tt.expectedPort {
-				t.Errorf("Expected %s port to be %d, got %d", tt.name, tt.expectedPort, tt.actualPort)
-			}
-		})
-	}
-}
-
-func TestGetBaseURL(t *testing.T) {
-	configPath := createTestConfigFile(t)
-
-	config, err := types.LoadConfig(configPath)
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	tests := []struct {
-		service     types.ServiceType
-		expectedURL string
-		expectError bool
-	}{
-		{types.ServiceExecutor, "http://localhost:8090", false},
-		{types.ServicePowerUnit, "http://localhost:8092", false},
-		{types.ServiceSensorUnit, "http://localhost:8093", false},
-		{types.ServiceStorage, "http://localhost:8091", false},
-		{"unknown", "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.service), func(t *testing.T) {
-			url, err := config.GetBaseURL(tt.service)
-
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error for service %s, but got none", tt.service)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error for service %s: %v", tt.service, err)
-				}
-				if url != tt.expectedURL {
-					t.Errorf("Expected URL %s for service %s, got %s", tt.expectedURL, tt.service, url)
-				}
-			}
-		})
-	}
-}
-
-func TestGetBaseURLHelperMethods(t *testing.T) {
-	configPath := createTestConfigFile(t)
-
-	config, err := types.LoadConfig(configPath)
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	tests := []struct {
-		name        string
-		method      func() (string, error)
-		expectedURL string
-	}{
-		{"GetExecutorURL", config.GetExecutorURL, "http://localhost:8090"},
-		{"GetPowerUnitURL", config.GetPowerUnitURL, "http://localhost:8092"},
-		{"GetSensorUnitURL", config.GetSensorUnitURL, "http://localhost:8093"},
-		{"GetStorageURL", config.GetStorageURL, "http://localhost:8091"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			url, err := tt.method()
+			port, err := tt.endpoint.GetPort()
 			if err != nil {
-				t.Errorf("Unexpected error in %s: %v", tt.name, err)
+				t.Errorf("Unexpected error getting port for %s: %v", tt.name, err)
 			}
-			if url != tt.expectedURL {
-				t.Errorf("Expected URL %s from %s, got %s", tt.expectedURL, tt.name, url)
+			if port != tt.expectedPort {
+				t.Errorf("Expected port %d for %s, got %d", tt.expectedPort, tt.name, port)
 			}
 		})
-	}
-}
-
-func TestServiceEndpointConfigurationValidation(t *testing.T) {
-	configPath := createTestConfigFile(t)
-
-	// LoadConfig already calls ValidateRequired(), so successful loading means validation passed
-	config, err := types.LoadConfig(configPath)
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
-	// Test that the ServiceEndpoint embedding works correctly with validation
-	// This is testing the integration between the refactored structure and validation
-	if config.ExecutorConfig.Host == "" || config.ExecutorConfig.Port <= 0 {
-		t.Error("ServiceEndpoint validation should ensure host and port are set")
-	}
-	if config.PowerUnit.Host == "" || config.PowerUnit.Port <= 0 {
-		t.Error("ServiceEndpoint validation should ensure host and port are set")
-	}
-	if config.SensorUnit.Host == "" || config.SensorUnit.Port <= 0 {
-		t.Error("ServiceEndpoint validation should ensure host and port are set")
-	}
-	if config.StorageConfig.Host == "" || config.StorageConfig.Port <= 0 {
-		t.Error("ServiceEndpoint validation should ensure host and port are set")
 	}
 }
 
@@ -278,33 +251,25 @@ func TestJSONMarshaling(t *testing.T) {
 		t.Fatalf("Failed to unmarshal config from JSON: %v", err)
 	}
 
-	// Verify that the embedded ServiceEndpoint fields are preserved
-	if newConfig.ExecutorConfig.Host != testHost || newConfig.ExecutorConfig.Port != 8090 {
-		t.Error("ExecutorConfig ServiceEndpoint fields not preserved after JSON round-trip")
+	// Verify that endpoint URLs are preserved
+	if newConfig.APIEndpoints.Executor.GetURL() != "http://localhost:8090" {
+		t.Error("Executor endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.PowerUnit.Host != testHost || newConfig.PowerUnit.Port != 8092 {
-		t.Error("PowerUnit ServiceEndpoint fields not preserved after JSON round-trip")
+	if newConfig.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
+		t.Error("PowerUnit endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.SensorUnit.Host != "localhost" || newConfig.SensorUnit.Port != 8093 {
-		t.Error("SensorUnit ServiceEndpoint fields not preserved after JSON round-trip")
+	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
+		t.Error("SensorUnit endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.StorageConfig.Host != "localhost" || newConfig.StorageConfig.Port != 8091 {
-		t.Error("StorageConfig ServiceEndpoint fields not preserved after JSON round-trip")
-	}
-}
-
-func TestServiceTypeConstants(t *testing.T) {
-	// Test that service type constants are defined correctly
-	expectedServices := map[types.ServiceType]string{
-		types.ServiceExecutor:   "executor",
-		types.ServicePowerUnit:  "power_unit",
-		types.ServiceSensorUnit: "sensor_unit",
-		types.ServiceStorage:    "storage",
+	if newConfig.APIEndpoints.Storage.GetURL() != "http://localhost:8091" {
+		t.Error("Storage endpoint URL not preserved after JSON round-trip")
 	}
 
-	for service, expected := range expectedServices {
-		if string(service) != expected {
-			t.Errorf("Expected service type %s to equal %s, got %s", service, expected, string(service))
-		}
+	// Verify that endpoint paths are preserved
+	if newConfig.APIEndpoints.Executor.Programs != "/programs" {
+		t.Error("Executor programs path not preserved after JSON round-trip")
+	}
+	if newConfig.APIEndpoints.SensorUnit.Temperatures != "/temperatures" {
+		t.Error("SensorUnit temperatures path not preserved after JSON round-trip")
 	}
 }
