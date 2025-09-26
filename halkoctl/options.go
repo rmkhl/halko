@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 
@@ -22,6 +23,7 @@ type SendOptions struct {
 // StatusOptions represents options specific to the status command
 type StatusOptions struct {
 	CommonOptions
+	Services []string // Services to check (executor, sensorunit, etc.)
 }
 
 // ValidateOptions represents options specific to the validate command
@@ -123,6 +125,27 @@ func ParseStatusOptions() (*StatusOptions, error) {
 
 	if err := statusFlags.Parse(os.Args[2:]); err != nil {
 		return nil, err
+	}
+
+	// Get positional arguments (service names)
+	args := statusFlags.Args()
+
+	// If no services specified, check all available services
+	if len(args) == 0 {
+		opts.Services = []string{"executor", "sensorunit"}
+	} else {
+		// Validate and set the specified services
+		validServices := map[string]bool{
+			"executor":   true,
+			"sensorunit": true,
+		}
+
+		for _, service := range args {
+			if !validServices[service] {
+				return nil, fmt.Errorf("unknown service '%s'. Valid services are: executor, sensorunit", service)
+			}
+		}
+		opts.Services = args
 	}
 
 	return opts, nil
