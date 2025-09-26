@@ -6,14 +6,18 @@ import (
 	"github.com/rmkhl/halko/powerunit/power"
 	"github.com/rmkhl/halko/powerunit/shelly"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 func New(p *power.Controller, powerMapping map[string]int, idMapping [shelly.NumberOfDevices]string, endpoints *types.APIEndpoints) http.Handler {
+	log.Trace("Creating HTTP router")
 	mux := http.NewServeMux()
 
 	setupRoutes(mux, p, powerMapping, idMapping, endpoints)
+	log.Debug("HTTP routes configured")
 
 	handler := addCORSHeaders(mux)
+	log.Debug("CORS headers configured")
 
 	return handler
 }
