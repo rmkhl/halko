@@ -55,9 +55,9 @@ Possible status values:
 - `connected`: The sensor unit is connected and responding
 - `disconnected`: The sensor unit is not connected or not responding
 
-#### POST `/status`
+#### POST `/display`
 
-Updates the status text displayed on the sensor unit's LCD.
+Updates the text displayed on the sensor unit's LCD.
 
 **Request Format:**
 
@@ -448,9 +448,9 @@ Gets the simulated connection status.
 }
 ```
 
-#### Simulated POST `/status`
+#### Simulated POST `/display`
 
-Logs a status message (simulates updating an LCD).
+Logs a display message (simulates updating an LCD).
 
 **Request Format:**
 

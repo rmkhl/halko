@@ -27,6 +27,11 @@ type StatusRequest struct {
 	Message string `json:"message"`
 }
 
+// DisplayRequest defines the structure for a display update request body
+type DisplayRequest struct {
+	Message string `json:"message"`
+}
+
 type (
 	ProgramState string
 	SensorStatus string

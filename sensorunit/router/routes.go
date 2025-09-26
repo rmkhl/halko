@@ -8,12 +8,9 @@ import (
 )
 
 func SetupRoutes(mux *http.ServeMux, api *API, endpoints *types.APIEndpoints) {
-	log.Trace("Setting up HTTP routes")
-	log.Trace("Registering GET %s for temperatures", endpoints.Temperatures)
 	mux.HandleFunc("GET "+endpoints.Temperatures, api.getTemperatures)
-	log.Trace("Registering GET %s for status", endpoints.Status)
 	mux.HandleFunc("GET "+endpoints.Status, api.getStatus)
-	log.Trace("Registering POST %s for status updates", endpoints.Status)
-	mux.HandleFunc("POST "+endpoints.Status, api.setStatus)
-	log.Trace("All routes registered successfully")
+	mux.HandleFunc("POST "+endpoints.Display, api.setDisplay)
+	log.Info("HTTP API initialized with 3 endpoints: %s, %s, %s",
+		endpoints.Temperatures, endpoints.Status, endpoints.Display)
 }

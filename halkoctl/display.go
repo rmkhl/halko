@@ -78,7 +78,7 @@ func showDisplayHelp() {
 	fmt.Printf("  %s --config /path/to/halko.cfg display \"Temperature: 25°C\"\n", os.Args[0])
 	fmt.Printf("  %s --verbose display \"System Ready\"\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The message will be sent to the sensor unit's POST /status endpoint")
+	fmt.Println("The message will be sent to the sensor unit's POST /display endpoint")
 	fmt.Println("to update the LCD display text.")
 }
 
@@ -87,7 +87,7 @@ func sendDisplayMessage(message, sensorunitURL string, verbose bool) error {
 		fmt.Printf("Preparing display message: %s\n", message)
 	}
 
-	payload := types.StatusRequest{
+	payload := types.DisplayRequest{
 		Message: message,
 	}
 
@@ -104,13 +104,13 @@ func sendDisplayMessage(message, sensorunitURL string, verbose bool) error {
 		Timeout: 10 * time.Second,
 	}
 
-	// Construct the full URL using the status endpoint
-	statusEndpoint := "/status"
-	if globalConfig != nil && globalConfig.APIEndpoints != nil && globalConfig.APIEndpoints.Status != "" {
-		statusEndpoint = globalConfig.APIEndpoints.Status
+	// Construct the full URL using the display endpoint
+	displayEndpoint := "/display"
+	if globalConfig != nil && globalConfig.APIEndpoints != nil && globalConfig.APIEndpoints.Display != "" {
+		displayEndpoint = globalConfig.APIEndpoints.Display
 	}
 
-	url := sensorunitURL + statusEndpoint
+	url := sensorunitURL + displayEndpoint
 
 	if verbose {
 		fmt.Printf("POST %s\n", url)

@@ -90,7 +90,7 @@ func (hm *Manager) run() {
 }
 
 func (hm *Manager) sendHeartbeat() error {
-	payload := types.StatusRequest{
+	payload := types.DisplayRequest{
 		Message: hm.executorIP,
 	}
 

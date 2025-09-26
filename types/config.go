@@ -58,6 +58,7 @@ type (
 		Running      string `json:"running"`
 		Temperatures string `json:"temperatures"`
 		Status       string `json:"status"`
+		Display      string `json:"display"`
 		Root         string `json:"root"`
 	}
 
@@ -255,6 +256,9 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if c.APIEndpoints.Status == "" {
 		return errors.New("API endpoints status path is required")
+	}
+	if c.APIEndpoints.Display == "" {
+		return errors.New("API endpoints display path is required")
 	}
 	if c.APIEndpoints.Root == "" {
 		return errors.New("API endpoints root path is required")
