@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 	"github.com/tarm/serial"
 )
 
@@ -165,7 +165,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 			valueStr = valueStr[:len(valueStr)-1]
 			_, err := fmt.Sscanf(valueStr, "%f", &value)
 			if err != nil {
-				log.Printf("Failed to parse temperature value: %s", valueStr)
+				log.Info("Failed to parse temperature value: %s", valueStr)
 				continue
 			}
 		}
@@ -245,7 +245,7 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		}
 
 		// Log unexpected lines for debugging
-		log.Printf("Skipping unexpected line for command %q: %q", cmd, line)
+		log.Info("Skipping unexpected line for command %q: %q", cmd, line)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -276,7 +276,7 @@ func (s *SensorUnit) clearInputBuffer() {
 		if err != nil || n == 0 {
 			break
 		}
-		log.Printf("Cleared %d bytes of garbage from serial buffer: %q", n, string(tempBuf[:n]))
+		log.Info("Cleared %d bytes of garbage from serial buffer: %q", n, string(tempBuf[:n]))
 	}
 
 	// Restore the original timeout

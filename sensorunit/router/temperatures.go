@@ -2,10 +2,10 @@ package router
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
@@ -33,7 +33,7 @@ func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
 	var ovenSecondary float32
 
 	for _, temp := range temperatures {
-		log.Printf("Temperature %s: %.2f", temp.Name, temp.Value)
+		log.Info("Temperature %s: %.2f", temp.Name, temp.Value)
 		switch temp.Name {
 		case "OvenPrimary":
 			ovenPrimary = temp.Value
@@ -53,17 +53,17 @@ func (api *API) getTemperatures(w http.ResponseWriter, _ *http.Request) {
 			response["oven"] = ovenSecondary
 		}
 	case ovenPrimary != types.InvalidTemperatureReading:
-		log.Println("Secondary oven temperature reading is invalid.")
+		log.Info("Secondary oven temperature reading is invalid.")
 		response["oven"] = ovenPrimary
 	case ovenSecondary != types.InvalidTemperatureReading:
-		log.Println("Primary oven temperature reading is invalid.")
+		log.Info("Primary oven temperature reading is invalid.")
 		response["oven"] = ovenSecondary
 	default:
-		log.Println("Oven temperature reading is invalid.")
+		log.Info("Oven temperature reading is invalid.")
 		response["oven"] = types.InvalidTemperatureReading
 	}
 	if response["material"] == types.InvalidTemperatureReading {
-		log.Println("Wood temperature reading is invalid.")
+		log.Info("Wood temperature reading is invalid.")
 	}
 
 	writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
