@@ -8,7 +8,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
+
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -98,31 +99,38 @@ func (e *Endpoint) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
-// GetPort extracts the port number from the URL
-// Returns 80 for HTTP and 443 for HTTPS if port is not explicitly specified
-func (e *Endpoint) GetPort() (int, error) {
-	parsedURL, err := url.Parse(e.URL)
+// GetPort extracts the port as a string from the URL or provided urlStr
+// Returns "80" for HTTP and "443" for HTTPS if port is not explicitly specified
+func (e *Endpoint) GetPort(urlStr ...string) (string, error) {
+	var targetURL string
+	if len(urlStr) > 0 && urlStr[0] != "" {
+		targetURL = urlStr[0]
+	} else {
+		targetURL = e.URL
+	}
+
+	if targetURL == "" {
+		return "", errors.New("empty URL")
+	}
+
+	parsedURL, err := url.Parse(targetURL)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse URL: %w", err)
+		return "", fmt.Errorf("failed to parse URL: %w", err)
 	}
 
 	port := parsedURL.Port()
 	if port != "" {
-		portNum, err := strconv.Atoi(port)
-		if err != nil {
-			return 0, fmt.Errorf("invalid port number: %w", err)
-		}
-		return portNum, nil
+		return port, nil
 	}
 
 	// Use standard ports based on scheme
 	switch parsedURL.Scheme {
 	case "http":
-		return 80, nil
+		return "80", nil
 	case "https":
-		return 443, nil
+		return "443", nil
 	default:
-		return 0, fmt.Errorf("unsupported scheme: %s", parsedURL.Scheme)
+		return "", fmt.Errorf("unsupported scheme: %s", parsedURL.Scheme)
 	}
 }
 
@@ -166,6 +174,8 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 		}
 	}
 
+	log.Info("Loading configuration from: %s", configPath)
+
 	config, err := readHalkoConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configPath, err)
@@ -175,27 +185,44 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	log.Info("Configuration loaded successfully from: %s", configPath)
 	return config, nil
 }
 
 func findDefaultConfigPath() string {
-	possiblePaths := []string{
-		"halko.cfg",
-		"/etc/halko/halko.cfg",
-		"/var/opt/halko/halko.cfg",
-	}
-
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			return path
+	// Check environment variable first
+	if configPath := os.Getenv("HALKO_CONFIG"); configPath != "" {
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath
 		}
 	}
 
+	// Define search paths in priority order
+	searchPaths := []string{
+		"halko.cfg", // Current directory
+	}
+
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		searchPaths = append(searchPaths,
+			filepath.Join(homeDir, ".halko.cfg"),           // ~/.halko.cfg
+			filepath.Join(homeDir, ".config", "halko.cfg"), // ~/.config/halko.cfg
+		)
+	}
+
+	searchPaths = append(searchPaths,
+		"/etc/halko/halko.cfg",     // System config directory
+		"/etc/opt/halko/halko.cfg", // Optional system config directory
+	)
+
 	if exePath, err := os.Executable(); err == nil {
 		exeDir := filepath.Dir(exePath)
-		configPath := filepath.Join(exeDir, "halko.cfg")
-		if _, err := os.Stat(configPath); err == nil {
-			return configPath
+		executablePath := filepath.Join(exeDir, "halko.cfg")
+		searchPaths = append(searchPaths, executablePath)
+	}
+
+	for _, path := range searchPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
 		}
 	}
 

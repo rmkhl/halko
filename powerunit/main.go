@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -41,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to get powerunit port: %v", err)
 	}
-	serverAddr := fmt.Sprintf(":%d", port)
+	serverAddr := ":" + port
 
 	p := power.New(maxIdleTime, cycleLength, shellyController)
 	r := router.New(p, powerMapping, idMapping, configuration.APIEndpoints)

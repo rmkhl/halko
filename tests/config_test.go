@@ -209,12 +209,12 @@ func TestGetPortMethod(t *testing.T) {
 	tests := []struct {
 		name         string
 		endpoint     *types.Endpoint
-		expectedPort int
+		expectedPort string
 	}{
-		{"Executor", &config.APIEndpoints.Executor.Endpoint, 8090},
-		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, 8092},
-		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, 8088},
-		{"Storage", &config.APIEndpoints.Storage.Endpoint, 8091},
+		{"Executor", &config.APIEndpoints.Executor.Endpoint, "8090"},
+		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, "8092"},
+		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8088"},
+		{"Storage", &config.APIEndpoints.Storage.Endpoint, "8091"},
 	}
 
 	for _, tt := range tests {
@@ -224,7 +224,7 @@ func TestGetPortMethod(t *testing.T) {
 				t.Errorf("Unexpected error getting port for %s: %v", tt.name, err)
 			}
 			if port != tt.expectedPort {
-				t.Errorf("Expected port %d for %s, got %d", tt.expectedPort, tt.name, port)
+				t.Errorf("Expected port %s for %s, got %s", tt.expectedPort, tt.name, port)
 			}
 		})
 	}
