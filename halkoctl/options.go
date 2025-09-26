@@ -36,6 +36,11 @@ type DisplayOptions struct {
 	Message string // Text message to display (positional argument)
 }
 
+// TemperaturesOptions represents options specific to the temperatures command
+type TemperaturesOptions struct {
+	CommonOptions
+}
+
 // ParseGlobalOptions parses global options from command line arguments
 // Returns the parsed options and the index where the command starts
 func ParseGlobalOptions() (*types.GlobalOptions, int) {
@@ -158,6 +163,20 @@ func ParseDisplayOptions() (*DisplayOptions, error) {
 	args := displayFlags.Args()
 	if len(args) > 0 {
 		opts.Message = args[0]
+	}
+
+	return opts, nil
+}
+
+// ParseTemperaturesOptions parses command-line options for the temperatures command
+func ParseTemperaturesOptions() (*TemperaturesOptions, error) {
+	opts := &TemperaturesOptions{}
+	temperaturesFlags := flag.NewFlagSet("temperatures", flag.ExitOnError)
+
+	SetupCommonFlags(temperaturesFlags, &opts.CommonOptions)
+
+	if err := temperaturesFlags.Parse(os.Args[2:]); err != nil {
+		return nil, err
 	}
 
 	return opts, nil
