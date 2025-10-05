@@ -8,9 +8,15 @@ export interface PidSettings {
   kd?: number;
 }
 
+export const powerSettingTypes = ["simple", "delta", "pid"] as const;
+export type PowerSettingType = (typeof powerSettingTypes)[number];
+
 export interface PowerPidSettings {
+  type: PowerSettingType;
+  minDelta?: number;
+  maxDelta?: number;
   power?: number;
-  pid: PidSettings;
+  pid?: PidSettings;
 }
 
 export interface TemperatureConstraint {
@@ -25,8 +31,8 @@ export interface Step {
   id: string;
   name: string;
   type: StepType;
-  runtime: number;
   targetTemperature: number;
+  runtime: number;
   heater?: PowerPidSettings;
   fan?: PowerSetting;
   humidifier?: PowerSetting;
