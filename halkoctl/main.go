@@ -49,6 +49,9 @@ func main() {
 			case "temperatures":
 				showTemperaturesHelp()
 				os.Exit(exitSuccess)
+			case "programs":
+				showProgramsHelp()
+				os.Exit(exitSuccess)
 			}
 		}
 	}
@@ -75,6 +78,8 @@ func main() {
 		handleDisplayCommand()
 	case "temperatures":
 		handleTemperaturesCommand()
+	case "programs":
+		handleProgramsCommand()
 	case "help", "-help", helpFlag:
 		showHelp()
 		os.Exit(exitSuccess)

@@ -27,6 +27,7 @@ func showHelp() {
 	fmt.Println("  validate              Validate a program file")
 	fmt.Println("  display               Send text to sensor unit display")
 	fmt.Println("  temperatures          Get current temperatures from sensor unit")
+	fmt.Println("  programs              Manage stored programs")
 	fmt.Println()
 	fmt.Println("Command Help:")
 	fmt.Printf("  %s <command> --help   Show help for a specific command\n", os.Args[0])
@@ -37,4 +38,6 @@ func showHelp() {
 	fmt.Printf("  %s --verbose validate my-program.json\n", os.Args[0])
 	fmt.Printf("  %s display \"Hello World\"\n", os.Args[0])
 	fmt.Printf("  %s temperatures\n", os.Args[0])
+	fmt.Printf("  %s programs list\n", os.Args[0])
+	fmt.Printf("  %s programs create my-program.json\n", os.Args[0])
 }
