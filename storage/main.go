@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rmkhl/halko/storage/filestorage"
 	"github.com/rmkhl/halko/storage/router"
+	"github.com/rmkhl/halko/storage/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -61,7 +61,7 @@ func main() {
 		}
 	}
 
-	storage, err := filestorage.NewFileStorage(storageBasePath)
+	storage, err := storagefs.NewProgramStorage(storageBasePath)
 	if err != nil {
 		log.Fatal(err)
 	}

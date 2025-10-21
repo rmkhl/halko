@@ -1,4 +1,4 @@
-package filestorage
+package storagefs
 
 import (
 	"encoding/csv"
@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
 	ExecutionLogWriter struct {
-		storage    *FileStorage
+		storage    *ExecutorFileStorage
 		name       string
 		file       *os.File
 		csvWriter  *csv.Writer
@@ -24,14 +25,16 @@ type (
 	}
 )
 
-func NewExecutionLogWriter(storage *FileStorage, name string, resolution int64) *ExecutionLogWriter {
-	filePath := filepath.Join(storage.logPath, name+".csv")
+func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolution int64) *ExecutionLogWriter {
+	log.Info("Creating execution log writer for program '%s'", name)
+	filePath := filepath.Join(fileStorage.logPath, name+".csv")
 	logFile, err := os.Create(filePath)
 	if err != nil {
+		log.Error("Failed to create execution log file for program '%s': %v", name, err)
 		return nil
 	}
 	writer := ExecutionLogWriter{
-		storage:    storage,
+		storage:    fileStorage,
 		name:       name,
 		file:       logFile,
 		csvWriter:  csv.NewWriter(logFile),
@@ -51,6 +54,7 @@ func NewExecutionLogWriter(storage *FileStorage, name string, resolution int64) 
 		"humidifier",
 	})
 	writer.csvWriter.Flush()
+	log.Debug("Successfully created execution log writer for program '%s'", name)
 	return &writer
 }
 
@@ -84,12 +88,9 @@ func (writer *ExecutionLogWriter) Close() {
 	if writer == nil {
 		return
 	}
+	log.Debug("Closing execution log writer for program '%s'", writer.name)
 	_ = writer.file.Close()
 	writer.csvWriter = nil
 	writer.file = nil
-}
-
-func (storage *FileStorage) MaybeDeleteExecutionLog(name string) {
-	filePath := filepath.Join(storage.logPath, name+".csv")
-	os.Remove(filePath)
+	log.Debug("Successfully closed execution log writer for program '%s'", writer.name)
 }

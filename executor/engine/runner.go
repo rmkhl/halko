@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/executor/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -30,8 +30,8 @@ type (
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
 		programStatus              *types.ExecutionStatus
-		statusWriter               *storage.StateWriter
-		logWriter                  *storage.ExecutionLogWriter
+		statusWriter               *storagefs.StateWriter
+		logWriter                  *storagefs.ExecutionLogWriter
 		// Note, we rely on the fact that the runner is the only one updating these and fsmController
 		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
 		psuStatus         fsmPSUStatus
@@ -41,7 +41,7 @@ type (
 	}
 )
 
-func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.FileStorage, program *types.Program, endpoints *types.APIEndpoints) (*programRunner, error) {
+func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.ExecutorFileStorage, program *types.Program, endpoints *types.APIEndpoints) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -81,12 +81,12 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storage.Fi
 	if err != nil {
 		return nil, err
 	}
-	runner.statusWriter = storage.NewStateWriter(programStorage, programName)
+	runner.statusWriter = storagefs.NewStateWriter(programStorage, programName)
 	err = runner.statusWriter.UpdateState(types.ProgramStatePending)
 	if err != nil {
 		return nil, err
 	}
-	runner.logWriter = storage.NewExecutionLogWriter(programStorage, programName, 60)
+	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, 60)
 	return &runner, nil
 }
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/executor/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -13,7 +13,7 @@ type (
 		wg          *sync.WaitGroup
 		config      *types.ExecutorConfig
 		halkoConfig *types.HalkoConfig
-		storage     *storage.FileStorage
+		storage     *storagefs.ExecutorFileStorage
 		runner      *programRunner
 		endpoints   *types.APIEndpoints
 	}
@@ -24,7 +24,7 @@ var (
 	ErrNoProgramRunning      = errors.New("no program running")
 )
 
-func NewEngine(halkoConfig *types.HalkoConfig, storage *storage.FileStorage, endpoints *types.APIEndpoints) *ControlEngine {
+func NewEngine(halkoConfig *types.HalkoConfig, storage *storagefs.ExecutorFileStorage, endpoints *types.APIEndpoints) *ControlEngine {
 	engine := ControlEngine{
 		halkoConfig: halkoConfig,
 		runner:      nil,

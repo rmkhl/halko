@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rmkhl/halko/storage/filestorage"
+	"github.com/rmkhl/halko/storage/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -20,7 +20,7 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage, endpoints *types.APIEndpoints) {
+func SetupRoutes(mux *http.ServeMux, storage *storagefs.ProgramStorage, endpoints *types.APIEndpoints) {
 	mux.HandleFunc("GET "+endpoints.Storage.Programs, listAllPrograms(storage))
 	mux.HandleFunc("GET "+endpoints.Storage.Programs+"/{name}", getProgram(storage))
 	mux.HandleFunc("POST "+endpoints.Storage.Programs, createProgram(storage))
@@ -28,7 +28,7 @@ func SetupRoutes(mux *http.ServeMux, storage *filestorage.FileStorage, endpoints
 	mux.HandleFunc("DELETE "+endpoints.Storage.Programs+"/{name}", deleteProgram(storage))
 }
 
-func listAllPrograms(storage *filestorage.FileStorage) http.HandlerFunc {
+func listAllPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		programs, err := storage.ListStoredPrograms()
 		if err != nil {
@@ -39,7 +39,7 @@ func listAllPrograms(storage *filestorage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func getProgram(storage *filestorage.FileStorage) http.HandlerFunc {
+func getProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		program, err := storage.LoadStoredProgram(programName)
@@ -51,7 +51,7 @@ func getProgram(storage *filestorage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func createProgram(storage *filestorage.FileStorage) http.HandlerFunc {
+func createProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var program types.Program
 
@@ -78,7 +78,7 @@ func createProgram(storage *filestorage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func updateProgram(storage *filestorage.FileStorage) http.HandlerFunc {
+func updateProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		var program types.Program
@@ -101,7 +101,7 @@ func updateProgram(storage *filestorage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func deleteProgram(storage *filestorage.FileStorage) http.HandlerFunc {
+func deleteProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 

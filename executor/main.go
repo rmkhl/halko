@@ -12,7 +12,7 @@ import (
 	"github.com/rmkhl/halko/executor/engine"
 	"github.com/rmkhl/halko/executor/heartbeat"
 	"github.com/rmkhl/halko/executor/router"
-	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/executor/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -44,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storage, err := storage.NewFileStorage(configuration.ExecutorConfig.BasePath)
+	storage, err := storagefs.NewExecutorFileStorage(configuration.ExecutorConfig.BasePath)
 	if err != nil {
 		log.Fatal(err)
 	}

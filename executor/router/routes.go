@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/rmkhl/halko/executor/engine"
-	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/executor/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -23,7 +23,7 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func SetupRoutes(mux *http.ServeMux, storage *storage.FileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+func SetupRoutes(mux *http.ServeMux, storage *storagefs.ExecutorFileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
 	mux.HandleFunc("GET "+endpoints.Executor.Programs, listAllRuns(storage))
 	mux.HandleFunc("GET "+endpoints.Executor.Programs+"/{name}", getRun(storage))
 	mux.HandleFunc("DELETE "+endpoints.Executor.Programs+"/{name}", deleteRun(storage))

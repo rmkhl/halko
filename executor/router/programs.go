@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rmkhl/halko/executor/storage"
+	"github.com/rmkhl/halko/executor/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
-func listAllRuns(storage *storage.FileStorage) http.HandlerFunc {
+func listAllRuns(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		var savedPrograms []types.RunHistory
 
@@ -43,7 +43,7 @@ func startTimeFromName(name string) int64 {
 	return 0
 }
 
-func getRun(storage *storage.FileStorage) http.HandlerFunc {
+func getRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		program, err := storage.LoadExecutedProgram(programName)
@@ -61,13 +61,11 @@ func getRun(storage *storage.FileStorage) http.HandlerFunc {
 	}
 }
 
-func deleteRun(storage *storage.FileStorage) http.HandlerFunc {
+func deleteRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 
 		err := storage.DeleteExecutedProgram(programName)
-		storage.MaybeDeleteState(programName)
-		storage.MaybeDeleteExecutionLog(programName)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -75,5 +73,3 @@ func deleteRun(storage *storage.FileStorage) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, types.APIResponse[string]{Data: "deleted"})
 	}
 }
-
-// Storage-related program handlers have been moved to the independent storage service
