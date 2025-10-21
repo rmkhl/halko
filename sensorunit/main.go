@@ -92,7 +92,7 @@ func main() {
 	}
 
 	log.Info("Closing sensor unit connection...")
-	if err := sensorUnit.Close(); err != nil {
+	if err := sensorUnit.Shutdown(); err != nil {
 		log.Error("Error closing sensor unit connection: %v", err)
 	} else {
 		log.Info("Sensor unit connection closed")
