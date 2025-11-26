@@ -147,10 +147,7 @@ example configuration:
 {
   "executor": {
     "base_path": "/var/opt/halko",
-    "port": 8090,
     "tick_length": 6000,
-    "sensor_unit_url": "http://localhost:8088/sensors",
-    "power_unit_url": "http://localhost:8092/powers",
     "status_message_url": "http://localhost:8088/status",
     "network_interface": "eth0",
     "defaults": {
@@ -171,16 +168,37 @@ example configuration:
       "fan": 2
     }
   },
+  "storage": {
+    "base_path": "/var/opt/halko"
+  },
   "sensorunit": {
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
   },
   "api_endpoints": {
-    "programs": "/programs",
-    "running": "/running",
-    "temperatures": "/temperatures",
-    "status": "/status",
-    "root": "/"
+    "executor": {
+      "url": "http://localhost:8090",
+      "status": "/status",
+      "programs": "/programs",
+      "running": "/running"
+    },
+    "sensorunit": {
+      "url": "http://localhost:8093",
+      "status": "/status",
+      "temperatures": "/temperatures",
+      "display": "/display"
+    },
+    "powerunit": {
+      "url": "http://localhost:8092",
+      "status": "/status",
+      "power": "/power"
+    },
+    "storage": {
+      "url": "http://localhost:8091",
+      "status": "/status",
+      "programs": "/programs",
+      "execution_log": "/log"
+    }
   }
 }
 ```
@@ -188,10 +206,7 @@ example configuration:
 ### Executor Configuration Options
 
 - **`base_path`**: Directory for storing program data and execution logs
-- **`port`**: HTTP server port for the executor API
 - **`tick_length`**: Execution tick duration in milliseconds
-- **`sensor_unit_url`**: Base URL for sensor unit API calls
-- **`power_unit_url`**: Base URL for power unit API calls
 - **`status_message_url`**: URL endpoint for heartbeat status messages
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")

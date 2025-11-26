@@ -64,8 +64,6 @@ var testConfigData = `{
     "port": 8090,
     "base_path": "/tmp/test/halko",
     "tick_length": 6000,
-    "sensor_unit_host": "localhost:8088",
-    "power_unit_host": "localhost:8092",
     "status_message_url": "http://localhost:8088/sensors/api/v1/status",
     "network_interface": "enp4s0",
     "defaults": {

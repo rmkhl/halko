@@ -27,8 +27,6 @@ type (
 	ExecutorConfig struct {
 		BasePath         string    `json:"base_path"`
 		TickLength       int       `json:"tick_length"`
-		PowerUnitHost    string    `json:"power_unit_host"`
-		SensorUnitHost   string    `json:"sensor_unit_host"`
 		StatusMessageURL string    `json:"status_message_url"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
@@ -254,12 +252,6 @@ func readHalkoConfig(path string) (*HalkoConfig, error) {
 func (c *HalkoConfig) ValidateRequired() error {
 	if c.ExecutorConfig == nil {
 		return errors.New("executor configuration is required")
-	}
-	if c.ExecutorConfig.SensorUnitHost == "" {
-		return errors.New("sensor unit host is required")
-	}
-	if c.ExecutorConfig.PowerUnitHost == "" {
-		return errors.New("power unit host is required")
 	}
 	if c.ExecutorConfig.BasePath == "" {
 		return errors.New("executor base path is required")
