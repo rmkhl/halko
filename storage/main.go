@@ -42,23 +42,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storageBasePath := "/tmp/halko" // Default fallback
-	port := "8091"                  // Default port
-
-	if configuration.StorageConfig != nil {
-		if configuration.StorageConfig.BasePath != "" {
-			storageBasePath = configuration.StorageConfig.BasePath
-		}
-	} else if configuration.ExecutorConfig != nil && configuration.ExecutorConfig.BasePath != "" {
+	var storageBasePath string
+	switch {
+	case configuration.StorageConfig != nil && configuration.StorageConfig.BasePath != "":
+		storageBasePath = configuration.StorageConfig.BasePath
+	case configuration.ExecutorConfig != nil && configuration.ExecutorConfig.BasePath != "":
 		storageBasePath = configuration.ExecutorConfig.BasePath
+	default:
+		log.Fatal("Storage base path is not configured. Set storage.base_path or executor.base_path in configuration")
 	}
 
 	// Get port from storage endpoint
-	if configuration.APIEndpoints != nil {
-		endpointPort, err := configuration.APIEndpoints.Storage.GetPort()
-		if err == nil {
-			port = endpointPort
-		}
+	if configuration.APIEndpoints == nil {
+		log.Fatal("API endpoints configuration is required")
+	}
+	port, err := configuration.APIEndpoints.Storage.GetPort()
+	if err != nil {
+		log.Fatalf("Failed to get storage port from configuration: %v", err)
 	}
 
 	storage, err := storagefs.NewProgramStorage(storageBasePath)

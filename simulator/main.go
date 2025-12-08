@@ -34,15 +34,13 @@ func main() {
 	// Extract Shelly port from powerunit.shelly_address
 	shellyPort, err := config.APIEndpoints.SensorUnit.GetPort(config.PowerUnit.ShellyAddress)
 	if err != nil {
-		log.Warning("Failed to extract shelly port, using default 8088: %v", err)
-		shellyPort = "8088"
+		log.Fatal("Failed to extract shelly port from configuration: %v", err)
 	}
 
 	// Extract sensor port from api_endpoints.sensorunit.url
 	sensorPort, err := config.APIEndpoints.SensorUnit.GetPort()
 	if err != nil {
-		log.Warning("Failed to extract sensor port, using default 8093: %v", err)
-		sensorPort = "8093"
+		log.Fatal("Failed to extract sensor port from configuration: %v", err)
 	}
 
 	log.Info("Starting Halko Simulator")
