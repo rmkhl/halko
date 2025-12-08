@@ -16,11 +16,12 @@ import (
 
 type (
 	Manager struct {
-		config     *types.ExecutorConfig
-		ctx        context.Context
-		cancel     context.CancelFunc
-		wg         *sync.WaitGroup
-		executorIP string
+		networkInterface string
+		apiEndpoints     *types.APIEndpoints
+		ctx              context.Context
+		cancel           context.CancelFunc
+		wg               *sync.WaitGroup
+		executorIP       string
 	}
 )
 
@@ -28,21 +29,22 @@ var (
 	ErrHeartbeatNotRunning = errors.New("heartbeat not running")
 )
 
-func NewManager(config *types.ExecutorConfig) (*Manager, error) {
+func NewManager(networkInterface string, apiEndpoints *types.APIEndpoints) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	executorIP, err := GetNetworkInterfaceIPv4(config.NetworkInterface)
+	executorIP, err := GetNetworkInterfaceIPv4(networkInterface)
 	if err != nil {
 		cancel() // Clean up the context since we're returning an error
-		return nil, errors.New("failed to get IP address for network interface " + config.NetworkInterface + ": " + err.Error())
+		return nil, errors.New("failed to get IP address for network interface " + networkInterface + ": " + err.Error())
 	}
 
 	return &Manager{
-		config:     config,
-		ctx:        ctx,
-		cancel:     cancel,
-		wg:         new(sync.WaitGroup),
-		executorIP: executorIP,
+		networkInterface: networkInterface,
+		apiEndpoints:     apiEndpoints,
+		ctx:              ctx,
+		cancel:           cancel,
+		wg:               new(sync.WaitGroup),
+		executorIP:       executorIP,
 	}, nil
 }
 
@@ -99,7 +101,8 @@ func (hm *Manager) sendHeartbeat() error {
 		return err
 	}
 
-	resp, err := http.Post(hm.config.StatusMessageURL, "application/json", bytes.NewBuffer(jsonData))
+	displayURL := hm.apiEndpoints.SensorUnit.URL + hm.apiEndpoints.SensorUnit.Display
+	resp, err := http.Post(displayURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}

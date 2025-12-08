@@ -148,7 +148,6 @@ example configuration:
   "executor": {
     "base_path": "/var/opt/halko",
     "tick_length": 6000,
-    "status_message_url": "http://localhost:8088/status",
     "network_interface": "eth0",
     "defaults": {
       "pid_settings": {
@@ -207,7 +206,6 @@ example configuration:
 
 - **`base_path`**: Directory for storing program data and execution logs
 - **`tick_length`**: Execution tick duration in milliseconds
-- **`status_message_url`**: URL endpoint for heartbeat status messages
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
@@ -221,7 +219,7 @@ The executor includes an automatic heartbeat service that:
 
 - Reports the executor's IP address every 30 seconds
 - Uses the configured `network_interface` to determine the IP address
-- Sends status messages to the `status_message_url` endpoint
+- Sends status messages to the sensorunit display endpoint (configured in `api_endpoints.sensorunit`)
 - Helps monitor executor availability in distributed deployments
 - Starts automatically when the executor service starts
 

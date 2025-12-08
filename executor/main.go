@@ -51,7 +51,7 @@ func main() {
 
 	engine := engine.NewEngine(configuration, storage, configuration.APIEndpoints)
 
-	heartbeatManager, err := heartbeat.NewManager(configuration.ExecutorConfig)
+	heartbeatManager, err := heartbeat.NewManager(configuration.ExecutorConfig.NetworkInterface, configuration.APIEndpoints)
 	if err != nil {
 		log.Fatalf("Failed to create heartbeat manager: %v", err)
 	}

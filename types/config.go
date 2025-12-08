@@ -27,7 +27,6 @@ type (
 	ExecutorConfig struct {
 		BasePath         string    `json:"base_path"`
 		TickLength       int       `json:"tick_length"`
-		StatusMessageURL string    `json:"status_message_url"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
 	}
