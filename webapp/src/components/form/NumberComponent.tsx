@@ -4,7 +4,7 @@ import {
   Unstable_NumberInput as BaseNumberInput,
   numberInputClasses,
 } from "@mui/base/Unstable_NumberInput";
-import { styled } from "@mui/system";
+import { styled } from "@mui/material/styles";
 
 export interface Props {
   editing?: boolean;

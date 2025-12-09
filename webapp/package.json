@@ -2,16 +2,27 @@
   "name": "halko",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "parcel index.html",
+    "build": "parcel build index.html --public-url ./",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
+  "source": "index.html",
+  "targets": {
+    "default": {
+      "context": "browser"
+    }
+  },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@mui/base": "^5.0.0-beta.40",
     "@mui/icons-material": "^5.15.15",
     "@mui/material": "^5.15.15",
     "@reduxjs/toolkit": "^2.2.3",

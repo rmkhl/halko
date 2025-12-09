@@ -28,6 +28,7 @@ func showHelp() {
 	fmt.Println("  display               Send text to sensor unit display")
 	fmt.Println("  temperatures          Get current temperatures from sensor unit")
 	fmt.Println("  programs              Manage stored programs")
+	fmt.Println("  nginx                 Generate nginx proxy configuration")
 	fmt.Println()
 	fmt.Println("Command Help:")
 	fmt.Printf("  %s <command> --help   Show help for a specific command\n", os.Args[0])
@@ -40,4 +41,5 @@ func showHelp() {
 	fmt.Printf("  %s temperatures\n", os.Args[0])
 	fmt.Printf("  %s programs list\n", os.Args[0])
 	fmt.Printf("  %s programs create my-program.json\n", os.Args[0])
+	fmt.Printf("  %s nginx -port 8080 -output /etc/nginx/sites-available/halko\n", os.Args[0])
 }

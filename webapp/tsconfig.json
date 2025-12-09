@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
     "jsx": "react",
-    "module": "NodeNext",
-    "target": "es5",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2015",
     "lib": ["dom", "dom.iterable", "esnext"],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "forceConsistentCasingInFileNames": true,
-  }
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
 }

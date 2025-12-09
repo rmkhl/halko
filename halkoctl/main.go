@@ -52,6 +52,9 @@ func main() {
 			case "programs":
 				showProgramsHelp()
 				os.Exit(exitSuccess)
+			case "nginx":
+				showNginxHelp()
+				os.Exit(exitSuccess)
 			}
 		}
 	}
@@ -80,6 +83,8 @@ func main() {
 		handleTemperaturesCommand()
 	case "programs":
 		handleProgramsCommand()
+	case "nginx":
+		handleNginxCommand()
 	case "help", "-help", helpFlag:
 		showHelp()
 		os.Exit(exitSuccess)

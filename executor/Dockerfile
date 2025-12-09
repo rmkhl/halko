@@ -1,9 +1,13 @@
-FROM golang:1.22
+FROM debian:bookworm-slim
 
-WORKDIR /executor
+WORKDIR /app
 
-RUN go install github.com/air-verse/air@v1.52.3
-RUN air init
+# Copy the precompiled binary
+COPY bin/executor /app/executor
 
-# Start the back end and listen to changes in files.
-ENTRYPOINT air --build.cmd "go build" --build.bin "./executor"
+# Make the binary executable
+RUN chmod +x /app/executor
+
+# Run the executor with config file option
+ENTRYPOINT ["/app/executor"]
+CMD ["-c", "/etc/halko/halko.cfg"]

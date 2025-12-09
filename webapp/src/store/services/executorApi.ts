@@ -2,6 +2,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchSingleQuery, list } from "./queryBuilders";
 import { Program } from "../../types/api";
+import { API_ENDPOINTS } from "../../config/api";
 
 const currentEndpoint = "";
 const runningProgramTag = "runningProgram";
@@ -9,7 +10,7 @@ const runningProgramTag = "runningProgram";
 export const executorApi = createApi({
   reducerPath: "executorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8090/engine/running",
+    baseUrl: API_ENDPOINTS.executor,
   }),
   tagTypes: [runningProgramTag],
   endpoints: (builder) => ({

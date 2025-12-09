@@ -1,26 +1,25 @@
 services:
   simulator:
     build:
-      context: ./simulator
-      dockerfile: Dockerfile
-    working_dir: /app/simulator
+      context: .
+      dockerfile: simulator/Dockerfile
     volumes:
-      - .:/app
       - ./fsdb:/fsdb
+      - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
     ports:
-      - "8088:8088"
+      - "8088:8088"  # Shelly emulation interface
+      - "8093:8093"  # SensorUnit emulation interface
     restart: unless-stopped
 
   executor:
     build:
-      context: ./executor
-      dockerfile: Dockerfile
-    working_dir: /app/executor
+      context: .
+      dockerfile: executor/Dockerfile
     volumes:
-      - .:/app
       - ./fsdb:/fsdb
+      - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
     ports:
-      - "8089:8089"
+      - "8090:8090"
     depends_on:
       simulator:
         condition: service_started
@@ -28,11 +27,33 @@ services:
 
   powerunit:
     build:
-      context: ./powerunit
-      dockerfile: Dockerfile
-    working_dir: /app/powerunit
+      context: .
+      dockerfile: powerunit/Dockerfile
     volumes:
-      - .:/app
+      - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
     ports:
-      - "8090:8090"
+      - "8092:8092"
+    restart: unless-stopped
+
+  storage:
+    build:
+      context: .
+      dockerfile: storage/Dockerfile
+    volumes:
+      - ./fsdb:/fsdb
+      - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
+    ports:
+      - "8091:8091"
+    restart: unless-stopped
+
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - executor
+      - storage
+      - powerunit
     restart: unless-stopped

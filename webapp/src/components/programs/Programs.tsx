@@ -3,8 +3,7 @@ import { useGetProgramsQuery } from "../../store/services";
 import { useTranslation } from "react-i18next";
 import { Program as ApiProgram } from "../../types/api";
 import { useNavigate } from "react-router-dom";
-import { Stack } from "@mui/system";
-import { Button } from "@mui/material";
+import { Stack, Button } from "@mui/material";
 import { ProgramRow } from "./ProgramRow";
 
 export const Programs: React.FC = () => {

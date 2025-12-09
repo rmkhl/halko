@@ -1,9 +1,13 @@
-FROM golang:1.22
+FROM debian:bookworm-slim
 
-WORKDIR /simulator
+WORKDIR /app
 
-RUN go install github.com/air-verse/air@v1.52.3
-RUN air init
+# Copy the precompiled binary
+COPY bin/simulator /app/simulator
 
-# Start the back end and listen to changes in files.
-ENTRYPOINT air --build.cmd "go build" --build.bin "./simulator"
+# Make the binary executable
+RUN chmod +x /app/simulator
+
+# Run the simulator with config file option
+ENTRYPOINT ["/app/simulator"]
+CMD ["-c", "/etc/halko/halko.cfg"]

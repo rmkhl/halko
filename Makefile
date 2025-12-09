@@ -13,6 +13,13 @@ $(BINDIR):
 .PHONY: clean
 clean:
 	rm -rf $(BINDIR)
+	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
+	@echo "✓ Cleaned Go binaries and webapp artifacts"
+
+.PHONY: distclean
+distclean: clean
+	@rm -rf .nodejs
+	@echo "✓ Removed local Node.js installation"
 
 .PHONY: prepare
 prepare:
@@ -50,10 +57,57 @@ prepare:
 		fi; \
 	done
 	@echo "Updated go.work file to include all modules."
+	@echo "Checking for Node.js..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	if ! command -v node > /dev/null; then \
+		echo "Node.js not found. Installing Node.js 18 locally in .nodejs/..."; \
+		mkdir -p .nodejs; \
+		ARCH=$$(uname -m); \
+		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		if [ "$$ARCH" = "x86_64" ]; then \
+			NODE_ARCH="x64"; \
+		elif [ "$$ARCH" = "aarch64" ] || [ "$$ARCH" = "arm64" ]; then \
+			NODE_ARCH="arm64"; \
+		else \
+			echo "Error: Unsupported architecture: $$ARCH"; \
+			exit 1; \
+		fi; \
+		NODE_VERSION="18.20.5"; \
+		NODE_DIST="node-v$${NODE_VERSION}-$${OS}-$${NODE_ARCH}"; \
+		echo "Downloading Node.js $${NODE_VERSION} for $${OS}-$${NODE_ARCH}..."; \
+		curl -fsSL "https://nodejs.org/dist/v$${NODE_VERSION}/$${NODE_DIST}.tar.gz" -o .nodejs/node.tar.gz; \
+		echo "Extracting Node.js..."; \
+		tar -xzf .nodejs/node.tar.gz -C .nodejs --strip-components=1; \
+		rm .nodejs/node.tar.gz; \
+		echo "✓ Node.js installed to .nodejs/"; \
+	else \
+		NODE_VERSION=$$(node -v | sed 's/v//'); \
+		NODE_MAJOR=$$(echo $$NODE_VERSION | cut -d. -f1); \
+		if [ $$NODE_MAJOR -lt 18 ]; then \
+			echo "Warning: Node.js $$NODE_VERSION detected. Node.js 18+ is recommended."; \
+		else \
+			echo "✓ Node.js $$(node -v) is installed"; \
+		fi; \
+	fi
 
 .PHONY: build
-build: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All binaries have been rebuilt."
+build: prepare clean $(MODULES:%=$(BINDIR)/%)
+	@echo "All Go binaries have been rebuilt."
+	@echo "Installing webapp dependencies..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install
+	@echo "✓ Webapp dependencies installed"
+	@echo "Building webapp for production..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm run build
+	@echo "✓ Webapp built to webapp/dist/"
+	@echo "All binaries and webapp have been rebuilt."
 
 .PHONY: lint
 lint:
@@ -177,24 +231,92 @@ validate:
 	@echo "Validating program: $(PROGRAM)"
 	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
 
+.PHONY: images
+images: build
+	@echo "Ensuring fsdb directory exists..."
+	@mkdir -p fsdb
+	@echo "Generating nginx configuration for webapp Docker container..."
+	@$(BINDIR)/halkoctl -c halko-docker.cfg nginx -port 80 -output webapp/nginx-docker.conf
+	@echo "Removing existing Docker images..."
+	@docker-compose down --remove-orphans || true
+	@docker-compose rm -f || true
+	@docker images --filter "reference=halko_*" -q | xargs -r docker rmi -f || true
+	@echo "Building new Docker images..."
+	@docker-compose build --no-cache
+	@echo "Docker images have been rebuilt."
+
+# ============================================================================
+# WebApp Targets
+# ============================================================================
+
+.PHONY: webapp-dev
+webapp-dev: prepare
+	@echo "Installing webapp dependencies..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install
+	@echo "Starting webapp development server..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm start
+
+.PHONY: build-webapp
+build-webapp: prepare $(BINDIR)/halkoctl
+	@echo "Building webapp for production (host installation)..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install
+	@echo "Building production bundle..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm run build
+	@echo "✓ Webapp built successfully to webapp/dist/"
+	@echo "Generating nginx configuration for host installation..."
+	@if [ -f /etc/opt/halko.cfg ]; then \
+		CONFIG_FILE="/etc/opt/halko.cfg"; \
+		echo "Using global config: $$CONFIG_FILE"; \
+	else \
+		CONFIG_FILE="halko.cfg"; \
+		echo "Using local config: $$CONFIG_FILE"; \
+	fi; \
+	$(BINDIR)/halkoctl -c $$CONFIG_FILE nginx -port 80 -output webapp/nginx-host.conf
+	@echo "✓ Generated webapp/nginx-host.conf for host installation"
+	@echo "  To serve: Copy webapp/dist/* to your web server root and nginx-host.conf to nginx sites"
+
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  help                  Show this help message. (default)"
-	@echo "  all                   Build all Go executables to bin/ directory."
-	@echo "  prepare               Check for required tools and create/update go.work file to include all modules."
-	@echo "  build                 Clean and rebuild all executables from scratch."
-	@echo "  clean                 Remove the bin/ directory and all built executables."
-	@echo "  lint                  Run golangci-lint on all modules."
-	@echo "  lint-markdown         Run mdl (markdown linter) on all markdown files."
-	@echo "  go-tidy               Run go mod tidy on all modules with go.mod files."
-	@echo "  update-modules        Update all go.mod dependencies and tidy them."
-	@echo "  install               Install all binaries except simulator to /opt/halko and copy templates/halko.cfg to /etc/opt/halko.cfg if not present."
-	@echo "  systemd-units         Create, install, and enable systemd unit files for all binaries except simulator."
-	@echo "  fmt-changed           Reformat changed Go files compared to the main branch using golangci-lint."
-	@echo "  test                  Run all tests."
-	@echo "  test-program-validation  Run program validation tests."
-	@echo "  test-shelly-api       Run shelly API tests."
-	@echo "  validate              Validate a program.json file using: make validate PROGRAM=path/to/program.json"
+	@echo ""
+	@echo "Main Targets:"
+	@echo "  help                       Show this help message. (default)"
+	@echo "  all                        Build all Go executables to bin/ directory."
+	@echo "  prepare                    Check for required tools (Go, Node.js), install Node.js if needed, and setup workspace."
+	@echo "  build                      Clean and rebuild all Go executables and webapp from scratch."
+	@echo "  clean                      Remove bin/ directory and webapp artifacts (keeps Node.js installation)."
+	@echo "  distclean                  Like clean, but also removes local Node.js installation."
+	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
+	@echo ""
+	@echo "Go Backend Targets:"
+	@echo "  lint                       Run golangci-lint on all modules."
+	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
+	@echo "  go-tidy                    Run go mod tidy on all modules with go.mod files."
+	@echo "  update-modules             Update all go.mod dependencies and tidy them."
+	@echo "  install                    Install all binaries except simulator to /opt/halko."
+	@echo "  systemd-units              Create, install, and enable systemd unit files."
+	@echo "  fmt-changed                Reformat changed Go files compared to the main branch."
+	@echo ""
+	@echo "Test Targets:"
+	@echo "  test                       Run all tests."
+	@echo "  test-program-validation    Run program validation tests."
+	@echo "  test-shelly-api            Run shelly API tests."
+	@echo "  validate                   Validate a program.json file: make validate PROGRAM=path/to/program.json"
+	@echo ""
+	@echo "WebApp Targets:"
+	@echo "  webapp-dev                 Start webapp development server with hot reload."
+	@echo "  build-webapp               Build webapp for production (host installation) to webapp/dist/."
 
 .DEFAULT_GOAL := help

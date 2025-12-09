@@ -27,11 +27,11 @@ The system is built with a microservices architecture with these main components
 The project uses a Makefile to simplify building and deployment:
 
 ```bash
-# Build all components
+# Build all Go backend components
 make all
 
 # Clean and rebuild all components from scratch
-make rebuild
+make build
 
 # Remove all built binaries
 make clean
@@ -50,6 +50,14 @@ make systemd-units
 
 # Reformat changed Go files
 make fmt-changed
+
+# WebApp development and deployment
+make webapp-install-node # Install Node.js 18 using nvm (if needed)
+make webapp-install      # Install webapp dependencies
+make webapp-dev          # Start development server
+make webapp-build        # Build for production
+make webapp-clean        # Clean webapp artifacts
+make webapp-docker-build # Build webapp Docker image
 ```
 
 ## Project Structure
@@ -99,7 +107,9 @@ SensorUnit and parts of the PowerUnit (Shelly devices).
 
 A React-based frontend application that serves as the user interface for the
 Halko system. It allows users to create and modify drying programs, monitor
-active drying sessions, and control the overall system.
+active drying sessions, and control the overall system. Built with React 18,
+TypeScript, Material-UI, and Redux Toolkit. See [webapp/README.md](webapp/README.md)
+for detailed development and deployment instructions.
 
 ### Supporting Directories
 

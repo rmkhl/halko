@@ -1,9 +1,13 @@
-FROM golang:1.22
+FROM debian:bookworm-slim
 
-WORKDIR /storage
+WORKDIR /app
 
-RUN go install github.com/air-verse/air@v1.52.3
-RUN air init
+# Copy the precompiled binary
+COPY bin/storage /app/storage
 
-# Start the back end and listen to changes in files.
-ENTRYPOINT air --build.cmd "go build" --build.bin "./storage"
+# Make the binary executable
+RUN chmod +x /app/storage
+
+# Run the storage with config file option
+ENTRYPOINT ["/app/storage"]
+CMD ["-c", "/etc/halko/halko.cfg"]

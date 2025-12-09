@@ -1,9 +1,13 @@
-FROM golang:1.22
+FROM debian:bookworm-slim
 
-WORKDIR /app/powerunit
+WORKDIR /app
 
-RUN go install github.com/air-verse/air@v1.52.3
-RUN air init
+# Copy the precompiled binary
+COPY bin/powerunit /app/powerunit
 
-# Start the back end and listen to changes in files.
-ENTRYPOINT air --build.cmd "go build" --build.bin "./powerunit" -- -k /app/.halko.cfg
+# Make the binary executable
+RUN chmod +x /app/powerunit
+
+# Run the powerunit with config file option
+ENTRYPOINT ["/app/powerunit"]
+CMD ["-c", "/etc/halko/halko.cfg"]
