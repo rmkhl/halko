@@ -242,7 +242,7 @@ images: build
 	@docker-compose rm -f || true
 	@docker images --filter "reference=halko_*" -q | xargs -r docker rmi -f || true
 	@echo "Building new Docker images..."
-	@docker-compose build --no-cache
+	@BUILDKIT_PROGRESS=plain docker-compose build --no-cache
 	@echo "Docker images have been rebuilt."
 
 # ============================================================================

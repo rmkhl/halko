@@ -20,7 +20,8 @@ COPY .env.production .env
 # Disable TTY/progress output to avoid escape sequences in logs
 ENV CI=true
 ENV NO_COLOR=1
-RUN npm run build
+ENV TERM=dumb
+RUN npx parcel build index.html --public-url ./ --log-level error > /dev/null 2>&1 && echo "Build completed successfully"
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
