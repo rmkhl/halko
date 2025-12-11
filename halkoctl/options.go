@@ -24,6 +24,7 @@ type SendOptions struct {
 type StatusOptions struct {
 	CommonOptions
 	Services []string // Services to check (controlunit, sensorunit, etc.)
+	Details  bool     // Show detailed status information
 }
 
 // ValidateOptions represents options specific to the validate command
@@ -122,6 +123,7 @@ func ParseStatusOptions() (*StatusOptions, error) {
 	statusFlags := flag.NewFlagSet("status", flag.ExitOnError)
 
 	SetupCommonFlags(statusFlags, &opts.CommonOptions)
+	statusFlags.BoolVar(&opts.Details, "details", false, "Show detailed status information")
 
 	if err := statusFlags.Parse(os.Args[2:]); err != nil {
 		return nil, err
@@ -132,19 +134,18 @@ func ParseStatusOptions() (*StatusOptions, error) {
 
 	// If no services specified, check all available services
 	if len(args) == 0 {
-		opts.Services = []string{"controlunit", "sensorunit", "powerunit", "storage"}
+		opts.Services = []string{"controlunit", "sensorunit", "powerunit"}
 	} else {
 		// Validate and set the specified services
 		validServices := map[string]bool{
 			"controlunit": true,
 			"sensorunit":  true,
 			"powerunit":   true,
-			"storage":     true,
 		}
 
 		for _, service := range args {
 			if !validServices[service] {
-				return nil, fmt.Errorf("unknown service '%s'. Valid services are: controlunit, sensorunit, powerunit, storage", service)
+				return nil, fmt.Errorf("unknown service '%s'. Valid services are: controlunit, sensorunit, powerunit", service)
 			}
 		}
 		opts.Services = args

@@ -51,10 +51,10 @@ func handleProgramsCommand() {
 
 func handleProgramListCommand() {
 	baseURL := getStorageAPIURL(globalConfig)
-	url := baseURL + globalConfig.APIEndpoints.Storage.Programs
+	url := baseURL + globalConfig.APIEndpoints.ControlUnit.Programs
 
 	if globalOpts.Verbose {
-		fmt.Printf("Listing programs from: %s\n", url)
+		fmt.Printf("Creating program at: %s\n", url)
 		fmt.Println()
 	}
 
@@ -110,7 +110,7 @@ func handleProgramGetCommand() {
 
 	programName := os.Args[3]
 	baseURL := getStorageAPIURL(globalConfig)
-	url := baseURL + globalConfig.APIEndpoints.Storage.Programs + "/" + programName
+	url := baseURL + globalConfig.APIEndpoints.ControlUnit.Programs + "/" + programName
 
 	if globalOpts.Verbose {
 		fmt.Printf("Getting program '%s' from: %s\n", programName, url)
@@ -175,7 +175,7 @@ func handleProgramCreateCommand() {
 	}
 
 	baseURL := getStorageAPIURL(globalConfig)
-	url := baseURL + globalConfig.APIEndpoints.Storage.Programs
+	url := baseURL + globalConfig.APIEndpoints.ControlUnit.Programs
 
 	if globalOpts.Verbose {
 		fmt.Printf("Creating program '%s' from file: %s\n", program.ProgramName, programPath)
@@ -239,7 +239,7 @@ func handleProgramUpdateCommand() {
 	program.ProgramName = programName
 
 	baseURL := getStorageAPIURL(globalConfig)
-	url := baseURL + globalConfig.APIEndpoints.Storage.Programs + "/" + programName
+	url := baseURL + globalConfig.APIEndpoints.ControlUnit.Programs + "/" + programName
 
 	if globalOpts.Verbose {
 		fmt.Printf("Updating program '%s' from file: %s\n", programName, programPath)
@@ -291,7 +291,7 @@ func handleProgramDeleteCommand() {
 
 	programName := os.Args[3]
 	baseURL := getStorageAPIURL(globalConfig)
-	url := baseURL + globalConfig.APIEndpoints.Storage.Programs + "/" + programName
+	url := baseURL + globalConfig.APIEndpoints.ControlUnit.Programs + "/" + programName
 
 	if globalOpts.Verbose {
 		fmt.Printf("Deleting program '%s' from: %s\n", programName, url)

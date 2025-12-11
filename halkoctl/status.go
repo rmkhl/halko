@@ -28,20 +28,13 @@ func handleStatusCommand() {
 	for _, service := range opts.Services {
 		switch service {
 		case "controlunit":
-			queryControlUnitStatus(globalOpts.Verbose)
+			queryControlUnitStatus(globalOpts.Verbose, opts.Details)
 		case "sensorunit":
-			querySensorUnitStatus(globalOpts.Verbose)
+			querySensorUnitStatus(globalOpts.Verbose, opts.Details)
 		case "powerunit":
-			queryPowerUnitStatus(globalOpts.Verbose)
-		case "storage":
-			queryStorageStatus(globalOpts.Verbose)
+			queryPowerUnitStatus(globalOpts.Verbose, opts.Details)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown service: %s\n", service)
-		}
-
-		// Add spacing between services if checking multiple
-		if len(opts.Services) > 1 {
-			fmt.Println()
 		}
 	}
 
@@ -55,48 +48,46 @@ func showStatusHelp() {
 	fmt.Println("Connection failures are reported as 'unavailable' status.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Printf("  %s [global-options] status [service...]\n", os.Args[0])
+	fmt.Printf("  %s [global-options] status [options] [service...]\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("Arguments:")
 	fmt.Println("  service")
-	fmt.Println("        Service name to check (controlunit, sensorunit, powerunit, storage)")
+	fmt.Println("        Service name to check (controlunit, sensorunit, powerunit)")
 	fmt.Println("        If no services specified, checks all available services")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
+	fmt.Println("  --details")
+	fmt.Println("        Show detailed status information")
 	fmt.Println()
 	fmt.Println("Global Options:")
 	fmt.Println("  -c, --config string")
 	fmt.Println("        Path to the halko.cfg configuration file")
 	fmt.Println("  -v, --verbose")
-	fmt.Println("        Enable verbose output")
+	fmt.Println("        Enable verbose output for HTTP requests")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Printf("  %s status                    # Check all services\n", os.Args[0])
+	fmt.Printf("  %s status                       # Check all services\n", os.Args[0])
 	fmt.Printf("  %s status controlunit           # Check controlunit service only\n", os.Args[0])
-	fmt.Printf("  %s status powerunit storage  # Check powerunit and storage services\n", os.Args[0])
-	fmt.Printf("  %s --verbose status          # Verbose output for all services\n", os.Args[0])
+	fmt.Printf("  %s status --details             # Check all services with details\n", os.Args[0])
+	fmt.Printf("  %s --verbose status --details   # Verbose HTTP requests + detailed status\n", os.Args[0])
 	fmt.Println()
 }
 
-func queryControlUnitStatus(verbose bool) {
-	queryServiceStatus("ControlUnit", &globalConfig.APIEndpoints.ControlUnit, verbose)
+func queryControlUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("ControlUnit", &globalConfig.APIEndpoints.ControlUnit, verbose, details)
 }
 
-func querySensorUnitStatus(verbose bool) {
-	queryServiceStatus("SensorUnit", &globalConfig.APIEndpoints.SensorUnit, verbose)
+func querySensorUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("SensorUnit", &globalConfig.APIEndpoints.SensorUnit, verbose, details)
 }
 
-func queryPowerUnitStatus(verbose bool) {
-	queryServiceStatus("PowerUnit", &globalConfig.APIEndpoints.PowerUnit, verbose)
+func queryPowerUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("PowerUnit", &globalConfig.APIEndpoints.PowerUnit, verbose, details)
 }
 
-func queryStorageStatus(verbose bool) {
-	queryServiceStatus("Storage", &globalConfig.APIEndpoints.Storage, verbose)
-}
-
-func queryServiceStatus(serviceName string, endpoint types.EndpointWithStatus, verbose bool) {
+func queryServiceStatus(serviceName string, endpoint types.EndpointWithStatus, verbose bool, details bool) {
 	url := endpoint.GetStatusURL()
 
 	if verbose {
@@ -104,10 +95,10 @@ func queryServiceStatus(serviceName string, endpoint types.EndpointWithStatus, v
 		fmt.Println()
 	}
 
-	getServiceStatus(serviceName, url, verbose)
+	getServiceStatus(serviceName, url, verbose, details)
 }
 
-func getServiceStatus(serviceName string, url string, verbose bool) {
+func getServiceStatus(serviceName string, url string, verbose bool, details bool) {
 	if verbose {
 		fmt.Printf("Querying status from: %s\n", url)
 	}
@@ -192,13 +183,12 @@ func getServiceStatus(serviceName string, url string, verbose bool) {
 
 	fmt.Printf("%s Status: %v\n", serviceName, status)
 
-	// Display details if in verbose mode
-	if verbose {
+	// Display details if details flag is set
+	if details {
 		if details, ok := dataMap["details"]; ok {
 			if detailsMap, ok := details.(map[string]interface{}); ok && len(detailsMap) > 0 {
-				fmt.Println("  Details:")
 				for key, value := range detailsMap {
-					fmt.Printf("    %s: %v\n", key, value)
+					fmt.Printf("  %s: %v\n", key, value)
 				}
 			}
 		}

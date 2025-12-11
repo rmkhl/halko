@@ -132,7 +132,7 @@ func sendProgram(programPath, controlunitURL string, verbose bool) error {
 	// Construct the full URL using the running endpoint
 	var url string
 	if globalConfig != nil && globalConfig.APIEndpoints != nil {
-		url = globalConfig.APIEndpoints.ControlUnit.GetRunningURL()
+		url = globalConfig.APIEndpoints.ControlUnit.GetEngineURL() + "/running"
 	} else {
 		url = controlunitURL + "/engine/running"
 	}

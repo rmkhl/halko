@@ -21,5 +21,5 @@ func getStorageAPIURL(config *types.HalkoConfig) string {
 		return "http://localhost:8091"
 	}
 
-	return config.APIEndpoints.Storage.GetURL()
+	return config.APIEndpoints.ControlUnit.GetURL()
 }
