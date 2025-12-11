@@ -74,3 +74,14 @@ func cancelRunningProgram(engine *engine.ControlEngine) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, types.APIResponse[string]{Data: "Stopped"})
 	}
 }
+
+func getDefaults(engine *engine.ControlEngine) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		defaults := engine.GetDefaults()
+		if defaults == nil {
+			writeError(w, http.StatusInternalServerError, "Defaults not configured")
+			return
+		}
+		writeJSON(w, http.StatusOK, types.APIResponse[types.Defaults]{Data: *defaults})
+	}
+}

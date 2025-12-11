@@ -322,7 +322,45 @@ Deletes/unloads a specific program definition.
 
 ### Engine Control Endpoints
 
-#### GET `/running`
+#### GET `/engine/defaults`
+
+Gets the configured default values for program steps. These defaults are applied to program steps that don't specify heater, fan, or humidifier settings.
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "pid_settings": {
+      "acclimate": {
+        "kp": 2.0,
+        "ki": 1.0,
+        "kd": 0.5
+      }
+    },
+    "max_delta_heating": 10.0,
+    "min_delta_heating": 5.0
+  }
+}
+```
+
+**Response Fields:**
+
+- `pid_settings.acclimate`: Default PID control parameters used for acclimate steps when heater settings are not specified
+  - `kp`: Proportional gain coefficient
+  - `ki`: Integral gain coefficient
+  - `kd`: Derivative gain coefficient
+- `max_delta_heating`: Maximum temperature delta (oven - wood) in degrees for heating steps using delta control
+- `min_delta_heating`: Minimum temperature delta (oven - wood) in degrees for heating steps using delta control
+
+**Default Application Rules:**
+
+When a program step doesn't specify heater control settings, these defaults are applied based on step type:
+- **Heating steps**: Use delta control with `min_delta_heating` and `max_delta_heating`
+- **Acclimate steps**: Use PID control with `pid_settings.acclimate` parameters
+- **Cooling steps**: Use simple control with 0% power
+
+#### GET `/engine/running`
 
 Gets the status of the currently running program.
 
@@ -354,7 +392,7 @@ If no program is running:
 }
 ```
 
-#### POST `/running`
+#### POST `/engine/running`
 
 Starts a new program (by providing its definition or name).
 
@@ -391,7 +429,7 @@ OR
 }
 ```
 
-#### DELETE `/running`
+#### DELETE `/engine/running`
 
 Cancels the currently running program.
 

@@ -27,6 +27,7 @@ var (
 func NewEngine(halkoConfig *types.HalkoConfig, storage *storagefs.ExecutorFileStorage, endpoints *types.APIEndpoints) *ControlEngine {
 	engine := ControlEngine{
 		halkoConfig: halkoConfig,
+		config:      halkoConfig.ControlUnitConfig,
 		runner:      nil,
 		storage:     storage,
 		endpoints:   endpoints,
