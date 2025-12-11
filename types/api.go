@@ -1,6 +1,6 @@
 package types
 
-// executor API
+// controlunit API
 const (
 	ProgramStateCanceled  ProgramState = "canceled"
 	ProgramStateCompleted ProgramState = "completed"

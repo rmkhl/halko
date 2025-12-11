@@ -28,7 +28,7 @@ type (
 		MinDeltaHeating float32                   `json:"min_delta_heating"`
 	}
 
-	ExecutorConfig struct {
+	ControlUnitConfig struct {
 		BasePath         string    `json:"base_path"`
 		TickLength       int       `json:"tick_length"`
 		NetworkInterface string    `json:"network_interface"`
@@ -51,7 +51,7 @@ type (
 		BasePath string `json:"base_path"`
 	}
 
-	ExecutorEndpoints struct {
+	ControlUnitEndpoints struct {
 		Endpoint `json:",inline"`
 		Programs string `json:"programs"`
 		Running  string `json:"running"`
@@ -79,18 +79,18 @@ type (
 	}
 
 	APIEndpoints struct {
-		Executor   ExecutorEndpoints   `json:"executor"`
-		SensorUnit SensorUnitEndpoints `json:"sensorunit"`
-		PowerUnit  PowerUnitEndpoints  `json:"powerunit"`
-		Storage    StorageEndpoints    `json:"storage"`
+		ControlUnit ControlUnitEndpoints `json:"controlunit"`
+		SensorUnit  SensorUnitEndpoints  `json:"sensorunit"`
+		PowerUnit   PowerUnitEndpoints   `json:"powerunit"`
+		Storage     StorageEndpoints     `json:"storage"`
 	}
 
 	HalkoConfig struct {
-		ExecutorConfig *ExecutorConfig   `json:"executor"`
-		PowerUnit      *PowerUnit        `json:"power_unit"`
-		SensorUnit     *SensorUnitConfig `json:"sensorunit"`
-		StorageConfig  *StorageConfig    `json:"storage"`
-		APIEndpoints   *APIEndpoints     `json:"api_endpoints"`
+		ControlUnitConfig *ControlUnitConfig `json:"controlunit"`
+		PowerUnit         *PowerUnit         `json:"power_unit"`
+		SensorUnit        *SensorUnitConfig  `json:"sensorunit"`
+		StorageConfig     *StorageConfig     `json:"storage"`
+		APIEndpoints      *APIEndpoints      `json:"api_endpoints"`
 	}
 )
 
@@ -104,8 +104,8 @@ func (e *Endpoint) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
-// GetStatusURL returns the full status endpoint URL for ExecutorEndpoints
-func (e *ExecutorEndpoints) GetStatusURL() string {
+// GetStatusURL returns the full status endpoint URL for ControlUnitEndpoints
+func (e *ControlUnitEndpoints) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
@@ -159,12 +159,12 @@ func (e *Endpoint) GetPort(urlStr ...string) (string, error) {
 	}
 }
 
-// ExecutorEndpoints methods
-func (e *ExecutorEndpoints) GetProgramsURL() string {
+// ControlUnitEndpoints methods
+func (e *ControlUnitEndpoints) GetProgramsURL() string {
 	return e.URL + e.Programs
 }
 
-func (e *ExecutorEndpoints) GetRunningURL() string {
+func (e *ControlUnitEndpoints) GetRunningURL() string {
 	return e.URL + e.Running
 }
 
@@ -277,14 +277,14 @@ func readHalkoConfig(path string) (*HalkoConfig, error) {
 }
 
 func (c *HalkoConfig) ValidateRequired() error {
-	if c.ExecutorConfig == nil {
-		return errors.New("executor configuration is required")
+	if c.ControlUnitConfig == nil {
+		return errors.New("controlunit configuration is required")
 	}
-	if c.ExecutorConfig.BasePath == "" {
-		return errors.New("executor base path is required")
+	if c.ControlUnitConfig.BasePath == "" {
+		return errors.New("controlunit base path is required")
 	}
-	if c.ExecutorConfig.TickLength <= 0 {
-		return errors.New("executor tick length is required and must be positive")
+	if c.ControlUnitConfig.TickLength <= 0 {
+		return errors.New("controlunit tick length is required and must be positive")
 	}
 
 	if c.SensorUnit == nil {
@@ -324,18 +324,18 @@ func (c *HalkoConfig) ValidateRequired() error {
 		return errors.New("API endpoints configuration is required")
 	}
 
-	// Validate executor endpoints
-	if c.APIEndpoints.Executor.URL == "" {
-		return errors.New("executor endpoints URL is required")
+	// Validate controlunit endpoints
+	if c.APIEndpoints.ControlUnit.URL == "" {
+		return errors.New("controlunit endpoints URL is required")
 	}
-	if c.APIEndpoints.Executor.Programs == "" {
-		return errors.New("executor endpoints programs path is required")
+	if c.APIEndpoints.ControlUnit.Programs == "" {
+		return errors.New("controlunit endpoints programs path is required")
 	}
-	if c.APIEndpoints.Executor.Running == "" {
-		return errors.New("executor endpoints running path is required")
+	if c.APIEndpoints.ControlUnit.Running == "" {
+		return errors.New("controlunit endpoints running path is required")
 	}
-	if c.APIEndpoints.Executor.Status == "" {
-		return errors.New("executor endpoints status path is required")
+	if c.APIEndpoints.ControlUnit.Status == "" {
+		return errors.New("controlunit endpoints status path is required")
 	}
 
 	// Validate sensorunit endpoints

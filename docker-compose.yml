@@ -11,10 +11,10 @@ services:
       - "8093:8093"  # SensorUnit emulation interface
     restart: unless-stopped
 
-  executor:
+  controlunit:
     build:
       context: .
-      dockerfile: executor/Dockerfile
+      dockerfile: controlunit/Dockerfile
     volumes:
       - ./fsdb:/fsdb
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
@@ -53,7 +53,7 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - executor
+      - controlunit
       - storage
       - powerunit
     restart: unless-stopped

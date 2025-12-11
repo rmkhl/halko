@@ -7,14 +7,14 @@ import (
 	"github.com/rmkhl/halko/types/log"
 )
 
-// GlobalOptions represents options common to all modules (executor, powerunit, sensorunit, halkoctl)
+// GlobalOptions represents options common to all modules (controlunit, powerunit, sensorunit, halkoctl)
 type GlobalOptions struct {
 	ConfigPath string       // Path to halko.cfg configuration file
 	Verbose    bool         // Enable verbose output
 	LogLevel   log.LogLevel // Log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
 }
 
-// ParseGlobalOptions parses command-line options for all modules (executor, powerunit, sensorunit, halkoctl)
+// ParseGlobalOptions parses command-line options for all modules (controlunit, powerunit, sensorunit, halkoctl)
 func ParseGlobalOptions() (*GlobalOptions, error) {
 	opts := &GlobalOptions{
 		ConfigPath: "", // Empty path - LoadConfig will determine the default location

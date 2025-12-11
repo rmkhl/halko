@@ -46,10 +46,10 @@ func main() {
 	switch {
 	case configuration.StorageConfig != nil && configuration.StorageConfig.BasePath != "":
 		storageBasePath = configuration.StorageConfig.BasePath
-	case configuration.ExecutorConfig != nil && configuration.ExecutorConfig.BasePath != "":
-		storageBasePath = configuration.ExecutorConfig.BasePath
+	case configuration.ControlUnitConfig != nil && configuration.ControlUnitConfig.BasePath != "":
+		storageBasePath = configuration.ControlUnitConfig.BasePath
 	default:
-		log.Fatal("Storage base path is not configured. Set storage.base_path or executor.base_path in configuration")
+		log.Fatal("Storage base path is not configured. Set storage.base_path or controlunit.base_path in configuration")
 	}
 
 	// Get port from storage endpoint

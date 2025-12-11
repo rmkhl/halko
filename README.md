@@ -8,7 +8,7 @@ control, power management, and program execution capabilities.
 
 The system is built with a microservices architecture with these main components:
 
-- **Executor**: Runs drying programs and controls the kiln.
+- **ControlUnit**: Runs drying programs and controls the kiln.
 - **PowerUnit**: Interfaces with Shelly devices to control power.
 - **SensorUnit**: Reads temperature data from physical sensors and provides an API.
 - **Simulator**: Provides a simulated environment for testing.
@@ -64,17 +64,17 @@ make webapp-docker-build # Build webapp Docker image
 
 ### Components
 
-#### `/executor`
+#### `/controlunit`
 
-The Executor is the core service that executes drying programs. It manages the
+The ControlUnit is the core service that executes drying programs. It manages the
 state machine for program execution, interacts with the PowerUnit to control
 heating elements, and with the SensorUnit (or Simulator) to monitor
 temperatures. It also provides a REST API to manage and monitor program
 execution.
 
-The Executor includes a heartbeat service that periodically reports its IP
+The ControlUnit includes a heartbeat service that periodically reports its IP
 address to a configured status endpoint. This allows monitoring systems to
-track the location and availability of the executor service in distributed
+track the location and availability of the controlunit service in distributed
 deployments.
 
 #### `/powerunit`
@@ -155,7 +155,7 @@ example configuration:
 
 ```json
 {
-  "executor": {
+  "controlunit": {
     "base_path": "/var/opt/halko",
     "tick_length": 6000,
     "network_interface": "eth0",
@@ -185,7 +185,7 @@ example configuration:
     "baud_rate": 9600
   },
   "api_endpoints": {
-    "executor": {
+    "controlunit": {
       "url": "http://localhost:8090",
       "status": "/status",
       "programs": "/programs",
@@ -212,7 +212,7 @@ example configuration:
 }
 ```
 
-### Executor Configuration Options
+### ControlUnit Configuration Options
 
 - **`base_path`**: Directory for storing program data and execution logs
 - **`tick_length`**: Execution tick duration in milliseconds
@@ -225,13 +225,13 @@ example configuration:
 
 ### Heartbeat Service
 
-The executor includes an automatic heartbeat service that:
+The controlunit includes an automatic heartbeat service that:
 
-- Reports the executor's IP address every 30 seconds
+- Reports the controlunit's IP address every 30 seconds
 - Uses the configured `network_interface` to determine the IP address
 - Sends status messages to the sensorunit display endpoint (configured in `api_endpoints.sensorunit`)
-- Helps monitor executor availability in distributed deployments
-- Starts automatically when the executor service starts
+- Helps monitor controlunit availability in distributed deployments
+- Starts automatically when the controlunit service starts
 
 The heartbeat sends a JSON payload in the following format:
 
@@ -252,10 +252,10 @@ Each component can be controlled independently:
 
 ```bash
 # Start a specific component
-sudo systemctl start halko@executor
+sudo systemctl start halko@controlunit
 
 # Stop a component
-sudo systemctl stop halko@executor
+sudo systemctl stop halko@controlunit
 
 # Check status
 sudo systemctl status halko@powerunit

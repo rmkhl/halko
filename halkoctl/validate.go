@@ -78,8 +78,8 @@ func validateProgram(programPath string, verbose bool) error {
 	}
 
 	config := globalConfig
-	if config.ExecutorConfig == nil || config.ExecutorConfig.Defaults == nil {
-		return errors.New("config file missing executor defaults")
+	if config.ControlUnitConfig == nil || config.ControlUnitConfig.Defaults == nil {
+		return errors.New("config file missing controlunit defaults")
 	}
 
 	if verbose {
@@ -123,7 +123,7 @@ func validateProgram(programPath string, verbose bool) error {
 		fmt.Println("Applying defaults...")
 	}
 
-	program.ApplyDefaults(config.ExecutorConfig.Defaults)
+	program.ApplyDefaults(config.ControlUnitConfig.Defaults)
 
 	if verbose {
 		fmt.Println("✓ Defaults applied successfully")

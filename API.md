@@ -23,7 +23,7 @@ All services implement a `/status` endpoint that returns health information usin
 {
   "data": {
     "status": "healthy",
-    "service": "executor",
+    "service": "controlunit",
     "details": {
       // Service-specific status details
     }
@@ -38,7 +38,7 @@ All services implement a `/status` endpoint that returns health information usin
 
 **Service-Specific Details:**
 
-- **Executor**: `program_running` (bool), `current_step` (int), `started_at` (string)
+- **ControlUnit**: `program_running` (bool), `current_step` (int), `started_at` (string)
 - **PowerUnit**: `controller_initialized` (bool)
 - **Storage**: `accessible` (bool), `error` (string if not accessible)
 - **SensorUnit**: `arduino_connected` (bool)
@@ -217,7 +217,7 @@ Operates a specific power channel.
 }
 ```
 
-## 3. Executor API
+## 3. ControlUnit API
 
 Base Path: `/engine`
 Default Port: `8090`
@@ -228,7 +228,7 @@ Default Port: `8090`
 
 #### GET `/status`
 
-Gets the health status of the Executor service. Follows the standard status endpoint format (see Common Response Patterns).
+Gets the health status of the ControlUnit service. Follows the standard status endpoint format (see Common Response Patterns).
 
 **Response Format:**
 
@@ -236,7 +236,7 @@ Gets the health status of the Executor service. Follows the standard status endp
 {
   "data": {
     "status": "healthy",
-    "service": "executor",
+    "service": "controlunit",
     "details": {
       "program_running": true,
       "current_step": 3,
@@ -255,7 +255,7 @@ Gets the health status of the Executor service. Follows the standard status endp
 
 #### GET `/programs`
 
-Lists all available programs (definitions loaded by executor).
+Lists all available programs (definitions loaded by controlunit).
 
 **Response Format:**
 

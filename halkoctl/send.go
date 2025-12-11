@@ -31,11 +31,11 @@ func handleSendCommand() {
 		os.Exit(exitError)
 	}
 
-	url := getExecutorAPIURL(globalConfig)
+	url := getControlUnitAPIURL(globalConfig)
 
 	if globalOpts.Verbose {
 		fmt.Printf("Sending program: %s\n", opts.ProgramPath)
-		fmt.Printf("Executor endpoint: %s\n", url)
+		fmt.Printf("ControlUnit endpoint: %s\n", url)
 		fmt.Println()
 	}
 
@@ -50,9 +50,9 @@ func handleSendCommand() {
 }
 
 func showSendHelp() {
-	fmt.Println("halkoctl send - Send program to executor")
+	fmt.Println("halkoctl send - Send program to controlunit")
 	fmt.Println()
-	fmt.Println("Sends a program.json file to the Halko executor to start execution.")
+	fmt.Println("Sends a program.json file to the Halko controlunit to start execution.")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Printf("  %s [global-options] send <program-file> [options]\n", os.Args[0])
@@ -75,11 +75,11 @@ func showSendHelp() {
 	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json\n", os.Args[0])
 	fmt.Printf("  %s --verbose send my-program.json\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The program will be sent to the executor's POST /engine/running endpoint")
-	fmt.Println("to start immediate execution. The executor will validate the program.")
+	fmt.Println("The program will be sent to the controlunit's POST /engine/running endpoint")
+	fmt.Println("to start immediate execution. The controlunit will validate the program.")
 }
 
-func sendProgram(programPath, executorURL string, verbose bool) error {
+func sendProgram(programPath, controlunitURL string, verbose bool) error {
 	if _, err := os.Stat(programPath); os.IsNotExist(err) {
 		return fmt.Errorf("program file does not exist: %s", programPath)
 	}
@@ -132,9 +132,9 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 	// Construct the full URL using the running endpoint
 	var url string
 	if globalConfig != nil && globalConfig.APIEndpoints != nil {
-		url = globalConfig.APIEndpoints.Executor.GetRunningURL()
+		url = globalConfig.APIEndpoints.ControlUnit.GetRunningURL()
 	} else {
-		url = executorURL + "/engine/running"
+		url = controlunitURL + "/engine/running"
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -171,7 +171,7 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 	}
 
 	if verbose {
-		fmt.Println("✓ Program sent and accepted by executor")
+		fmt.Println("✓ Program sent and accepted by controlunit")
 		displaySendResponse(respBody)
 	}
 
@@ -195,7 +195,7 @@ func displaySendResponse(respBody []byte) {
 	}
 
 	if status, ok := dataMap["status"]; ok {
-		fmt.Printf("Executor status: %v\n", status)
+		fmt.Printf("ControlUnit status: %v\n", status)
 	}
 
 	if program, ok := dataMap["program"]; ok {

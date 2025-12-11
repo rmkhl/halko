@@ -16,7 +16,7 @@ const API_PREFIX = process.env.API_PREFIX || '';
 
 interface ApiEndpoints {
   storage: string;
-  executor: string;
+  controlunit: string;
   sensors: string;
 }
 
@@ -35,7 +35,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
     // nginx routes /api/v1/{service}/* to the backend service base URL
     return {
       storage: `${API_PREFIX}/storage/storage`,
-      executor: `${API_PREFIX}/executor/engine/running`,
+      controlunit: `${API_PREFIX}/controlunit/engine/running`,
       sensors: `${API_PREFIX}/sensorunit`,
     };
   }
@@ -44,7 +44,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
   // These match the actual backend service paths from halko.cfg
   return {
     storage: 'http://localhost:8091/storage',
-    executor: 'http://localhost:8090/engine/running',
+    controlunit: 'http://localhost:8090/engine/running',
     sensors: 'http://localhost:8093',
   };
 };

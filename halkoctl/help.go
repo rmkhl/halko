@@ -22,7 +22,7 @@ func showHelp() {
 	fmt.Println("        Show this help message")
 	fmt.Println()
 	fmt.Println("Available Commands:")
-	fmt.Println("  send                  Send program to executor")
+	fmt.Println("  send                  Send program to controlunit")
 	fmt.Println("  status                Get program status")
 	fmt.Println("  validate              Validate a program file")
 	fmt.Println("  display               Send text to sensor unit display")

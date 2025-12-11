@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import {
   useGetRunningProgramQuery,
   useStopRunningProgramMutation,
-} from "../../store/services/executorApi";
+} from "../../store/services/controlunitApi";
 import { Button, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useGetTemperaturesQuery } from "../../store/services/sensorsApi";

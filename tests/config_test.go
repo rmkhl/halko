@@ -19,12 +19,12 @@ func TestConfigReading(t *testing.T) {
 
 	// Test specific business logic that's not covered by basic validation
 	// Verify that delta heating values are sensible
-	if config.ExecutorConfig.Defaults.MaxDeltaHeating <= config.ExecutorConfig.Defaults.MinDeltaHeating {
+	if config.ControlUnitConfig.Defaults.MaxDeltaHeating <= config.ControlUnitConfig.Defaults.MinDeltaHeating {
 		t.Error("MaxDeltaHeating should be greater than MinDeltaHeating")
 	}
 
 	// Check that acclimate PID settings exist and have reasonable values
-	acclimate, exists := config.ExecutorConfig.Defaults.PidSettings[types.StepTypeAcclimate]
+	acclimate, exists := config.ControlUnitConfig.Defaults.PidSettings[types.StepTypeAcclimate]
 	if exists && acclimate != nil {
 		if acclimate.Kp <= 0 || acclimate.Ki <= 0 || acclimate.Kd < 0 {
 			t.Error("PID values should be positive (Kp, Ki > 0, Kd >= 0)")
@@ -41,7 +41,7 @@ func TestConfigStructure(t *testing.T) {
 	}
 
 	// Test business logic constraints that go beyond basic validation
-	defaults := config.ExecutorConfig.Defaults
+	defaults := config.ControlUnitConfig.Defaults
 
 	// Verify that delta heating values are reasonable for the use case
 	if defaults.MaxDeltaHeating < 1.0 || defaults.MaxDeltaHeating > 100.0 {
@@ -147,8 +147,8 @@ func TestServiceEndpointEmbedding(t *testing.T) {
 	// Test that the embedded Endpoint struct methods work correctly
 	// This tests the actual functionality, not just configuration presence
 	expectedExecutorStatusURL := "http://localhost:8090/status"
-	if config.APIEndpoints.Executor.GetStatusURL() != expectedExecutorStatusURL {
-		t.Errorf("Expected Executor status URL %s, got %s", expectedExecutorStatusURL, config.APIEndpoints.Executor.GetStatusURL())
+	if config.APIEndpoints.ControlUnit.GetStatusURL() != expectedExecutorStatusURL {
+		t.Errorf("Expected Executor status URL %s, got %s", expectedExecutorStatusURL, config.APIEndpoints.ControlUnit.GetStatusURL())
 	}
 
 	expectedPowerUnitStatusURL := "http://localhost:8092/status"
@@ -166,8 +166,8 @@ func TestGetServiceURLs(t *testing.T) {
 	}
 
 	// Test endpoint URL methods
-	if config.APIEndpoints.Executor.GetURL() != "http://localhost:8090" {
-		t.Errorf("Expected Executor URL http://localhost:8090, got %s", config.APIEndpoints.Executor.GetURL())
+	if config.APIEndpoints.ControlUnit.GetURL() != "http://localhost:8090" {
+		t.Errorf("Expected Executor URL http://localhost:8090, got %s", config.APIEndpoints.ControlUnit.GetURL())
 	}
 
 	if config.APIEndpoints.Storage.GetURL() != "http://localhost:8091" {
@@ -184,8 +184,8 @@ func TestGetServiceURLs(t *testing.T) {
 
 	// Test specific endpoint methods
 	expectedProgramsURL := "http://localhost:8090/programs"
-	if config.APIEndpoints.Executor.GetProgramsURL() != expectedProgramsURL {
-		t.Errorf("Expected Programs URL %s, got %s", expectedProgramsURL, config.APIEndpoints.Executor.GetProgramsURL())
+	if config.APIEndpoints.ControlUnit.GetProgramsURL() != expectedProgramsURL {
+		t.Errorf("Expected Programs URL %s, got %s", expectedProgramsURL, config.APIEndpoints.ControlUnit.GetProgramsURL())
 	}
 
 	expectedTemperaturesURL := "http://localhost:8088/temperatures"
@@ -208,7 +208,7 @@ func TestGetPortMethod(t *testing.T) {
 		endpoint     *types.Endpoint
 		expectedPort string
 	}{
-		{"Executor", &config.APIEndpoints.Executor.Endpoint, "8090"},
+		{"Executor", &config.APIEndpoints.ControlUnit.Endpoint, "8090"},
 		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, "8092"},
 		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8088"},
 		{"Storage", &config.APIEndpoints.Storage.Endpoint, "8091"},
@@ -249,7 +249,7 @@ func TestJSONMarshaling(t *testing.T) {
 	}
 
 	// Verify that endpoint URLs are preserved
-	if newConfig.APIEndpoints.Executor.GetURL() != "http://localhost:8090" {
+	if newConfig.APIEndpoints.ControlUnit.GetURL() != "http://localhost:8090" {
 		t.Error("Executor endpoint URL not preserved after JSON round-trip")
 	}
 	if newConfig.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
@@ -263,7 +263,7 @@ func TestJSONMarshaling(t *testing.T) {
 	}
 
 	// Verify that endpoint paths are preserved
-	if newConfig.APIEndpoints.Executor.Programs != "/programs" {
+	if newConfig.APIEndpoints.ControlUnit.Programs != "/programs" {
 		t.Error("Executor programs path not preserved after JSON round-trip")
 	}
 	if newConfig.APIEndpoints.SensorUnit.Temperatures != "/temperatures" {

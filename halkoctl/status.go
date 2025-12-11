@@ -27,8 +27,8 @@ func handleStatusCommand() {
 	// Check status for each requested service
 	for _, service := range opts.Services {
 		switch service {
-		case "executor":
-			queryExecutorStatus(globalOpts.Verbose)
+		case "controlunit":
+			queryControlUnitStatus(globalOpts.Verbose)
 		case "sensorunit":
 			querySensorUnitStatus(globalOpts.Verbose)
 		case "powerunit":
@@ -59,7 +59,7 @@ func showStatusHelp() {
 	fmt.Println()
 	fmt.Println("Arguments:")
 	fmt.Println("  service")
-	fmt.Println("        Service name to check (executor, sensorunit, powerunit, storage)")
+	fmt.Println("        Service name to check (controlunit, sensorunit, powerunit, storage)")
 	fmt.Println("        If no services specified, checks all available services")
 	fmt.Println()
 	fmt.Println("Options:")
@@ -74,14 +74,14 @@ func showStatusHelp() {
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Printf("  %s status                    # Check all services\n", os.Args[0])
-	fmt.Printf("  %s status executor           # Check executor service only\n", os.Args[0])
+	fmt.Printf("  %s status controlunit           # Check controlunit service only\n", os.Args[0])
 	fmt.Printf("  %s status powerunit storage  # Check powerunit and storage services\n", os.Args[0])
 	fmt.Printf("  %s --verbose status          # Verbose output for all services\n", os.Args[0])
 	fmt.Println()
 }
 
-func queryExecutorStatus(verbose bool) {
-	queryServiceStatus("Executor", &globalConfig.APIEndpoints.Executor, verbose)
+func queryControlUnitStatus(verbose bool) {
+	queryServiceStatus("ControlUnit", &globalConfig.APIEndpoints.ControlUnit, verbose)
 }
 
 func querySensorUnitStatus(verbose bool) {

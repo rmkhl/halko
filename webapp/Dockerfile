@@ -17,6 +17,9 @@ COPY . .
 COPY .env.production .env
 
 # Build the application with production configuration
+# Disable TTY/progress output to avoid escape sequences in logs
+ENV CI=true
+ENV NO_COLOR=1
 RUN npm run build
 
 # Stage 2: Serve with nginx
