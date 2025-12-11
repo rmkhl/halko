@@ -17,7 +17,7 @@ React-based user interface for the Halko kiln control system.
 ### Prerequisites
 
 - Node.js 18+ and npm
-- The Halko backend services running (executor, storage, powerunit, sensorunit)
+- The Halko backend services running (controlunit, powerunit, sensorunit)
 
 ### Installing Node.js
 
@@ -69,7 +69,7 @@ The webapp uses a centralized API configuration (`src/config/api.ts`) that deter
 - No environment variables needed
 
 **Production Mode** (Docker/nginx proxy):
-- Uses relative paths: `/api/v1/executor`, `/api/v1/storage`, `/api/v1/sensorunit`
+- Uses relative paths: `/api/v1/controlunit`, `/api/v1/sensorunit`
 - Requires nginx to proxy requests to backend services
 - Set environment variable: `VITE_API_PREFIX=/api/v1`
 
@@ -174,9 +174,8 @@ make webapp-nginx-docker-config
 Generates `webapp/nginx.conf` using `halko-docker.cfg` which proxies to Docker service names.
 
 API proxy endpoints (Docker mode):
-- `/api/v1/executor/` → `http://executor:8089`
-- `/api/v1/storage/` → `http://storage:8091`
-- `/api/v1/powerunit/` → `http://powerunit:8090`
+- `/api/v1/controlunit/` → `http://controlunit:8090`
+- `/api/v1/powerunit/` → `http://powerunit:8092`
 - `/api/v1/sensorunit/` → `http://simulator:8093`
 
 ## Project Structure

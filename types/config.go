@@ -53,8 +53,8 @@ type (
 
 	ControlUnitEndpoints struct {
 		Endpoint `json:",inline"`
+		Engine   string `json:"engine"`
 		Programs string `json:"programs"`
-		Running  string `json:"running"`
 		Status   string `json:"status"`
 	}
 
@@ -71,25 +71,16 @@ type (
 		Status   string `json:"status"`
 	}
 
-	StorageEndpoints struct {
-		Endpoint     `json:",inline"`
-		Programs     string `json:"programs"`
-		ExecutionLog string `json:"execution_log"`
-		Status       string `json:"status"`
-	}
-
 	APIEndpoints struct {
 		ControlUnit ControlUnitEndpoints `json:"controlunit"`
 		SensorUnit  SensorUnitEndpoints  `json:"sensorunit"`
 		PowerUnit   PowerUnitEndpoints   `json:"powerunit"`
-		Storage     StorageEndpoints     `json:"storage"`
 	}
 
 	HalkoConfig struct {
 		ControlUnitConfig *ControlUnitConfig `json:"controlunit"`
 		PowerUnit         *PowerUnit         `json:"power_unit"`
 		SensorUnit        *SensorUnitConfig  `json:"sensorunit"`
-		StorageConfig     *StorageConfig     `json:"storage"`
 		APIEndpoints      *APIEndpoints      `json:"api_endpoints"`
 	}
 )
@@ -116,11 +107,6 @@ func (e *SensorUnitEndpoints) GetStatusURL() string {
 
 // GetStatusURL returns the full status endpoint URL for PowerUnitEndpoints
 func (e *PowerUnitEndpoints) GetStatusURL() string {
-	return e.URL + e.Status
-}
-
-// GetStatusURL returns the full status endpoint URL for StorageEndpoints
-func (e *StorageEndpoints) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
@@ -164,8 +150,8 @@ func (e *ControlUnitEndpoints) GetProgramsURL() string {
 	return e.URL + e.Programs
 }
 
-func (e *ControlUnitEndpoints) GetRunningURL() string {
-	return e.URL + e.Running
+func (e *ControlUnitEndpoints) GetEngineURL() string {
+	return e.URL + e.Engine
 }
 
 // SensorUnitEndpoints methods
@@ -180,15 +166,6 @@ func (e *SensorUnitEndpoints) GetDisplayURL() string {
 // PowerUnitEndpoints methods
 func (e *PowerUnitEndpoints) GetPowerURL() string {
 	return e.URL + e.Power
-}
-
-// StorageEndpoints methods
-func (e *StorageEndpoints) GetProgramsURL() string {
-	return e.URL + e.Programs
-}
-
-func (e *StorageEndpoints) GetExecutionLogURL() string {
-	return e.URL + e.ExecutionLog
 }
 
 func LoadConfig(configPath string) (*HalkoConfig, error) {
@@ -313,13 +290,6 @@ func (c *HalkoConfig) ValidateRequired() error {
 		return errors.New("power unit power mapping is required")
 	}
 
-	if c.StorageConfig == nil {
-		return errors.New("storage configuration is required")
-	}
-	if c.StorageConfig.BasePath == "" {
-		return errors.New("storage base path is required")
-	}
-
 	if c.APIEndpoints == nil {
 		return errors.New("API endpoints configuration is required")
 	}
@@ -328,11 +298,11 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.APIEndpoints.ControlUnit.URL == "" {
 		return errors.New("controlunit endpoints URL is required")
 	}
+	if c.APIEndpoints.ControlUnit.Engine == "" {
+		return errors.New("controlunit endpoints engine path is required")
+	}
 	if c.APIEndpoints.ControlUnit.Programs == "" {
 		return errors.New("controlunit endpoints programs path is required")
-	}
-	if c.APIEndpoints.ControlUnit.Running == "" {
-		return errors.New("controlunit endpoints running path is required")
 	}
 	if c.APIEndpoints.ControlUnit.Status == "" {
 		return errors.New("controlunit endpoints status path is required")
@@ -361,20 +331,6 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if c.APIEndpoints.PowerUnit.Power == "" {
 		return errors.New("powerunit endpoints power path is required")
-	}
-
-	// Validate storage endpoints
-	if c.APIEndpoints.Storage.URL == "" {
-		return errors.New("storage endpoints URL is required")
-	}
-	if c.APIEndpoints.Storage.Programs == "" {
-		return errors.New("storage endpoints programs path is required")
-	}
-	if c.APIEndpoints.Storage.ExecutionLog == "" {
-		return errors.New("storage endpoints execution log path is required")
-	}
-	if c.APIEndpoints.Storage.Status == "" {
-		return errors.New("storage endpoints status path is required")
 	}
 
 	return nil

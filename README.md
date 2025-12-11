@@ -70,7 +70,7 @@ The ControlUnit is the core service that executes drying programs. It manages th
 state machine for program execution, interacts with the PowerUnit to control
 heating elements, and with the SensorUnit (or Simulator) to monitor
 temperatures. It also provides a REST API to manage and monitor program
-execution.
+execution, as well as storage management for drying programs and execution logs.
 
 The ControlUnit includes a heartbeat service that periodically reports its IP
 address to a configured status endpoint. This allows monitoring systems to
@@ -177,9 +177,6 @@ example configuration:
       "fan": 2
     }
   },
-  "storage": {
-    "base_path": "/var/opt/halko"
-  },
   "sensorunit": {
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
@@ -203,10 +200,10 @@ example configuration:
       "power": "/power"
     },
     "storage": {
-      "url": "http://localhost:8091",
-      "status": "/status",
-      "programs": "/programs",
-      "execution_log": "/log"
+      "url": "http://localhost:8090",
+      "status": "/storage/status",
+      "programs": "/storage/programs",
+      "execution_log": "/storage/execution_log"
     }
   }
 }

@@ -170,10 +170,6 @@ func TestGetServiceURLs(t *testing.T) {
 		t.Errorf("Expected Executor URL http://localhost:8090, got %s", config.APIEndpoints.ControlUnit.GetURL())
 	}
 
-	if config.APIEndpoints.Storage.GetURL() != "http://localhost:8091" {
-		t.Errorf("Expected Storage URL http://localhost:8091, got %s", config.APIEndpoints.Storage.GetURL())
-	}
-
 	if config.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
 		t.Errorf("Expected PowerUnit URL http://localhost:8092, got %s", config.APIEndpoints.PowerUnit.GetURL())
 	}
@@ -186,6 +182,11 @@ func TestGetServiceURLs(t *testing.T) {
 	expectedProgramsURL := "http://localhost:8090/programs"
 	if config.APIEndpoints.ControlUnit.GetProgramsURL() != expectedProgramsURL {
 		t.Errorf("Expected Programs URL %s, got %s", expectedProgramsURL, config.APIEndpoints.ControlUnit.GetProgramsURL())
+	}
+
+	expectedEngineURL := "http://localhost:8090/engine"
+	if config.APIEndpoints.ControlUnit.GetEngineURL() != expectedEngineURL {
+		t.Errorf("Expected Engine URL %s, got %s", expectedEngineURL, config.APIEndpoints.ControlUnit.GetEngineURL())
 	}
 
 	expectedTemperaturesURL := "http://localhost:8088/temperatures"
@@ -211,7 +212,6 @@ func TestGetPortMethod(t *testing.T) {
 		{"Executor", &config.APIEndpoints.ControlUnit.Endpoint, "8090"},
 		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, "8092"},
 		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8088"},
-		{"Storage", &config.APIEndpoints.Storage.Endpoint, "8091"},
 	}
 
 	for _, tt := range tests {
@@ -258,13 +258,13 @@ func TestJSONMarshaling(t *testing.T) {
 	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
 		t.Error("SensorUnit endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.APIEndpoints.Storage.GetURL() != "http://localhost:8091" {
-		t.Error("Storage endpoint URL not preserved after JSON round-trip")
-	}
 
 	// Verify that endpoint paths are preserved
 	if newConfig.APIEndpoints.ControlUnit.Programs != "/programs" {
-		t.Error("Executor programs path not preserved after JSON round-trip")
+		t.Error("ControlUnit programs path not preserved after JSON round-trip")
+	}
+	if newConfig.APIEndpoints.ControlUnit.Engine != "/engine" {
+		t.Error("ControlUnit engine path not preserved after JSON round-trip")
 	}
 	if newConfig.APIEndpoints.SensorUnit.Temperatures != "/temperatures" {
 		t.Error("SensorUnit temperatures path not preserved after JSON round-trip")

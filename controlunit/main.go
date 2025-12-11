@@ -49,6 +49,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	programStorage, err := storagefs.NewProgramStorage(configuration.ControlUnitConfig.BasePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	engine := engine.NewEngine(configuration, storage, configuration.APIEndpoints)
 
 	heartbeatManager, err := heartbeat.NewManager(configuration.ControlUnitConfig.NetworkInterface, configuration.APIEndpoints)
@@ -60,7 +65,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	router.SetupRoutes(mux, storage, engine, configuration.APIEndpoints)
+	router.SetupRoutes(mux, storage, programStorage, engine, configuration.APIEndpoints)
 
 	corsHandler := addCORSHeaders(mux)
 

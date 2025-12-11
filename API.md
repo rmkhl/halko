@@ -219,10 +219,8 @@ Operates a specific power channel.
 
 ## 3. ControlUnit API
 
-Base Path: `/engine`
+Base Path: `/engine` and `/storage`
 Default Port: `8090`
-
-**Note:** Program storage endpoints (`/storage/*`) have been moved to the independent Storage Service API (Section 4).
 
 ### Status Endpoints
 
@@ -397,18 +395,13 @@ Cancels the currently running program.
 
 - Status 204 No Content on success
 
-## 4. Storage Service API
+### Program Storage Endpoints
 
-Base Path: `/storage`
-Default Port: `8091`
+The ControlUnit also provides program storage management at `/storage/*` endpoints.
 
-The storage service provides independent program storage management.
+#### GET `/storage/status`
 
-### Status Endpoints
-
-#### GET `/status`
-
-Gets the health status of the Storage service. Follows the standard status endpoint format (see Common Response Patterns).
+Gets the health status of the storage subsystem. Follows the standard status endpoint format (see Common Response Patterns).
 
 **Response Format:**
 
@@ -443,9 +436,7 @@ If storage is not accessible:
 - `accessible`: Boolean indicating if the storage directory is accessible
 - `error`: Error message if storage is not accessible (only present when accessible is false)
 
-### Program Storage Endpoints
-
-#### GET `/programs`
+#### GET `/storage/programs`
 
 Lists all stored programs.
 
@@ -461,7 +452,7 @@ Lists all stored programs.
 }
 ```
 
-#### GET `/programs/{name}`
+#### GET `/storage/programs/{name}`
 
 Gets a specific stored program by name.
 
@@ -488,7 +479,7 @@ Gets a specific stored program by name.
 }
 ```
 
-#### POST `/programs`
+#### POST `/storage/programs`
 
 Creates a new stored program.
 
@@ -507,7 +498,7 @@ Creates a new stored program.
 - Status 201 Created on success
 - Status 409 Conflict if program already exists
 
-#### POST `/programs/{name}`
+#### POST `/storage/programs/{name}`
 
 Updates an existing stored program.
 
@@ -530,7 +521,7 @@ Updates an existing stored program.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-#### DELETE `/programs/{name}`
+#### DELETE `/storage/programs/{name}`
 
 Deletes a stored program.
 
@@ -543,7 +534,7 @@ Deletes a stored program.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-## 5. Simulator API
+## 4. Simulator API
 
 The simulator mimics endpoints from the SensorUnit and Shelly devices.
 

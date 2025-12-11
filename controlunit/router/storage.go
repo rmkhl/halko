@@ -4,32 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rmkhl/halko/storage/storagefs"
+	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
-func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		_ = err
-	}
-}
-
-func writeError(w http.ResponseWriter, statusCode int, message string) {
-	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
-}
-
-func SetupRoutes(mux *http.ServeMux, storage *storagefs.ProgramStorage, endpoints *types.APIEndpoints) {
-	mux.HandleFunc("GET "+endpoints.Storage.Programs, listAllPrograms(storage))
-	mux.HandleFunc("GET "+endpoints.Storage.Programs+"/{name}", getProgram(storage))
-	mux.HandleFunc("POST "+endpoints.Storage.Programs, createProgram(storage))
-	mux.HandleFunc("POST "+endpoints.Storage.Programs+"/{name}", updateProgram(storage))
-	mux.HandleFunc("DELETE "+endpoints.Storage.Programs+"/{name}", deleteProgram(storage))
-	mux.HandleFunc("GET "+endpoints.Storage.Status, getStatus(storage))
-}
-
-func listAllPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func listAllStoredPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		programs, err := storage.ListStoredPrograms()
 		if err != nil {
@@ -40,7 +19,7 @@ func listAllPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func getProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func getStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		program, err := storage.LoadStoredProgram(programName)
@@ -52,7 +31,7 @@ func getProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func createProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func createStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var program types.Program
 
@@ -62,8 +41,6 @@ func createProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 			return
 		}
 
-		// Basic validation - we don't have access to engine defaults here
-		// We'll validate that the program has a name and some basic structure
 		if program.ProgramName == "" {
 			writeError(w, http.StatusBadRequest, "Program name is required")
 			return
@@ -79,7 +56,7 @@ func createProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func updateProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func updateStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		var program types.Program
@@ -102,7 +79,7 @@ func updateProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func deleteProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func deleteStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 

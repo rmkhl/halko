@@ -23,16 +23,22 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func SetupRoutes(mux *http.ServeMux, storage *storagefs.ExecutorFileStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
-	mux.HandleFunc("GET "+endpoints.ControlUnit.Programs, listAllRuns(storage))
-	mux.HandleFunc("GET "+endpoints.ControlUnit.Programs+"/{name}", getRun(storage))
-	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Programs+"/{name}", deleteRun(storage))
+func SetupRoutes(mux *http.ServeMux, execStorage *storagefs.ExecutorFileStorage, programStorage *storagefs.ProgramStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+	// Engine execution endpoints
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history", listAllRuns(execStorage))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}", getRun(execStorage))
+	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Engine+"/history/{name}", deleteRun(execStorage))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running", getCurrentProgram(engine))
+	mux.HandleFunc("POST "+endpoints.ControlUnit.Engine+"/running", startNewProgram(engine))
+	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Engine+"/running", cancelRunningProgram(engine))
 
-	mux.HandleFunc("GET "+endpoints.ControlUnit.Running, getCurrentProgram(engine))
-	mux.HandleFunc("POST "+endpoints.ControlUnit.Running, startNewProgram(engine))
-	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Running, cancelRunningProgram(engine))
-
+	// Status endpoint
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Status, getStatus(engine))
 
-	// Note: /storage/ endpoints are now handled by the independent storage service
+	// Program storage endpoints (stored/saved programs)
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Programs, listAllStoredPrograms(programStorage))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Programs+"/{name}", getStoredProgram(programStorage))
+	mux.HandleFunc("POST "+endpoints.ControlUnit.Programs, createStoredProgram(programStorage))
+	mux.HandleFunc("POST "+endpoints.ControlUnit.Programs+"/{name}", updateStoredProgram(programStorage))
+	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Programs+"/{name}", deleteStoredProgram(programStorage))
 }
