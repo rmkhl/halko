@@ -2,7 +2,7 @@ MODULES = controlunit powerunit simulator sensorunit halkoctl
 BINDIR = bin
 
 .PHONY: all
-all: prepare clean $(MODULES:%=$(BINDIR)/%)
+all: clean $(MODULES:%=$(BINDIR)/%)
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
 	go build -o $@ ./$*/
@@ -91,9 +91,15 @@ prepare:
 			echo "✓ Node.js $$(node -v) is installed"; \
 		fi; \
 	fi
+	@echo "Installing webapp dependencies (including ESLint)..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install
+	@echo "✓ Webapp dependencies installed"
 
 .PHONY: build
-build: prepare clean $(MODULES:%=$(BINDIR)/%)
+build: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All Go binaries have been rebuilt."
 	@echo "Installing webapp dependencies..."
 	@if [ -f .nodejs/bin/node ]; then \
@@ -245,12 +251,8 @@ images: build
 	@BUILDKIT_PROGRESS=plain docker-compose build --no-cache
 	@echo "Docker images have been rebuilt."
 
-# ============================================================================
-# WebApp Targets
-# ============================================================================
-
-.PHONY: webapp-dev
-webapp-dev: prepare
+.PHONY: run-webapp
+run-webapp:
 	@echo "Installing webapp dependencies..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -263,7 +265,7 @@ webapp-dev: prepare
 	cd webapp && npm start
 
 .PHONY: build-webapp
-build-webapp: prepare $(BINDIR)/halkoctl
+build-webapp: $(BINDIR)/halkoctl
 	@echo "Building webapp for production (host installation)..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -286,6 +288,14 @@ build-webapp: prepare $(BINDIR)/halkoctl
 	$(BINDIR)/halkoctl -c $$CONFIG_FILE nginx -port 80 -output webapp/nginx-host.conf
 	@echo "✓ Generated webapp/nginx-host.conf for host installation"
 	@echo "  To serve: Copy webapp/dist/* to your web server root and nginx-host.conf to nginx sites"
+
+.PHONY: lint-webapp
+lint-webapp:
+	@echo "Linting webapp..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm run lint
 
 .PHONY: help
 help:
@@ -316,7 +326,8 @@ help:
 	@echo "  validate                   Validate a program.json file: make validate PROGRAM=path/to/program.json"
 	@echo ""
 	@echo "WebApp Targets:"
-	@echo "  webapp-dev                 Start webapp development server with hot reload."
+	@echo "  run-webapp                 Start webapp development server with hot reload."
 	@echo "  build-webapp               Build webapp for production (host installation) to webapp/dist/."
+	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 
 .DEFAULT_GOAL := help
