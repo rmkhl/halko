@@ -15,11 +15,6 @@ clean:
 	@rm -rf $(BINDIR)
 	@echo "✓ Cleaned Go binaries"
 
-.PHONY: clean-webapp
-clean-webapp:
-	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
-	@echo "✓ Cleaned webapp artifacts"
-
 .PHONY: distclean
 distclean: clean clean-webapp
 	@rm -rf .nodejs
@@ -249,6 +244,11 @@ images: clean $(MODULES:%=$(BINDIR)/%)
 	@BUILDKIT_PROGRESS=plain docker-compose build
 	@echo "Docker images have been rebuilt."
 
+.PHONY: clean-webapp
+clean-webapp:
+	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
+	@echo "✓ Cleaned webapp artifacts"
+
 .PHONY: run-webapp
 run-webapp: clean-webapp
 	@echo "Installing webapp dependencies..."
@@ -305,7 +305,6 @@ help:
 	@echo "  prepare                    Check for required tools (Go, Node.js), install Node.js if needed, and setup workspace."
 	@echo "  build                      Clean and rebuild all Go executables."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
-	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
 	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
 	@echo ""
@@ -325,6 +324,7 @@ help:
 	@echo "  validate                   Validate a program.json file: make validate PROGRAM=path/to/program.json"
 	@echo ""
 	@echo "WebApp Targets:"
+	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo "  run-webapp                 Start webapp development server with hot reload."
 	@echo "  build-webapp               Build webapp for production (host installation) to webapp/dist/."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
