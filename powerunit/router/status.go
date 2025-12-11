@@ -19,6 +19,9 @@ func getStatus(p *power.Controller) http.HandlerFunc {
 		}
 
 		details["controller_initialized"] = isHealthy
+		if isHealthy {
+			details["is_idle"] = p.IsIdle()
+		}
 
 		response := types.ServiceStatusResponse{
 			Status:  status,

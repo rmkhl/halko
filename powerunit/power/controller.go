@@ -25,6 +25,7 @@ type (
 		maxIdleTime  time.Duration  // Maximum idle time before resetting percentages
 		tickCount    int            // Current tick count (0-99)
 		lastCommand  time.Time      // Timestamp when the last command was applied
+		isIdle       bool           // Tracks whether we're currently in idle state
 		shelly       *shelly.Shelly // Shelly controller for device communication
 	}
 )
@@ -55,6 +56,7 @@ func New(maxIdleTimeS int, cycleLengthS int, shellyCtrl *shelly.Shelly) *Control
 		tickDuration: tickDuration,
 		tickCount:    0,
 		lastCommand:  time.Now(),
+		isIdle:       true,
 		shelly:       shellyCtrl,
 	}
 	log.Debug("Power controller created successfully")
@@ -65,6 +67,15 @@ func (c *Controller) Start() error {
 	log.Info("Starting power controller with tick duration %v", c.tickDuration)
 	defer c.cancel()
 
+	// Turn off all devices on startup to ensure clean initial state
+	log.Info("Turning off all devices on startup")
+	for i := range shelly.NumberOfDevices {
+		if _, err := c.shelly.SetState(shelly.Off, i); err != nil {
+			log.Error("Error turning off device %d on startup: %v", i, err)
+			// Continue with other devices even if one fails
+		}
+	}
+
 	ticker := time.NewTicker(c.tickDuration)
 	defer ticker.Stop()
 	log.Debug("Created ticker for power control loop")
@@ -72,11 +83,11 @@ func (c *Controller) Start() error {
 	c.mu.Lock()
 	for i := range shelly.NumberOfDevices {
 		c.powerStates[i].percentage = 0
-		c.powerStates[i].currentState = shelly.On
+		c.powerStates[i].currentState = shelly.Off
 	}
 	c.lastCommand = time.Now()
 	c.mu.Unlock()
-	log.Debug("Initialized power states to 0%% and On")
+	log.Debug("Initialized power states to 0%% and Off")
 
 	for {
 		select {
@@ -128,7 +139,10 @@ func (c *Controller) processTick() error {
 	// If more than max idle time has passed since the last command, set all percentages to 0
 	timeSinceLastCommand := time.Since(c.lastCommand)
 	if timeSinceLastCommand > c.maxIdleTime {
-		log.Warning("Idle for %v (max: %v), resetting all percentages to 0", timeSinceLastCommand, c.maxIdleTime)
+		if !c.isIdle {
+			log.Warning("Idle for %v (max: %v), resetting all percentages to 0", timeSinceLastCommand, c.maxIdleTime)
+			c.isIdle = true
+		}
 		for id := range shelly.NumberOfDevices {
 			if c.powerStates[id].percentage > 0 {
 				log.Debug("Resetting device %d percentage from %d%% to 0%%", id, c.powerStates[id].percentage)
@@ -176,6 +190,7 @@ func (c *Controller) SetAllPercentages(percentages [shelly.NumberOfDevices]uint8
 	defer c.mu.Unlock()
 
 	c.lastCommand = time.Now()
+	c.isIdle = false // Reset idle state when receiving new command
 
 	log.Debug("Setting new percentages: %v", percentages)
 	for id := range shelly.NumberOfDevices {
@@ -185,4 +200,11 @@ func (c *Controller) SetAllPercentages(percentages [shelly.NumberOfDevices]uint8
 			log.Debug("Device %d percentage changed: %d%% -> %d%%", id, oldPercentage, percentages[id])
 		}
 	}
+}
+
+// IsIdle returns whether the controller is currently in idle state
+func (c *Controller) IsIdle() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.isIdle
 }
