@@ -5,19 +5,23 @@ BINDIR = bin
 all: clean $(MODULES:%=$(BINDIR)/%)
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
-	go build -o $@ ./$*/
+	@go build -o $@ ./$*/
 
 $(BINDIR):
-	mkdir -p $(BINDIR)
+	@mkdir -p $(BINDIR)
 
 .PHONY: clean
 clean:
-	rm -rf $(BINDIR)
+	@rm -rf $(BINDIR)
+	@echo "✓ Cleaned Go binaries"
+
+.PHONY: clean-webapp
+clean-webapp:
 	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
-	@echo "✓ Cleaned Go binaries and webapp artifacts"
+	@echo "✓ Cleaned webapp artifacts"
 
 .PHONY: distclean
-distclean: clean
+distclean: clean clean-webapp
 	@rm -rf .nodejs
 	@echo "✓ Removed local Node.js installation"
 
@@ -101,19 +105,6 @@ prepare:
 .PHONY: build
 build: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All Go binaries have been rebuilt."
-	@echo "Installing webapp dependencies..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install
-	@echo "✓ Webapp dependencies installed"
-	@echo "Building webapp for production..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm run build
-	@echo "✓ Webapp built to webapp/dist/"
-	@echo "All binaries and webapp have been rebuilt."
 
 .PHONY: lint
 lint:
@@ -238,7 +229,14 @@ validate:
 	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
 
 .PHONY: images
-images: build
+images: clean $(MODULES:%=$(BINDIR)/%)
+	@echo "All Go binaries have been rebuilt."
+	@echo "Building webapp for Docker..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install && npm run build
+	@echo "✓ Webapp built to webapp/dist/"
 	@echo "Ensuring fsdb directory exists..."
 	@mkdir -p fsdb
 	@echo "Generating nginx configuration for webapp Docker container..."
@@ -248,11 +246,11 @@ images: build
 	@docker-compose rm -f || true
 	@docker images --filter "reference=halko_*" -q | xargs -r docker rmi -f || true
 	@echo "Building new Docker images..."
-	@BUILDKIT_PROGRESS=plain docker-compose build --no-cache
+	@BUILDKIT_PROGRESS=plain docker-compose build
 	@echo "Docker images have been rebuilt."
 
 .PHONY: run-webapp
-run-webapp:
+run-webapp: clean-webapp
 	@echo "Installing webapp dependencies..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -265,7 +263,7 @@ run-webapp:
 	cd webapp && npm start
 
 .PHONY: build-webapp
-build-webapp: $(BINDIR)/halkoctl
+build-webapp: clean-webapp $(BINDIR)/halkoctl
 	@echo "Building webapp for production (host installation)..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -305,9 +303,10 @@ help:
 	@echo "  help                       Show this help message. (default)"
 	@echo "  all                        Build all Go executables to bin/ directory."
 	@echo "  prepare                    Check for required tools (Go, Node.js), install Node.js if needed, and setup workspace."
-	@echo "  build                      Clean and rebuild all Go executables and webapp from scratch."
-	@echo "  clean                      Remove bin/ directory and webapp artifacts (keeps Node.js installation)."
-	@echo "  distclean                  Like clean, but also removes local Node.js installation."
+	@echo "  build                      Clean and rebuild all Go executables."
+	@echo "  clean                      Remove bin/ directory (Go binaries only)."
+	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
+	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
 	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
 	@echo ""
 	@echo "Go Backend Targets:"
