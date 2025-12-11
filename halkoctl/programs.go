@@ -82,7 +82,7 @@ func handleProgramListCommand() {
 		os.Exit(exitError)
 	}
 
-	var response types.APIResponse[[]string]
+	var response types.APIResponse[[]types.StoredProgramInfo]
 	if err := json.Unmarshal(body, &response); err != nil {
 		resp.Body.Close()
 		fmt.Fprintf(os.Stderr, "Failed to parse response: %v\n", err)
@@ -95,8 +95,8 @@ func handleProgramListCommand() {
 		fmt.Println("No programs found")
 	} else {
 		fmt.Println("Stored programs:")
-		for _, programName := range response.Data {
-			fmt.Printf("  %s\n", programName)
+		for _, programInfo := range response.Data {
+			fmt.Printf("  %s (last modified: %s)\n", programInfo.Name, programInfo.LastModified)
 		}
 	}
 }

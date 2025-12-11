@@ -10,12 +10,12 @@ import (
 
 func listAllStoredPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		programs, err := storage.ListStoredPrograms()
+		programs, err := storage.ListStoredProgramsWithInfo()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		writeJSON(w, http.StatusOK, types.APIResponse[[]string]{Data: programs})
+		writeJSON(w, http.StatusOK, types.APIResponse[[]types.StoredProgramInfo]{Data: programs})
 	}
 }
 

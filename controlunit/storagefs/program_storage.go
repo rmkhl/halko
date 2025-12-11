@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
@@ -41,6 +42,32 @@ func NewProgramStorage(basePath string) (*ProgramStorage, error) {
 func (storage *ProgramStorage) ListStoredPrograms() ([]string, error) {
 	searchPath := filepath.Join(storage.programPath, "*.json")
 	return storage.ListPrograms(searchPath)
+}
+
+func (storage *ProgramStorage) ListStoredProgramsWithInfo() ([]types.StoredProgramInfo, error) {
+	log.Debug("Listing stored programs with modification times")
+	programs, err := storage.ListStoredPrograms()
+	if err != nil {
+		return nil, err
+	}
+
+	programInfos := make([]types.StoredProgramInfo, 0, len(programs))
+	for _, programName := range programs {
+		filePath := filepath.Join(storage.programPath, programName+".json")
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			log.Warning("Failed to get file info for program '%s': %v", programName, err)
+			continue
+		}
+
+		programInfos = append(programInfos, types.StoredProgramInfo{
+			Name:         programName,
+			LastModified: fileInfo.ModTime().Format(time.RFC3339),
+		})
+	}
+
+	log.Debug("Found %d stored programs with info", len(programInfos))
+	return programInfos, nil
 }
 
 func (storage *ProgramStorage) LoadStoredProgram(programName string) (*types.Program, error) {

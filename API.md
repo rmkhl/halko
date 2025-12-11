@@ -443,19 +443,33 @@ If storage is not accessible:
 
 #### GET `/storage/programs`
 
-Lists all stored programs.
+Lists all stored programs with their last modification times.
 
 **Response Format:**
 
 ```json
 {
   "data": [
-    "Standard Drying",
-    "Quick Drying",
-    "Pine Program"
+    {
+      "name": "Standard Drying",
+      "last_modified": "2023-12-17T14:30:00Z"
+    },
+    {
+      "name": "Quick Drying",
+      "last_modified": "2023-12-16T10:15:00Z"
+    },
+    {
+      "name": "Pine Program",
+      "last_modified": "2023-12-15T08:00:00Z"
+    }
   ]
 }
 ```
+
+**Fields:**
+
+- `name`: The name of the stored program
+- `last_modified`: ISO 8601 formatted timestamp of the last modification time
 
 #### GET `/storage/programs/{name}`
 

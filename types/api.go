@@ -81,6 +81,11 @@ type (
 		Programs []RunHistory `json:"programs"`
 	}
 
+	StoredProgramInfo struct {
+		Name         string `json:"name"`
+		LastModified string `json:"last_modified"`
+	}
+
 	// TemperatureStatus represents the current temperature of the material and oven in Celsius.
 	TemperatureStatus struct {
 		Material float32 `json:"material"`
