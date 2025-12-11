@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 const (
@@ -18,6 +19,15 @@ var globalOpts *types.GlobalOptions
 func main() {
 	var commandIndex int
 	globalOpts, commandIndex = ParseGlobalOptions()
+
+	// Set log level based on verbose flag
+	// For CLI tool, default to ERROR level (suppress INFO messages)
+	// Enable INFO level only when verbose mode is on
+	if globalOpts.Verbose {
+		log.SetLevel(log.INFO)
+	} else {
+		log.SetLevel(log.ERROR)
+	}
 
 	if commandIndex == -1 {
 		showHelp()

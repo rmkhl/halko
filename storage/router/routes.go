@@ -26,6 +26,7 @@ func SetupRoutes(mux *http.ServeMux, storage *storagefs.ProgramStorage, endpoint
 	mux.HandleFunc("POST "+endpoints.Storage.Programs, createProgram(storage))
 	mux.HandleFunc("POST "+endpoints.Storage.Programs+"/{name}", updateProgram(storage))
 	mux.HandleFunc("DELETE "+endpoints.Storage.Programs+"/{name}", deleteProgram(storage))
+	mux.HandleFunc("GET "+endpoints.Storage.Status, getStatus(storage))
 }
 
 func listAllPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {

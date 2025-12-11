@@ -132,17 +132,19 @@ func ParseStatusOptions() (*StatusOptions, error) {
 
 	// If no services specified, check all available services
 	if len(args) == 0 {
-		opts.Services = []string{"executor", "sensorunit"}
+		opts.Services = []string{"executor", "sensorunit", "powerunit", "storage"}
 	} else {
 		// Validate and set the specified services
 		validServices := map[string]bool{
 			"executor":   true,
 			"sensorunit": true,
+			"powerunit":  true,
+			"storage":    true,
 		}
 
 		for _, service := range args {
 			if !validServices[service] {
-				return nil, fmt.Errorf("unknown service '%s'. Valid services are: executor, sensorunit", service)
+				return nil, fmt.Errorf("unknown service '%s'. Valid services are: executor, sensorunit, powerunit, storage", service)
 			}
 		}
 		opts.Services = args

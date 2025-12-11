@@ -9,13 +9,19 @@ import (
 
 func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
 	log.Debug("Processing status check request from %s", req.RemoteAddr)
-	log.Debug("Returning sensor status: %s", types.SensorStatusConnected)
 
-	response := types.APIResponse[types.StatusResponse]{
-		Data: types.StatusResponse{
-			Status: types.SensorStatusConnected,
-		},
+	details := make(map[string]interface{})
+	details["arduino_connected"] = true
+
+	response := types.ServiceStatusResponse{
+		Status:  types.ServiceStatusHealthy,
+		Service: "sensorunit",
+		Details: details,
 	}
 
-	writeJSON(w, http.StatusOK, response)
+	log.Debug("Returning sensor status: %s", response.Status)
+
+	writeJSON(w, http.StatusOK, types.APIResponse[types.ServiceStatusResponse]{
+		Data: response,
+	})
 }

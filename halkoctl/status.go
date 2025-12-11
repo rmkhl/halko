@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/rmkhl/halko/types"
 )
 
 func handleStatusCommand() {
@@ -29,6 +31,10 @@ func handleStatusCommand() {
 			queryExecutorStatus(globalOpts.Verbose)
 		case "sensorunit":
 			querySensorUnitStatus(globalOpts.Verbose)
+		case "powerunit":
+			queryPowerUnitStatus(globalOpts.Verbose)
+		case "storage":
+			queryStorageStatus(globalOpts.Verbose)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown service: %s\n", service)
 		}
@@ -53,7 +59,7 @@ func showStatusHelp() {
 	fmt.Println()
 	fmt.Println("Arguments:")
 	fmt.Println("  service")
-	fmt.Println("        Service name to check (executor, sensorunit)")
+	fmt.Println("        Service name to check (executor, sensorunit, powerunit, storage)")
 	fmt.Println("        If no services specified, checks all available services")
 	fmt.Println()
 	fmt.Println("Options:")
@@ -69,42 +75,45 @@ func showStatusHelp() {
 	fmt.Println("Examples:")
 	fmt.Printf("  %s status                    # Check all services\n", os.Args[0])
 	fmt.Printf("  %s status executor           # Check executor service only\n", os.Args[0])
-	fmt.Printf("  %s status sensorunit         # Check sensorunit service only\n", os.Args[0])
-	fmt.Printf("  %s status executor sensorunit # Check both services\n", os.Args[0])
+	fmt.Printf("  %s status powerunit storage  # Check powerunit and storage services\n", os.Args[0])
 	fmt.Printf("  %s --verbose status          # Verbose output for all services\n", os.Args[0])
 	fmt.Println()
 }
 
 func queryExecutorStatus(verbose bool) {
-	executorURL := getExecutorAPIURL(globalConfig)
-	if executorURL == "" {
-		fmt.Printf("Executor Status: unavailable (could not determine URL from config)\n")
-		return
-	}
+	queryServiceStatus("Executor", &globalConfig.APIEndpoints.Executor, verbose)
+}
+
+func querySensorUnitStatus(verbose bool) {
+	queryServiceStatus("SensorUnit", &globalConfig.APIEndpoints.SensorUnit, verbose)
+}
+
+func queryPowerUnitStatus(verbose bool) {
+	queryServiceStatus("PowerUnit", &globalConfig.APIEndpoints.PowerUnit, verbose)
+}
+
+func queryStorageStatus(verbose bool) {
+	queryServiceStatus("Storage", &globalConfig.APIEndpoints.Storage, verbose)
+}
+
+func queryServiceStatus(serviceName string, endpoint types.EndpointWithStatus, verbose bool) {
+	url := endpoint.GetStatusURL()
 
 	if verbose {
-		fmt.Printf("Querying executor status at: %s/engine/running\n", executorURL)
+		fmt.Printf("Querying %s status at: %s\n", serviceName, url)
 		fmt.Println()
 	}
 
-	getExecutorStatus(executorURL, verbose)
+	getServiceStatus(serviceName, url, verbose)
 }
 
-func getExecutorStatus(executorURL string, verbose bool) {
+func getServiceStatus(serviceName string, url string, verbose bool) {
 	if verbose {
-		fmt.Printf("Querying status from: %s\n", executorURL)
+		fmt.Printf("Querying status from: %s\n", url)
 	}
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
-	}
-
-	// Construct the full URL using the running endpoint
-	var url string
-	if globalConfig != nil && globalConfig.APIEndpoints != nil {
-		url = globalConfig.APIEndpoints.Executor.GetRunningURL()
-	} else {
-		url = executorURL + "/engine/running"
 	}
 
 	if verbose {
@@ -113,7 +122,7 @@ func getExecutorStatus(executorURL string, verbose bool) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("Executor Status: unavailable (failed to create HTTP request: %v)\n", err)
+		fmt.Printf("%s Status: unavailable (failed to create HTTP request: %v)\n", serviceName, err)
 		return
 	}
 
@@ -121,7 +130,7 @@ func getExecutorStatus(executorURL string, verbose bool) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Executor Status: unavailable (connection failed)\n")
+		fmt.Printf("%s Status: unavailable (connection failed)\n", serviceName)
 		if verbose {
 			fmt.Printf("  Error: %v\n", err)
 		}
@@ -131,7 +140,7 @@ func getExecutorStatus(executorURL string, verbose bool) {
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Executor Status: unavailable (failed to read response: %v)\n", err)
+		fmt.Printf("%s Status: unavailable (failed to read response: %v)\n", serviceName, err)
 		return
 	}
 
@@ -143,14 +152,8 @@ func getExecutorStatus(executorURL string, verbose bool) {
 		fmt.Println()
 	}
 
-	// Handle 204 No Content - means no program is running
-	if resp.StatusCode == http.StatusNoContent {
-		fmt.Printf("Executor Status: idle (no program running)\n")
-		return
-	}
-
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		fmt.Printf("Executor Status: unavailable (HTTP %d)\n", resp.StatusCode)
+		fmt.Printf("%s Status: unavailable (HTTP %d)\n", serviceName, resp.StatusCode)
 		if verbose && len(respBody) > 0 {
 			fmt.Printf("  Error: %s\n", strings.TrimSpace(string(respBody)))
 		}
@@ -159,172 +162,45 @@ func getExecutorStatus(executorURL string, verbose bool) {
 
 	// Only try to parse JSON if we have a body
 	if len(respBody) == 0 {
-		fmt.Printf("Executor Status: unavailable (empty response body)\n")
+		fmt.Printf("%s Status: unavailable (empty response body)\n", serviceName)
 		return
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(respBody, &response); err != nil {
-		fmt.Printf("Executor Status: unavailable (failed to parse response: %v)\n", err)
+		fmt.Printf("%s Status: unavailable (failed to parse response: %v)\n", serviceName, err)
 		return
 	}
 
 	data, ok := response["data"]
 	if !ok {
-		fmt.Printf("Executor Status: unavailable (no data field in response)\n")
+		fmt.Printf("%s Status: unavailable (no data field in response)\n", serviceName)
 		return
 	}
 
 	dataMap, ok := data.(map[string]interface{})
 	if !ok {
-		fmt.Printf("Executor Status: unavailable (invalid data format in response)\n")
+		fmt.Printf("%s Status: unavailable (invalid data format in response)\n", serviceName)
 		return
 	}
 
 	status, ok := dataMap["status"]
 	if !ok {
-		fmt.Printf("Executor Status: unavailable (no status field in response)\n")
+		fmt.Printf("%s Status: unavailable (no status field in response)\n", serviceName)
 		return
 	}
 
-	fmt.Printf("Executor Status: %v\n", status)
+	fmt.Printf("%s Status: %v\n", serviceName, status)
 
-	displayProgramDetails(dataMap)
-}
-
-func displayProgramDetails(dataMap map[string]interface{}) {
-	program, ok := dataMap["program"]
-	if !ok {
-		return
-	}
-
-	programMap, ok := program.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	fmt.Println()
-	fmt.Println("Running Program Details:")
-
-	if name, ok := programMap["name"]; ok {
-		fmt.Printf("  Program Name: %v\n", name)
-	}
-	if currentPhase, ok := programMap["currentPhase"]; ok {
-		fmt.Printf("  Current Phase: %v\n", currentPhase)
-	}
-	if elapsedTime, ok := programMap["elapsedTime"]; ok {
-		fmt.Printf("  Elapsed Time: %v seconds\n", elapsedTime)
-	}
-	if currentTemp, ok := programMap["currentTemperature"]; ok {
-		fmt.Printf("  Current Temperature: %v°C\n", currentTemp)
-	}
-	if targetTemp, ok := programMap["targetTemperature"]; ok {
-		fmt.Printf("  Target Temperature: %v°C\n", targetTemp)
-	}
-	if remainingTime, ok := programMap["remainingTime"]; ok {
-		fmt.Printf("  Remaining Time: %v seconds\n", remainingTime)
-	}
-}
-
-func querySensorUnitStatus(verbose bool) {
-	sensorUnitURL := getSensorUnitAPIURL(globalConfig)
-	if sensorUnitURL == "" {
-		fmt.Printf("SensorUnit Status: unavailable (could not determine URL from config)\n")
-		return
-	}
-
+	// Display details if in verbose mode
 	if verbose {
-		fmt.Printf("Querying sensorunit status at: %s/status\n", sensorUnitURL)
-		fmt.Println()
-	}
-
-	getSensorUnitStatus(sensorUnitURL, verbose)
-}
-
-func getSensorUnitStatus(sensorUnitURL string, verbose bool) {
-	if verbose {
-		fmt.Printf("Querying status from: %s\n", sensorUnitURL)
-	}
-
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	// Construct the full URL using the status endpoint
-	var url string
-	if globalConfig != nil && globalConfig.APIEndpoints != nil {
-		url = globalConfig.APIEndpoints.SensorUnit.GetStatusURL()
-	} else {
-		url = sensorUnitURL + "/status"
-	}
-
-	if verbose {
-		fmt.Printf("GET %s\n", url)
-	}
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		fmt.Printf("SensorUnit Status: unavailable (failed to create HTTP request: %v)\n", err)
-		return
-	}
-
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("SensorUnit Status: unavailable (connection failed)\n")
-		if verbose {
-			fmt.Printf("  Error: %v\n", err)
+		if details, ok := dataMap["details"]; ok {
+			if detailsMap, ok := details.(map[string]interface{}); ok && len(detailsMap) > 0 {
+				fmt.Println("  Details:")
+				for key, value := range detailsMap {
+					fmt.Printf("    %s: %v\n", key, value)
+				}
+			}
 		}
-		return
 	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("SensorUnit Status: unavailable (failed to read response: %v)\n", err)
-		return
-	}
-
-	if verbose {
-		fmt.Printf("HTTP Status: %d %s\n", resp.StatusCode, resp.Status)
-		if len(respBody) > 0 {
-			fmt.Printf("Raw Response: %s\n", string(respBody))
-		}
-		fmt.Println()
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		fmt.Printf("SensorUnit Status: unavailable (HTTP %d)\n", resp.StatusCode)
-		if verbose && len(respBody) > 0 {
-			fmt.Printf("  Error: %s\n", strings.TrimSpace(string(respBody)))
-		}
-		return
-	}
-
-	var response map[string]interface{}
-	if err := json.Unmarshal(respBody, &response); err != nil {
-		fmt.Printf("SensorUnit Status: unavailable (failed to parse response: %v)\n", err)
-		return
-	}
-
-	data, ok := response["data"]
-	if !ok {
-		fmt.Printf("SensorUnit Status: unavailable (no data field in response)\n")
-		return
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		fmt.Printf("SensorUnit Status: unavailable (invalid data format in response)\n")
-		return
-	}
-
-	status, ok := dataMap["status"]
-	if !ok {
-		fmt.Printf("SensorUnit Status: unavailable (no status field in response)\n")
-		return
-	}
-
-	fmt.Printf("SensorUnit Status: %v\n", status)
 }

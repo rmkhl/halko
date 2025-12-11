@@ -3,6 +3,46 @@
 This document provides detailed information about the REST APIs exposed by each
 component of the Halko wood drying kiln control system.
 
+## Common Response Patterns
+
+All Halko services use a consistent JSON response structure:
+
+```json
+{
+  "data": {
+    // Service-specific data
+  }
+}
+```
+
+### Standardized Status Endpoint
+
+All services implement a `/status` endpoint that returns health information using this format:
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "executor",
+    "details": {
+      // Service-specific status details
+    }
+  }
+}
+```
+
+**Status Values:**
+- `healthy`: Service is operating normally
+- `degraded`: Service is operational but experiencing issues
+- `unavailable`: Service is not operational
+
+**Service-Specific Details:**
+
+- **Executor**: `program_running` (bool), `current_step` (int), `started_at` (string)
+- **PowerUnit**: `controller_initialized` (bool)
+- **Storage**: `accessible` (bool), `error` (string if not accessible)
+- **SensorUnit**: `arduino_connected` (bool)
+
 ## 1. SensorUnit API
 
 Base Path: `/sensors`
@@ -38,21 +78,24 @@ The response includes:
 
 #### GET `/status`
 
-Checks the connection status of the sensor unit.
+Checks the connection status of the sensor unit. Follows the standard status endpoint format (see Common Response Patterns).
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "status": "connected"
+    "status": "healthy",
+    "service": "sensorunit",
+    "details": {
+      "arduino_connected": true
+    }
   }
 }
 ```
 
-Possible status values:
-
-- `connected`: The sensor unit is connected and responding
+**Details:**
+- `arduino_connected`: Boolean indicating if the Arduino device is connected via USB serial
 - `disconnected`: The sensor unit is not connected or not responding
 
 #### POST `/display`
@@ -80,6 +123,31 @@ Updates the text displayed on the sensor unit's LCD.
 ## 2. PowerUnit API
 
 Base Path: `/powers`
+
+### Status Endpoints
+
+#### GET `/status`
+
+Gets the health status of the PowerUnit service. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "powerunit",
+    "details": {
+      "controller_initialized": true
+    }
+  }
+}
+```
+
+**Details:**
+- `controller_initialized`: Boolean indicating if the power controller (Shelly device interface) is properly initialized
+
+### Power Control Endpoints
 
 ### GET `/`
 
@@ -155,6 +223,33 @@ Base Path: `/engine`
 Default Port: `8090`
 
 **Note:** Program storage endpoints (`/storage/*`) have been moved to the independent Storage Service API (Section 4).
+
+### Status Endpoints
+
+#### GET `/status`
+
+Gets the health status of the Executor service. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "executor",
+    "details": {
+      "program_running": true,
+      "current_step": 3,
+      "started_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Details:**
+- `program_running`: Boolean indicating if a program is currently executing
+- `current_step`: Current step number in the program (only present if program is running)
+- `started_at`: ISO 8601 timestamp of program start (only present if program is running)
 
 ### Program Execution History Endpoints
 
@@ -308,6 +403,45 @@ Base Path: `/storage`
 Default Port: `8091`
 
 The storage service provides independent program storage management.
+
+### Status Endpoints
+
+#### GET `/status`
+
+Gets the health status of the Storage service. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "storage",
+    "details": {
+      "accessible": true
+    }
+  }
+}
+```
+
+If storage is not accessible:
+
+```json
+{
+  "data": {
+    "status": "degraded",
+    "service": "storage",
+    "details": {
+      "accessible": false,
+      "error": "storage directory not accessible: /path/to/storage"
+    }
+  }
+}
+```
+
+**Details:**
+- `accessible`: Boolean indicating if the storage directory is accessible
+- `error`: Error message if storage is not accessible (only present when accessible is false)
 
 ### Program Storage Endpoints
 

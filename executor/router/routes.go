@@ -32,5 +32,7 @@ func SetupRoutes(mux *http.ServeMux, storage *storagefs.ExecutorFileStorage, eng
 	mux.HandleFunc("POST "+endpoints.Executor.Running, startNewProgram(engine))
 	mux.HandleFunc("DELETE "+endpoints.Executor.Running, cancelRunningProgram(engine))
 
+	mux.HandleFunc("GET "+endpoints.Executor.Status, getStatus(engine))
+
 	// Note: /storage/ endpoints are now handled by the independent storage service
 }

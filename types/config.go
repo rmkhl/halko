@@ -13,6 +13,10 @@ import (
 )
 
 type (
+	EndpointWithStatus interface {
+		GetStatusURL() string
+	}
+
 	Endpoint struct {
 		URL    string `json:"url"`
 		Status string `json:"status"`
@@ -51,23 +55,27 @@ type (
 		Endpoint `json:",inline"`
 		Programs string `json:"programs"`
 		Running  string `json:"running"`
+		Status   string `json:"status"`
 	}
 
 	SensorUnitEndpoints struct {
 		Endpoint     `json:",inline"`
 		Temperatures string `json:"temperatures"`
 		Display      string `json:"display"`
+		Status       string `json:"status"`
 	}
 
 	PowerUnitEndpoints struct {
 		Endpoint `json:",inline"`
 		Power    string `json:"power"`
+		Status   string `json:"status"`
 	}
 
 	StorageEndpoints struct {
 		Endpoint     `json:",inline"`
 		Programs     string `json:"programs"`
 		ExecutionLog string `json:"execution_log"`
+		Status       string `json:"status"`
 	}
 
 	APIEndpoints struct {
@@ -93,6 +101,26 @@ func (e *Endpoint) GetURL() string {
 
 // GetStatusURL returns the full status endpoint URL
 func (e *Endpoint) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for ExecutorEndpoints
+func (e *ExecutorEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for SensorUnitEndpoints
+func (e *SensorUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for PowerUnitEndpoints
+func (e *PowerUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for StorageEndpoints
+func (e *StorageEndpoints) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
