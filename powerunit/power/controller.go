@@ -68,11 +68,33 @@ func (c *Controller) Start() error {
 	defer c.cancel()
 
 	// Turn off all devices on startup to ensure clean initial state
+	// Use retry mechanism to handle race condition shelly startup
 	log.Info("Turning off all devices on startup")
+	maxRetries := 5
+	retryDelay := 500 * time.Millisecond
+
 	for i := range shelly.NumberOfDevices {
-		if _, err := c.shelly.SetState(shelly.Off, i); err != nil {
-			log.Error("Error turning off device %d on startup: %v", i, err)
-			// Continue with other devices even if one fails
+		success := false
+		for attempt := 0; attempt < maxRetries; attempt++ {
+			if _, err := c.shelly.SetState(shelly.Off, i); err != nil {
+				if attempt < maxRetries-1 {
+					log.Debug("Failed to turn off device %d (attempt %d/%d), retrying in %v: %v",
+						i, attempt+1, maxRetries, retryDelay, err)
+					time.Sleep(retryDelay)
+					retryDelay *= 2 // Exponential backoff
+				} else {
+					log.Error("Error turning off device %d after %d attempts: %v", i, maxRetries, err)
+				}
+			} else {
+				success = true
+				if attempt > 0 {
+					log.Debug("Successfully turned off device %d on attempt %d", i, attempt+1)
+				}
+				break
+			}
+		}
+		if success {
+			retryDelay = 500 * time.Millisecond // Reset delay for next device
 		}
 	}
 
