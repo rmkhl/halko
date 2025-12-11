@@ -32,6 +32,7 @@ All services implement a `/status` endpoint that returns health information usin
 ```
 
 **Status Values:**
+
 - `healthy`: Service is operating normally
 - `degraded`: Service is operational but experiencing issues
 - `unavailable`: Service is not operational
@@ -95,6 +96,7 @@ Checks the connection status of the sensor unit. Follows the standard status end
 ```
 
 **Details:**
+
 - `arduino_connected`: Boolean indicating if the Arduino device is connected via USB serial
 - `disconnected`: The sensor unit is not connected or not responding
 
@@ -145,6 +147,7 @@ Gets the health status of the PowerUnit service. Follows the standard status end
 ```
 
 **Details:**
+
 - `controller_initialized`: Boolean indicating if the power controller (Shelly device interface) is properly initialized
 
 ### Power Control Endpoints
@@ -245,6 +248,7 @@ Gets the health status of the ControlUnit service. Follows the standard status e
 ```
 
 **Details:**
+
 - `program_running`: Boolean indicating if a program is currently executing
 - `current_step`: Current step number in the program (only present if program is running)
 - `started_at`: ISO 8601 timestamp of program start (only present if program is running)
@@ -433,6 +437,7 @@ If storage is not accessible:
 ```
 
 **Details:**
+
 - `accessible`: Boolean indicating if the storage directory is accessible
 - `error`: Error message if storage is not accessible (only present when accessible is false)
 

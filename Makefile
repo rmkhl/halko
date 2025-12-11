@@ -122,7 +122,7 @@ lint:
 lint-markdown:
 	@if command -v mdl > /dev/null; then \
 		echo "Linting markdown files..."; \
-		mdl . || true; \
+		find . -name "*.md" -not -path "./.github/*" -not -path "./webapp/*" -not -path "./.nodejs/*" -not -path "./fsdb/*" -not -path "./node_modules/*" | xargs mdl --ignore-front-matter || true; \
 	else \
 		echo "Warning: mdl is not installed. Skipping markdown linting."; \
 	fi
