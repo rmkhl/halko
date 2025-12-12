@@ -147,7 +147,8 @@ func (c *Controller) processTick() error {
 
 	for id := range shelly.NumberOfDevices {
 		tracker := c.powerStates[id]
-		if c.tickCount >= int(tracker.percentage) && tracker.currentState == shelly.On && tracker.percentage > 0 {
+		// Turn off devices when tickCount reaches their percentage (including 0%)
+		if c.tickCount >= int(tracker.percentage) && tracker.currentState == shelly.On {
 			log.Debug("Turning off device %d at tick %d (percentage: %d%%)", id, c.tickCount, tracker.percentage)
 			if _, err := c.shelly.SetState(shelly.Off, id); err != nil {
 				log.Error("Error turning off %d at tick %d: %v", id, c.tickCount, err)
@@ -159,6 +160,7 @@ func (c *Controller) processTick() error {
 	}
 
 	// If more than max idle time has passed since the last command, set all percentages to 0
+	// Devices will be turned off on the next tick by the normal cycle logic
 	timeSinceLastCommand := time.Since(c.lastCommand)
 	if timeSinceLastCommand > c.maxIdleTime {
 		if !c.isIdle {

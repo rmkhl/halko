@@ -51,7 +51,9 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.Ha
 		}
 		log.Debug("Received power commands: %v", commands)
 
+		currentPercentages := p.GetAllPercentages()
 		var percentages [shelly.NumberOfDevices]uint8
+		changed := false
 
 		for powerName, command := range commands {
 			id, ok := powerMapping[powerName]
@@ -61,11 +63,19 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.Ha
 				return
 			}
 			percentages[id] = command.Percent
-			log.Trace("Mapped power %s (id=%d) to %d%%", powerName, id, command.Percent)
+			if currentPercentages[id] != command.Percent {
+				log.Info("Power percentage for %s updated to %d%% (was %d%%)", powerName, command.Percent, currentPercentages[id])
+				changed = true
+			} else {
+				log.Trace("Power percentage for %s unchanged at %d%%", powerName, command.Percent)
+			}
 		}
 
-		p.SetAllPercentages(percentages)
-		log.Info("Power percentages updated successfully")
+		if changed {
+			p.SetAllPercentages(percentages)
+		} else {
+			log.Debug("No power percentage changes, skipping update")
+		}
 
 		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerOperationResponse]{
 			Data: types.PowerOperationResponse{Message: "completed"},
@@ -116,10 +126,15 @@ func setPercentage(p *power.Controller, powerMapping map[string]int) http.Handle
 		log.Debug("Received power command for %s: %d%%", powerName, command.Percent)
 
 		percentages := p.GetAllPercentages()
+		currentPercent := percentages[id]
 		percentages[id] = command.Percent
 
-		p.SetAllPercentages(percentages)
-		log.Info("Power percentage for %s updated to %d%%", powerName, command.Percent)
+		if currentPercent != command.Percent {
+			p.SetAllPercentages(percentages)
+			log.Info("Power percentage for %s updated to %d%% (was %d%%)", powerName, command.Percent, currentPercent)
+		} else {
+			log.Debug("Power percentage for %s unchanged at %d%%", powerName, command.Percent)
+		}
 
 		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerResponse]{
 			Data: types.PowerResponse(command),
