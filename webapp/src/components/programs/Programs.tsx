@@ -229,7 +229,7 @@ export const Programs: React.FC = () => {
             <Typography color="text.secondary">No programs found</Typography>
           </Box>
         ) : (
-          <List sx={{ padding: 0 }}>
+          <List sx={{ padding: 0, paddingBottom: 4 }}>
             {sortedPrograms.map((item) => (
               <React.Fragment key={item.name}>
                 <ListItem
@@ -284,7 +284,7 @@ export const Programs: React.FC = () => {
               <CircularProgress />
             </Paper>
           ) : selectedProgramData ? (
-            <Paper sx={{ padding: 3 }}>
+            <Paper sx={{ padding: 3, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                 <Typography variant="h5">{selectedProgramData.name}</Typography>
                 <Button
@@ -299,30 +299,32 @@ export const Programs: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Steps ({selectedProgramData.steps?.length || 0})
               </Typography>
-              {selectedProgramData.steps && selectedProgramData.steps.length > 0 ? (
-                <Stack spacing={2}>
-                  {selectedProgramData.steps.map((step, index) => (
-                    <Paper key={index} variant="outlined" sx={{ padding: 2 }}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {index + 1}. {step.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Type: {step.type}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Target Temperature: {step.temperature_target}°C
-                      </Typography>
-                      {step.runtime && (
-                        <Typography variant="body2" color="text.secondary">
-                          Runtime: {step.runtime}
+              <Box sx={{ flexGrow: 1, overflow: "auto", paddingRight: 1 }}>
+                {selectedProgramData.steps && selectedProgramData.steps.length > 0 ? (
+                  <Stack spacing={2} sx={{ paddingBottom: 2 }}>
+                    {selectedProgramData.steps.map((step, index) => (
+                      <Paper key={index} variant="outlined" sx={{ padding: 2 }}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {index + 1}. {step.name}
                         </Typography>
-                      )}
-                    </Paper>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography color="text.secondary">No steps defined</Typography>
-              )}
+                        <Typography variant="body2" color="text.secondary">
+                          Type: {step.type}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Target Temperature: {step.temperature_target}°C
+                        </Typography>
+                        {step.runtime && (
+                          <Typography variant="body2" color="text.secondary">
+                            Runtime: {step.runtime}
+                          </Typography>
+                        )}
+                      </Paper>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography color="text.secondary">No steps defined</Typography>
+                )}
+              </Box>
             </Paper>
           ) : (
             <Paper

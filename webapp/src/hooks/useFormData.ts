@@ -59,6 +59,11 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
+    // Don't reset if already editing
+    if (editData) {
+      return;
+    }
+
     const data = allData.find((p) => p.name === name);
 
     if (!data) {
@@ -66,10 +71,11 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
-    // When loading an existing program, start in view mode
+    // When loading an existing program, start in edit mode
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMode("view");
+    setMode("edit");
     setFormData(data);
+    dispatch(setEditData(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, allData]);
 
@@ -116,19 +122,8 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
   };
 
   const handleCancel = () => {
-    if (!editData) {
-      navigate(rootPath);
-      return;
-    }
-
     dispatch(setEditData(undefined));
-
-    if (name === "new") {
-      navigate(rootPath);
-      return;
-    }
-
-    setMode("view");
+    navigate(rootPath);
   };
 
 

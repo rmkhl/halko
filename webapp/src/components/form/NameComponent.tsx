@@ -17,6 +17,7 @@ export const NameComponent: React.FC<Props> = (props) => {
 
   return editing ? (
     <Input
+      fullWidth
       style={{ fontSize: "2em" }}
       value={name}
       onChange={handleChange}

@@ -1,11 +1,11 @@
 import React from "react";
 import { Step as ApiStep, PowerSettings } from "../../types/api";
-import { Button, Stack, StackProps, TextField, MenuItem, Select, FormControl, InputLabel, Typography, Box } from "@mui/material";
-import { useTranslation } from "react-i18next";
+import { Button, Stack, StackProps, TextField, MenuItem, Select, FormControl, InputLabel, Typography, Box, IconButton, Tooltip } from "@mui/material";
 import { TextComponent } from "../form/TextComponent";
 import { PowerSettingsComponent } from "../power/PowerSettings";
 import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useGetDefaultsQuery } from "../../store/services/controlunitApi";
 
 interface Position {
@@ -18,10 +18,11 @@ interface Props extends Omit<StackProps, "onChange"> {
   step: ApiStep;
   pos: Position;
   onChange: (step: ApiStep, idx: number) => void;
+  onDelete?: () => void;
 }
 
 export const Step: React.FC<Props> = (props) => {
-  const { editing, step, onChange: updateStep, pos, ...rest } = props;
+  const { editing, step, onChange: updateStep, pos, onDelete, ...rest } = props;
   const {
     name,
     type,
@@ -31,7 +32,6 @@ export const Step: React.FC<Props> = (props) => {
     fan,
     humidifier,
   } = step;
-  const { t } = useTranslation();
   const { data: defaults } = useGetDefaultsQuery();
 
   const handleChange =
@@ -44,7 +44,7 @@ export const Step: React.FC<Props> = (props) => {
   // Get default heater settings based on step type
   const getDefaultHeater = (): PowerSettings | undefined => {
     if (!defaults) return undefined;
-    
+
     if (type === "heating") {
       return {
         type: "delta",
@@ -75,13 +75,13 @@ export const Step: React.FC<Props> = (props) => {
   const getHeaterControlType = (): string => {
     const effectiveHeater = heater || getDefaultHeater();
     const isUsingDefaults = !heater;
-    
+
     if (!effectiveHeater) {
       return "not configured";
     }
 
     let controlType = "";
-    
+
     // Explicit type is set
     if (effectiveHeater.type === "simple") controlType = "constant";
     else if (effectiveHeater.type === "delta") controlType = "delta";
@@ -96,13 +96,13 @@ export const Step: React.FC<Props> = (props) => {
   };
 
   return (
-    <Stack gap={3} direction="row" {...rest}>
-      <Stack flex={1} gap={0.5}>
+    <Stack gap={2} direction="row" {...rest}>
+      <Stack flex={1} gap={1.5}>
         <TextComponent
           value={name}
           onChange={handleChange("name")}
           editing={editing}
-          title={t("programs.steps.name")}
+          title="Step Name"
         />
 
         <Stack direction="row" gap={2} alignItems="center">
@@ -135,7 +135,20 @@ export const Step: React.FC<Props> = (props) => {
                 size="small"
                 value={temperature_target}
                 onChange={(e) => handleChange("temperature_target")(Number(e.target.value))}
-                sx={{ width: 80 }}
+                sx={{
+                  width: 80,
+                  '& input[type=number]': {
+                    MozAppearance: 'textfield'
+                  },
+                  '& input[type=number]::-webkit-outer-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0
+                  },
+                  '& input[type=number]::-webkit-inner-spin-button': {
+                    WebkitAppearance: 'none',
+                    margin: 0
+                  }
+                }}
                 variant="standard"
               />
             ) : (
@@ -175,30 +188,63 @@ export const Step: React.FC<Props> = (props) => {
           <Stack flex={1} gap={0.5}>
             <PowerSettingsComponent
               editing={editing}
-              title={t("programs.steps.heater")}
+              title="Heater"
               settings={displayHeater}
               onChange={handleChange("heater")}
             />
 
-            <PowerSettingsComponent
-              editing={editing}
-              title={t("programs.steps.fan")}
-              settings={fan}
-              onChange={handleChange("fan")}
-            />
+            <Stack direction="row" gap={2} alignItems="center">
+              <Typography variant="body2" sx={{ width: 100 }}>Fan Power:</Typography>
+              {editing ? (
+                <TextField
+                  type="number"
+                  size="small"
+                  value={fan?.power ?? 0}
+                  onChange={e => handleChange("fan")!({ type: "simple", power: Number(e.target.value) })}
+                  inputProps={{ min: 0, max: 100 }}
+                  sx={{ width: 100, '& input[type=number]': { MozAppearance: 'textfield' }, '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 }, '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 } }}
+                  variant="standard"
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">{fan?.power ?? 0}%</Typography>
+              )}
+            </Stack>
 
-            <PowerSettingsComponent
-              editing={editing}
-              title={t("programs.steps.humidifier")}
-              settings={humidifier}
-              onChange={handleChange("humidifier")}
-            />
+            <Stack direction="row" gap={2} alignItems="center">
+              <Typography variant="body2" sx={{ width: 100 }}>Humidifier Power:</Typography>
+              {editing ? (
+                <TextField
+                  type="number"
+                  size="small"
+                  value={humidifier?.power ?? 0}
+                  onChange={e => handleChange("humidifier")!({ type: "simple", power: Number(e.target.value) })}
+                  inputProps={{ min: 0, max: 100 }}
+                  sx={{ width: 100, '& input[type=number]': { MozAppearance: 'textfield' }, '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 }, '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 } }}
+                  variant="standard"
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary">{humidifier?.power ?? 0}%</Typography>
+              )}
+            </Stack>
           </Stack>
         </Stack>
       </Stack>
 
       {editing && (
-        <NudgeColumn pos={pos} onChange={(pos) => handleNudge(pos)} />
+        <Stack direction="column" gap={1} alignItems="center">
+          <NudgeColumn pos={pos} onChange={(pos) => handleNudge(pos)} />
+          {onDelete && (
+            <Tooltip title="Delete Step">
+              <IconButton
+                onClick={onDelete}
+                color="error"
+                size="small"
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
       )}
     </Stack>
   );
@@ -223,11 +269,11 @@ const NudgeColumn: React.FC<NudgeColumnProps> = (props) => {
 
   return (
     <Stack gap={3} justifyContent="center">
-      <Button disabled={idx === 0} onClick={handleUpClick}>
+      <Button disabled={idx === 0} onClick={handleUpClick} variant="outlined" size="small">
         <ArrowUpwardRoundedIcon />
       </Button>
 
-      <Button disabled={isLast} onClick={handleDownClick}>
+      <Button disabled={isLast} onClick={handleDownClick} variant="outlined" size="small">
         <ArrowDownwardRoundedIcon />
       </Button>
     </Stack>

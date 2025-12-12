@@ -2,6 +2,20 @@ import React from "react";
 import { PowerSettings as ApiPowerSettings } from "../../types/api";
 import { Stack, Typography, TextField, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
 
+const noSpinnerSx = {
+  '& input[type=number]': {
+    MozAppearance: 'textfield'
+  },
+  '& input[type=number]::-webkit-outer-spin-button': {
+    WebkitAppearance: 'none',
+    margin: 0
+  },
+  '& input[type=number]::-webkit-inner-spin-button': {
+    WebkitAppearance: 'none',
+    margin: 0
+  }
+};
+
 interface Props {
   editing?: boolean;
   title: string;
@@ -43,15 +57,15 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
   // Determine control type from settings (matching backend validation logic)
   const getControlType = (): string => {
     if (!settings) return "";
-    
+
     // Explicit type is set
     if (settings.type) return settings.type;
-    
+
     // Infer from fields
     if (settings.pid) return "pid";
     if (settings.min_delta !== undefined || settings.max_delta !== undefined) return "delta";
     if (settings.power !== undefined) return "simple";
-    
+
     return "";
   };
 
@@ -97,7 +111,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
               value={settings?.power || 0}
               onChange={(e) => handlePowerChange(Number(e.target.value))}
               inputProps={{ min: 0, max: 100 }}
-              sx={{ width: 120 }}
+              sx={{ width: 120, ...noSpinnerSx }}
             />
           )}
 
@@ -109,7 +123,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
                 size="small"
                 value={settings?.min_delta || 0}
                 onChange={(e) => handleDeltaChange("min_delta", Number(e.target.value))}
-                sx={{ width: 100 }}
+                sx={{ width: 100, ...noSpinnerSx }}
               />
               <TextField
                 label="Max Δ (°C)"
@@ -117,7 +131,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
                 size="small"
                 value={settings?.max_delta || 0}
                 onChange={(e) => handleDeltaChange("max_delta", Number(e.target.value))}
-                sx={{ width: 100 }}
+                sx={{ width: 100, ...noSpinnerSx }}
               />
             </>
           )}
@@ -130,7 +144,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
                 size="small"
                 value={settings.pid.kp}
                 onChange={(e) => handlePidChange("kp", Number(e.target.value))}
-                sx={{ width: 80 }}
+                sx={{ width: 80, ...noSpinnerSx }}
               />
               <TextField
                 label="Ki"
@@ -138,7 +152,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
                 size="small"
                 value={settings.pid.ki}
                 onChange={(e) => handlePidChange("ki", Number(e.target.value))}
-                sx={{ width: 80 }}
+                sx={{ width: 80, ...noSpinnerSx }}
               />
               <TextField
                 label="Kd"
@@ -146,7 +160,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
                 size="small"
                 value={settings.pid.kd}
                 onChange={(e) => handlePidChange("kd", Number(e.target.value))}
-                sx={{ width: 80 }}
+                sx={{ width: 80, ...noSpinnerSx }}
               />
             </>
           )}
