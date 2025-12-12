@@ -24,6 +24,8 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func SetupRoutes(mux *http.ServeMux, execStorage *storagefs.ExecutorFileStorage, programStorage *storagefs.ProgramStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+	// WebSocket endpoint for live run log
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running/logws", StreamLiveRunLog(engine))
 	// Engine execution endpoints
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history", listAllRuns(execStorage))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}", getRun(execStorage))

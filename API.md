@@ -322,6 +322,45 @@ Deletes/unloads a specific program definition.
 
 ### Engine Control Endpoints
 
+#### GET `/engine/running/logws` (WebSocket)
+
+Streams live program execution log data as CSV over a WebSocket connection while a program is running.
+
+**Protocol:**
+
+- Connect using a WebSocket client to `/engine/running/logws`.
+- On connection, the server sends the CSV header line (as in a fresh run log file).
+- While a program is running, the server sends a new CSV line every second with the latest status.
+- If the client disconnects, the stream stops. The server does not expect any messages from the client.
+- If no program is running, the server sends a text message: `No program running` and closes the connection.
+
+**CSV Format:**
+
+```
+time,step,steptime,material,oven,heater,fan,humidifier
+0,Initial Heating,0,42.5,45.2,75,50,0
+...
+```
+
+- `time`: Seconds since program start
+- `step`: Name of the current step
+- `steptime`: Seconds since current step started
+- `material`: Current material (wood) temperature in °C
+- `oven`: Current oven temperature in °C
+- `heater`: Heater power level (0-100%)
+- `fan`: Fan power level (0-100%)
+- `humidifier`: Humidifier power level (0-100%)
+
+**Example Usage:**
+
+```
+GET ws://<host>:8090/engine/running/logws
+```
+
+**Notes:**
+- This endpoint is intended for real-time monitoring and visualization.
+- For completed or historical logs, use the `/engine/history/{name}/log` HTTP endpoint.
+
 #### GET `/engine/defaults`
 
 Gets the configured default values for program steps. These defaults are applied to program steps that don't specify heater, fan, or humidifier settings.
