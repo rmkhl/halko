@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,12 +20,28 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
+	// Define simulator-specific flags
+	tickDurationStr := flag.String("tick", "6s", "Simulation tick duration (e.g., 1s, 500ms, 100ms)")
+	statusInterval := flag.Int("status-interval", 10, "Log simulation status every N ticks (0 to disable)")
+
 	// Parse global options and load configuration like other services
 	opts, err := types.ParseGlobalOptions()
 	if err != nil {
 		log.Fatal("Failed to parse global options: %v", err)
 	}
 	opts.ApplyLogLevel()
+
+	// Parse tick duration
+	tickDuration, err := time.ParseDuration(*tickDurationStr)
+	if err != nil {
+		log.Fatal("Invalid tick duration '%s': %v", *tickDurationStr, err)
+	}
+	log.Info("Simulation tick duration: %v", tickDuration)
+	if *statusInterval > 0 {
+		log.Info("Status logging every %d ticks", *statusInterval)
+	} else {
+		log.Info("Status logging disabled")
+	}
 
 	config, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
@@ -68,7 +85,7 @@ func main() {
 	for name, id := range config.PowerUnit.PowerMapping {
 		if element, exists := elementsByName[name]; exists {
 			shellyControls[int8(id)] = element
-			log.Debug("Mapped Shelly switch %d to %s", id, name)
+			log.Trace("Mapped Shelly switch %d to %s", id, name)
 		} else {
 			log.Warning("Power mapping references unknown element: %s", name)
 		}
@@ -77,7 +94,7 @@ func main() {
 
 	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
 
-	ticker := time.NewTicker(6000 * time.Millisecond)
+	ticker := time.NewTicker(tickDuration)
 	stop := make(chan struct{})
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -118,10 +135,10 @@ func main() {
 				humidifier.Tick()
 				heater.Tick()
 
-				// Log status summary every 10 ticks (1 minute)
-				if tickCount%10 == 0 {
-					log.Info("Simulation status - Tick #%d: Oven=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v",
-						tickCount, heater.Temperature(), wood.Temperature(), heater.IsOn(), fan.IsOn())
+				// Log status summary at configured interval
+				if *statusInterval > 0 && tickCount%*statusInterval == 0 {
+					log.Info("Simulation status - Tick #%d: Oven=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Humidifier=%v",
+						tickCount, heater.Temperature(), wood.Temperature(), heater.IsOn(), fan.IsOn(), humidifier.IsOn())
 				}
 			case <-stop:
 				log.Info("Stopping simulation loop at tick #%d", tickCount)

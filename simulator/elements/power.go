@@ -12,7 +12,7 @@ type (
 )
 
 func NewPower(name string) *Power {
-	p := Power{name: name, power: new(engine.Power)}
+	p := Power{name: name, power: engine.NewPower(name)}
 	return &p
 }
 

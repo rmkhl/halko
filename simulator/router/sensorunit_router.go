@@ -10,7 +10,7 @@ import (
 
 // SetupSensorUnitRoutes sets up routes for the SensorUnit emulation server using configurable endpoints
 func SetupSensorUnitRoutes(mux *http.ServeMux, temperatureSensors map[string]engine.TemperatureSensor, endpoints types.SensorUnitEndpoints) {
-	log.Debug("Setting up SensorUnit emulation routes with configurable endpoints")
+	log.Trace("Setting up SensorUnit emulation routes with configurable endpoints")
 	router := &Router{}
 
 	// Use configured endpoint paths

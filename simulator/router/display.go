@@ -9,7 +9,7 @@ import (
 )
 
 func (r *Router) setDisplay(w http.ResponseWriter, req *http.Request) {
-	log.Debug("Processing display update request from %s", req.RemoteAddr)
+	log.Trace("Processing display update request from %s", req.RemoteAddr)
 	var payload types.DisplayRequest
 	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
 		log.Error("Failed to decode display request body: %v", err)

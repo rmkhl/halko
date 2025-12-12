@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
-	log.Debug("Processing status check request from %s", req.RemoteAddr)
+	log.Trace("Processing status check request from %s", req.RemoteAddr)
 
 	details := make(map[string]interface{})
 	details["arduino_connected"] = true
@@ -19,7 +19,7 @@ func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
 		Details: details,
 	}
 
-	log.Debug("Returning sensor status: %s", response.Status)
+	log.Trace("Returning sensor status: %s", response.Status)
 
 	writeJSON(w, http.StatusOK, types.APIResponse[types.ServiceStatusResponse]{
 		Data: response,

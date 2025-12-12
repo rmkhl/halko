@@ -16,7 +16,7 @@ type PowerInfo interface {
 func readSwitchStatus(powers map[int8]interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switchID := r.URL.Query().Get("id")
-		log.Debug("Processing switch status request for ID: %s from %s", switchID, r.RemoteAddr)
+		log.Trace("Processing switch status request for ID: %s from %s", switchID, r.RemoteAddr)
 
 		if switchID == "" {
 			log.Warning("Switch status request missing ID parameter")
@@ -46,7 +46,7 @@ func readSwitchStatus(powers map[int8]interface{}) http.HandlerFunc {
 		}
 
 		_, turnedOn := powerInfo.Info()
-		log.Debug("Switch %d status: output=%v", id, turnedOn)
+		log.Trace("Switch %d status: output=%v", id, turnedOn)
 
 		response := types.ShellySwitchGetStatusResponse{
 			ID:     strconv.Itoa(id),
@@ -74,7 +74,7 @@ func setSwitchState(powers map[int8]interface{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switchID := r.URL.Query().Get("id")
 		turnOn := r.URL.Query().Get("on")
-		log.Debug("Processing switch set request for ID: %s, state: %s from %s", switchID, turnOn, r.RemoteAddr)
+		log.Trace("Processing switch set request for ID: %s, state: %s from %s", switchID, turnOn, r.RemoteAddr)
 
 		if switchID == "" {
 			log.Warning("Switch set request missing ID parameter")
@@ -121,7 +121,7 @@ func setSwitchState(powers map[int8]interface{}) http.HandlerFunc {
 		log.Info("Setting switch %d to %v (was %v)", id, newState, previousState)
 
 		switcher.SwitchTo(newState)
-		log.Debug("Switch %d state change queued successfully", id)
+		log.Trace("Switch %d state change queued successfully", id)
 
 		response := types.ShellySwitchSetResponse{
 			WasOn: previousState,

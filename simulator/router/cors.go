@@ -18,7 +18,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Max-Age", "43200") // 12 hours
 
 		if r.Method == "OPTIONS" {
-			log.Debug("Handling CORS preflight request for %s", r.URL.Path)
+			log.Trace("Handling CORS preflight request for %s", r.URL.Path)
 			w.WriteHeader(http.StatusOK)
 			return
 		}

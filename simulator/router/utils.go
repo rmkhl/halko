@@ -9,7 +9,7 @@ import (
 )
 
 func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
-	log.Debug("HTTP Response: %d", statusCode)
+	log.Trace("HTTP Response: %d", statusCode)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
@@ -18,6 +18,6 @@ func writeJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 }
 
 func writeError(w http.ResponseWriter, statusCode int, message string) {
-	log.Debug("HTTP Error Response: %d - %s", statusCode, message)
+	log.Trace("HTTP Error Response: %d - %s", statusCode, message)
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
