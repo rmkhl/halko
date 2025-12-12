@@ -112,11 +112,8 @@ func sendProgram(programPath, controlunitURL string, verbose bool) error {
 			program.ProgramName, len(program.ProgramSteps))
 	}
 
-	requestBody := map[string]interface{}{
-		"program": program,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
+	// Send the program directly without wrapping (consistent with storage endpoints)
+	jsonData, err := json.Marshal(program)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}

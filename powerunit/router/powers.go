@@ -72,3 +72,57 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.Ha
 		})
 	}
 }
+
+func getPercentage(p *power.Controller, powerMapping map[string]int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		powerName := r.PathValue("power")
+		log.Trace("GET /power/%s request from %s", powerName, r.RemoteAddr)
+
+		id, ok := powerMapping[powerName]
+		if !ok {
+			log.Warning("Unknown power device requested: %s", powerName)
+			writeError(w, http.StatusNotFound, "Unknown power '"+powerName+"'")
+			return
+		}
+
+		percentages := p.GetAllPercentages()
+		log.Debug("Returning power status for %s: %d%%", powerName, percentages[id])
+
+		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerResponse]{
+			Data: types.PowerResponse{Percent: percentages[id]},
+		})
+	}
+}
+
+func setPercentage(p *power.Controller, powerMapping map[string]int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		powerName := r.PathValue("power")
+		log.Trace("POST /power/%s request from %s", powerName, r.RemoteAddr)
+
+		id, ok := powerMapping[powerName]
+		if !ok {
+			log.Warning("Unknown power device requested: %s", powerName)
+			writeError(w, http.StatusNotFound, "Unknown power '"+powerName+"'")
+			return
+		}
+
+		var command types.PowerCommand
+		err := json.NewDecoder(r.Body).Decode(&command)
+		if err != nil {
+			log.Warning("Invalid JSON in power command request: %v", err)
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		log.Debug("Received power command for %s: %d%%", powerName, command.Percent)
+
+		percentages := p.GetAllPercentages()
+		percentages[id] = command.Percent
+
+		p.SetAllPercentages(percentages)
+		log.Info("Power percentage for %s updated to %d%%", powerName, command.Percent)
+
+		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerResponse]{
+			Data: types.PowerResponse(command),
+		})
+	}
+}
