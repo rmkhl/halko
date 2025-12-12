@@ -79,7 +79,6 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 func (engine *ControlEngine) StopEngine() error {
 	if engine.runner != nil {
 		engine.runner.Stop()
-		engine.wg.Done()
 		engine.runner = nil
 		return nil
 	}
