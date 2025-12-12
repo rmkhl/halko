@@ -176,30 +176,11 @@ func sendProgram(programPath, controlunitURL string, verbose bool) error {
 }
 
 func displaySendResponse(respBody []byte) {
-	var response map[string]interface{}
+	var response types.APIResponse[types.Program]
 	if err := json.Unmarshal(respBody, &response); err != nil {
 		return
 	}
 
-	data, ok := response["data"]
-	if !ok {
-		return
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	if status, ok := dataMap["status"]; ok {
-		fmt.Printf("ControlUnit status: %v\n", status)
-	}
-
-	if program, ok := dataMap["program"]; ok {
-		if programMap, ok := program.(map[string]interface{}); ok {
-			if name, ok := programMap["name"]; ok {
-				fmt.Printf("Started program: %v\n", name)
-			}
-		}
-	}
+	fmt.Printf("Started program: %s\n", response.Data.ProgramName)
+	fmt.Printf("Number of steps: %d\n", len(response.Data.ProgramSteps))
 }

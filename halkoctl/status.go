@@ -157,40 +157,18 @@ func getServiceStatus(serviceName string, url string, verbose bool, details bool
 		return
 	}
 
-	var response map[string]interface{}
+	var response types.APIResponse[types.ServiceStatusResponse]
 	if err := json.Unmarshal(respBody, &response); err != nil {
 		fmt.Printf("%s Status: unavailable (failed to parse response: %v)\n", serviceName, err)
 		return
 	}
 
-	data, ok := response["data"]
-	if !ok {
-		fmt.Printf("%s Status: unavailable (no data field in response)\n", serviceName)
-		return
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		fmt.Printf("%s Status: unavailable (invalid data format in response)\n", serviceName)
-		return
-	}
-
-	status, ok := dataMap["status"]
-	if !ok {
-		fmt.Printf("%s Status: unavailable (no status field in response)\n", serviceName)
-		return
-	}
-
-	fmt.Printf("%s Status: %v\n", serviceName, status)
+	fmt.Printf("%s Status: %v\n", serviceName, response.Data.Status)
 
 	// Display details if details flag is set
-	if details {
-		if details, ok := dataMap["details"]; ok {
-			if detailsMap, ok := details.(map[string]interface{}); ok && len(detailsMap) > 0 {
-				for key, value := range detailsMap {
-					fmt.Printf("  %s: %v\n", key, value)
-				}
-			}
+	if details && len(response.Data.Details) > 0 {
+		for key, value := range response.Data.Details {
+			fmt.Printf("  %s: %v\n", key, value)
 		}
 	}
 }

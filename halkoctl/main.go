@@ -50,6 +50,9 @@ func main() {
 			case "status":
 				showStatusHelp()
 				os.Exit(exitSuccess)
+			case "running":
+				showRunningHelp()
+				os.Exit(exitSuccess)
 			case "validate":
 				showValidateHelp()
 				os.Exit(exitSuccess)
@@ -85,6 +88,8 @@ func main() {
 		handleSendCommand()
 	case "status":
 		handleStatusCommand()
+	case "running":
+		handleRunningCommand()
 	case "validate":
 		handleValidateCommand()
 	case "display":
