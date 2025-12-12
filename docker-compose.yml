@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: simulator/Dockerfile
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./fsdb:/fsdb
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
@@ -15,6 +16,7 @@ services:
     build:
       context: .
       dockerfile: controlunit/Dockerfile
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./fsdb:/fsdb
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
@@ -29,6 +31,7 @@ services:
     build:
       context: .
       dockerfile: powerunit/Dockerfile
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
     ports:

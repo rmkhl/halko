@@ -270,6 +270,38 @@ sudo systemctl stop halko@controlunit
 sudo systemctl status halko@powerunit
 ```
 
+### Docker Deployment
+
+The system can also be deployed using Docker Compose. The containers are
+configured to run as the host user to ensure proper file ownership.
+
+#### File Ownership Configuration
+
+By default, containers run as UID:GID 1000:1000. To use your current user's
+UID/GID for proper file ownership on the host:
+
+```bash
+# Set environment variables before starting containers
+export UID=$(id -u)
+export GID=$(id -g)
+```
+
+#### Starting the Services
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+Files created by the containers in the `fsdb/` directory will be owned by the
+specified UID:GID on the host system.
+
 ## Development
 
 For development, you can run the simulator instead of connecting to real hardware:
