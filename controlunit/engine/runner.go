@@ -1,13 +1,17 @@
 package engine
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 const (
@@ -32,6 +36,9 @@ type (
 		programStatus              *types.ExecutionStatus
 		statusWriter               *storagefs.StateWriter
 		logWriter                  *storagefs.ExecutionLogWriter
+		displayURL                 string
+		httpClient                 *http.Client
+		previousStep               string
 		// Note, we rely on the fact that the runner is the only one updating these and fsmController
 		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
 		psuStatus         fsmPSUStatus
@@ -75,6 +82,9 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	}
 
 	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.defaults)
+	runner.displayURL = endpoints.SensorUnit.URL + endpoints.SensorUnit.Display
+	runner.httpClient = &http.Client{Timeout: 5 * time.Second}
+	runner.previousStep = ""
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
 	err = programStorage.CreateExecutedProgram(programName, program)
@@ -116,6 +126,13 @@ func (runner *programRunner) Run() {
 			runner.temperatureStatus.reading = temperatures
 		}
 		runner.fsmController.UpdateStatus(runner.programStatus)
+
+		// Update display if current step changed
+		if runner.programStatus.CurrentStep != runner.previousStep {
+			runner.updateDisplay(runner.programStatus.CurrentStep)
+			runner.previousStep = runner.programStatus.CurrentStep
+		}
+
 		runner.logWriter.AddLine(runner.programStatus)
 	}
 	if runner.fsmController.Completed() {
@@ -131,6 +148,33 @@ func (runner *programRunner) Run() {
 	runner.fsmController.shutdown()
 	runner.psuSensorCommands <- controllerDone
 	runner.temperatureSensorCommands <- controllerDone
+}
+
+// updateDisplay sends the current step information to the sensorunit display
+func (runner *programRunner) updateDisplay(stepName string) {
+	if runner.displayURL == "" {
+		log.Trace("Runner: Display URL not configured, skipping display update")
+		return
+	}
+
+	payload := types.DisplayRequest{
+		Message: stepName,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		log.Warning("Runner: Failed to marshal display message: %v", err)
+		return
+	}
+
+	resp, err := runner.httpClient.Post(runner.displayURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Warning("Runner: Failed to update display: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Debug("Runner: Display updated to: %s", stepName)
 }
 
 func (runner *programRunner) Stop() {

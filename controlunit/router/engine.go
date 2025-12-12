@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/rmkhl/halko/controlunit/engine"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 func getCurrentProgram(engine *engine.ControlEngine) http.HandlerFunc {
@@ -27,11 +27,11 @@ func startNewProgram(engine *engine.ControlEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("Failed to read request body: %v", err)
+			log.Error("Failed to read request body: %v", err)
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("Failed to read request body (%s)", err.Error()))
 			return
 		}
-		log.Printf("Raw request body: %s", string(body))
+		log.Trace("Raw request body: %s", string(body))
 
 		r.Body = io.NopCloser(bytes.NewBuffer(body))
 
@@ -43,9 +43,9 @@ func startNewProgram(engine *engine.ControlEngine) http.HandlerFunc {
 			return
 		}
 
-		log.Printf("Received program: %s with %d steps", program.ProgramName, len(program.ProgramSteps))
+		log.Debug("Received program: %s with %d steps", program.ProgramName, len(program.ProgramSteps))
 		for i, step := range program.ProgramSteps {
-			log.Printf("  Step %d: %s (%s) - Target: %d°C", i+1, step.Name, step.StepType, step.TargetTemperature)
+			log.Debug("  Step %d: %s (%s) - Target: %d°C", i+1, step.Name, step.StepType, step.TargetTemperature)
 		}
 
 		program.ApplyDefaults(engine.GetDefaults())

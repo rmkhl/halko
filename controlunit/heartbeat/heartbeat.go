@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -75,17 +75,17 @@ func (hm *Manager) run() {
 	defer ticker.Stop()
 
 	if err := hm.sendHeartbeat(); err != nil {
-		log.Printf("Error sending initial heartbeat: %v", err)
+		log.Warning("Error sending initial heartbeat: %v", err)
 	}
 
 	for {
 		select {
 		case <-hm.ctx.Done():
-			log.Println("Heartbeat manager stopped")
+			log.Info("Heartbeat manager stopped")
 			return
 		case <-ticker.C:
 			if err := hm.sendHeartbeat(); err != nil {
-				log.Printf("Error sending heartbeat: %v", err)
+				log.Warning("Error sending heartbeat: %v", err)
 			}
 		}
 	}

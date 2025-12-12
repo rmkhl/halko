@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -176,12 +176,12 @@ func (controller *psuSensorReader) Run(wg *sync.WaitGroup) {
 		case sensorRead:
 			values, err := controller.readSensors()
 			if err != nil {
-				log.Printf("Failed to read psu sensors (%s)", err.Error())
+				log.Error("Failed to read psu sensors: %v", err)
 			} else {
 				controller.runner <- *values
 			}
 		default:
-			log.Printf("Unknown controller message (%s)", engineMessage)
+			log.Warning("Unknown controller message: %s", engineMessage)
 		}
 	}
 }
@@ -196,12 +196,12 @@ func (controller *temperatureSensorReader) Run(wg *sync.WaitGroup) {
 		case sensorRead:
 			values, err := controller.readTemperatures()
 			if err != nil {
-				log.Printf("Failed to read temperature sensors (%s)", err.Error())
+				log.Error("Failed to read temperature sensors: %v", err)
 			} else {
 				controller.runner <- *values
 			}
 		default:
-			log.Printf("Unknown controller message (%s)", engineMessage)
+			log.Warning("Unknown controller message: %s", engineMessage)
 		}
 	}
 }
