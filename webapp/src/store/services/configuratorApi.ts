@@ -3,28 +3,27 @@ import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchQuery, saveMutation } from "./queryBuilders";
 import { API_ENDPOINTS } from "../../config/api";
 
-const phasesTag = "phases" as const;
 const programsTag = "programs" as const;
-const phasesEndpoint = "phases";
-const programsEndpoint = "programs";
+const programsEndpoint = "/programs";
 
 export const configuratorApi = createApi({
   reducerPath: "configuratorApi",
   baseQuery: fetchBaseQuery({
     baseUrl: API_ENDPOINTS.storage,
   }),
-  tagTypes: [phasesTag, programsTag],
+  tagTypes: [programsTag],
   endpoints: (builder) => ({
-    getPhases: fetchQuery(builder, phasesEndpoint, phasesTag),
-    savePhase: saveMutation(builder, phasesEndpoint, phasesTag),
     getPrograms: fetchQuery(builder, programsEndpoint, programsTag),
+    getProgram: builder.query({
+      query: (name: string) => `${programsEndpoint}/${encodeURIComponent(name)}`,
+      providesTags: [programsTag],
+    }),
     saveProgram: saveMutation(builder, programsEndpoint, programsTag),
   }),
 });
 
 export const {
-  useGetPhasesQuery,
-  useSavePhaseMutation,
   useGetProgramsQuery,
+  useGetProgramQuery,
   useSaveProgramMutation,
 } = configuratorApi;

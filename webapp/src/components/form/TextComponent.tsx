@@ -12,12 +12,10 @@ export const TextComponent: React.FC<Props> = (props) => {
   const { title, editing, value, onChange } = props;
 
   return (
-    <Stack direction="row" alignItems="center" justifyContent="space-between">
-      <Stack flex={1}>
-        <Typography>{title}</Typography>
-      </Stack>
+    <Stack direction="row" gap={2} alignItems="center">
+      <Typography sx={{ minWidth: 100 }}>{title}</Typography>
 
-      <Stack flex={3}>
+      <Stack flex={1}>
         {editing ? (
           <Input
             value={value}

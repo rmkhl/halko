@@ -5,16 +5,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { NameComponent } from "../form";
 import { RootState } from "../../store/store";
 import {
-  useGetProgramsQuery,
+  useGetProgramQuery,
   useSaveProgramMutation,
 } from "../../store/services";
 import { validName } from "../../util";
 import { emptyProgram } from "./templates";
 import { useFormData } from "../../hooks/useFormData";
 import { DataForm } from "../form/DataForm";
-import { useTranslation } from "react-i18next";
 import { Steps } from "./Steps";
-import { TimeComponent } from "../form/TimeComponent";
+import { useParams, useNavigate } from "react-router-dom";
+import { Stack } from "@mui/material";
 
 const normalize = (program: ApiProgram): ApiProgram => {
   const cpy = { ...program };
@@ -24,25 +24,32 @@ const normalize = (program: ApiProgram): ApiProgram => {
 };
 
 export const Program: React.FC = () => {
-  const { data } = useGetProgramsQuery();
+  const { name } = useParams();
+  const navigate = useNavigate();
+  const { data } = useGetProgramQuery(name || "", { skip: !name || name === "new" });
   const [saveProgram, { isSuccess }] = useSaveProgramMutation();
   const editProgram = useSelector(
     (state: RootState) => state.programs.editRecord
   );
 
-  const programs = useMemo(() => data as ApiProgram[], [data]);
-
-  const { t } = useTranslation();
+  const program = useMemo(() => {
+    if (!data) return undefined;
+    const responseData = data as any;
+    if (responseData.data) {
+      return responseData.data as ApiProgram;
+    }
+    return data as ApiProgram;
+  }, [data]);
 
   const {
     editing,
-    formData: program,
+    formData: displayProgram,
     nameUsed,
     handleCancel,
     handleEdit,
     handleSave,
   } = useFormData({
-    allData: programs,
+    allData: program ? [program] : [],
     defaultData: emptyProgram(),
     editData: editProgram,
     rootPath: "/programs",
@@ -78,49 +85,50 @@ export const Program: React.FC = () => {
     if (!steps.length) return false;
 
     for (const step of steps) {
-      if (!step.fan || !step.heater || !step.humidifier) {
+      if (!step.name || !step.type) {
         return false;
       }
+      // Power settings are optional - backend applies defaults
     }
 
     return true;
-  }, [editProgram]);
+  }, [editProgram, nameUsed]);
+
+  const handleRun = () => {
+    // TODO: Implement run functionality
+    console.log("Run program:", displayProgram?.name);
+  };
+
+  const handleBack = () => {
+    navigate("/programs");
+  };
 
   return (
-    <DataForm
-      editing={editing}
-      isValid={isValid}
-      handleCancel={handleCancel}
-      handleEdit={handleEdit}
-      handleSave={handleSave}
-    >
-      <NameComponent
+    <Stack alignItems="center" sx={{ width: "100%", height: "100%", overflow: "hidden" }}>
+      <DataForm
         editing={editing}
-        name={editing ? editProgram?.name : program.name}
-        handleChange={updateName}
-      />
+        isValid={isValid}
+        programName={displayProgram?.name}
+        handleCancel={handleCancel}
+        handleEdit={handleEdit}
+        handleSave={handleSave}
+        handleRun={handleRun}
+        handleBack={handleBack}
+      >
+        {editing && (
+          <NameComponent
+            editing={editing}
+            name={editProgram?.name}
+            handleChange={updateName}
+          />
+        )}
 
-      <TimeComponent
-        editing={editing}
-        title={t("programs.defaultStepRuntime")}
-        value={
-          editing ? editProgram?.defaultStepRuntime : program.defaultStepRuntime
-        }
-        onChange={updateEdited("defaultStepRuntime")}
-      />
-
-      <TimeComponent
-        editing={editing}
-        title={t("programs.preheatTo")}
-        value={editing ? editProgram?.preheatTo : program.preheatTo}
-        onChange={updateEdited("preheatTo")}
-      />
-
-      <Steps
-        editing={editing}
-        steps={editing ? editProgram?.steps : program.steps}
-        onChange={updateEdited("steps")}
-      />
-    </DataForm>
+        <Steps
+          editing={editing}
+          steps={editing ? editProgram?.steps : displayProgram?.steps}
+          onChange={updateEdited("steps")}
+        />
+      </DataForm>
+    </Stack>
   );
 };

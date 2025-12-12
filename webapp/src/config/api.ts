@@ -43,8 +43,8 @@ export const getApiEndpoints = (): ApiEndpoints => {
   // Development mode: direct localhost access
   // These match the actual backend service paths from halko.cfg
   return {
-    storage: 'http://localhost:8091/storage',
-    controlunit: 'http://localhost:8090/engine/running',
+    storage: 'http://localhost:8090',
+    controlunit: 'http://localhost:8090',
     sensors: 'http://localhost:8093',
   };
 };

@@ -40,8 +40,10 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
 
   const dispatch = useDispatch();
 
+
   useEffect(() => {
     if (name === "new") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("edit");
 
       if (editData && !editData.name) {
@@ -53,7 +55,7 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
-    if (!name || !allData) {
+    if (!name || !allData || allData.length === 0) {
       return;
     }
 
@@ -64,8 +66,13 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
+    // When loading an existing program, start in view mode
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMode("view");
     setFormData(data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, allData]);
+
 
   useEffect(() => {
     if (!saveSuccess) {
@@ -75,11 +82,13 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     const editName = editData?.name;
     dispatch(setEditData(undefined));
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode("view");
 
     if (name === "new") {
       navigate(`${rootPath}/${editName}`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSuccess]);
 
   const handleEdit = () => {
@@ -122,11 +131,14 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     setMode("view");
   };
 
+
   useEffect(() => {
     if (!name) {
       navigate(rootPath);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
+
 
   const nameUsed = useMemo(() => {
     if (!editData || !allData?.length) {
@@ -144,6 +156,7 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     }
 
     return false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allData, editData]);
 
   return {

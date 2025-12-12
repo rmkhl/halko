@@ -6,22 +6,34 @@ import { API_ENDPOINTS } from "../../config/api";
 
 const currentEndpoint = "";
 const runningProgramTag = "runningProgram";
+const defaultsTag = "defaults";
+
+export interface EngineDefaults {
+  pid_settings: Record<string, { kp: number; ki: number; kd: number }>;
+  max_delta_heating: number;
+  min_delta_heating: number;
+}
 
 export const controlunitApi = createApi({
   reducerPath: "controlunitApi",
   baseQuery: fetchBaseQuery({
     baseUrl: API_ENDPOINTS.controlunit,
   }),
-  tagTypes: [runningProgramTag],
+  tagTypes: [runningProgramTag, defaultsTag],
   endpoints: (builder) => ({
     getRunningProgram: fetchSingleQuery(
       builder,
-      currentEndpoint,
+      "/engine/running",
       runningProgramTag
     ),
+    getDefaults: builder.query<EngineDefaults, void>({
+      query: () => "/engine/defaults",
+      providesTags: [defaultsTag],
+      transformResponse: (response: { data: EngineDefaults }) => response.data,
+    }),
     startProgram: builder.mutation({
       query: (p: Program) => ({
-        url: "",
+        url: "/engine/running",
         method: "POST",
         body: JSON.stringify({
           name: p.name,
@@ -40,7 +52,7 @@ export const controlunitApi = createApi({
     }),
     stopRunningProgram: builder.mutation({
       query: () => ({
-        url: "",
+        url: "/engine/running",
         method: "DELETE",
       }),
       invalidatesTags: (_, error) =>
@@ -51,6 +63,7 @@ export const controlunitApi = createApi({
 
 export const {
   useGetRunningProgramQuery,
+  useGetDefaultsQuery,
   useStartProgramMutation,
   useStopRunningProgramMutation,
 } = controlunitApi;

@@ -12,11 +12,12 @@ interface Props {
 
 const emptyStep = (): ApiStep => ({
   name: "",
-  timeConstraint: 360,
-  temperatureConstraint: {
-    minimum: 50,
-    maximum: 100,
-  },
+  type: "heating",
+  temperature_target: 100,
+  runtime: undefined,
+  heater: { type: "simple", power: 100 },
+  fan: { type: "simple", power: 100 },
+  humidifier: { type: "simple", power: 50 },
 });
 
 export const Steps: React.FC<Props> = (props) => {
@@ -28,7 +29,7 @@ export const Steps: React.FC<Props> = (props) => {
   }
 
   const handleChange = (i: number) => (updatedStep: ApiStep, idx: number) => {
-    let updatedSteps = steps.map((step, idx) =>
+    const updatedSteps = steps.map((step, idx) =>
       idx === i ? updatedStep : step
     );
 
@@ -51,25 +52,22 @@ export const Steps: React.FC<Props> = (props) => {
 
   return (
     <Stack gap={6}>
-      <Stack alignItems="center" justifyContent="space-between" direction="row">
-        <Typography variant="h4">{t("programs.steps.title")}</Typography>
-
-        {editing && (
+      {editing && (
+        <Stack alignItems="center" justifyContent="flex-end" direction="row">
           <Button color="success" onClick={addStep}>
             {t("programs.steps.add")}
           </Button>
-        )}
-      </Stack>
+        </Stack>
+      )}
 
       {steps.map((step, i) => (
-        <Stack direction="row" justifyContent="space-between">
+        <Stack key={`step-${i}`} direction="row" justifyContent="space-between">
           <Typography variant="h4" flex={1}>
             {i + 1}
           </Typography>
 
           <Step
             flex={10}
-            key={`step-${i}`}
             editing={editing}
             step={step}
             pos={{ idx: i, isLast: i === steps.length - 1 }}
