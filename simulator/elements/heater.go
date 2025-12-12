@@ -16,8 +16,8 @@ type (
 	}
 )
 
-func NewHeater(name string, minTemp float32, material *Wood) *Heater {
-	h := Heater{Power: NewPower(name), temperature: minTemp, minTemp: minTemp, wood: material}
+func NewHeater(name string, initialTemp float32, envTemp float32, material *Wood) *Heater {
+	h := Heater{Power: NewPower(name), temperature: initialTemp, minTemp: envTemp, wood: material}
 	return &h
 }
 

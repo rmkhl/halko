@@ -23,6 +23,9 @@ func main() {
 	// Define simulator-specific flags
 	tickDurationStr := flag.String("tick", "6s", "Simulation tick duration (e.g., 1s, 500ms, 100ms)")
 	statusInterval := flag.Int("status-interval", 10, "Log simulation status every N ticks (0 to disable)")
+	initialOvenTemp := flag.Float64("oven-temp", 20, "Initial oven temperature in °C")
+	initialMaterialTemp := flag.Float64("material-temp", 20, "Initial material temperature in °C")
+	environmentTemp := flag.Float64("env-temp", 20, "Environment temperature in °C (ambient baseline)")
 
 	// Parse global options and load configuration like other services
 	opts, err := types.ParseGlobalOptions()
@@ -68,10 +71,11 @@ func main() {
 	fan.TurnOn(false) // Start the power controller in off state
 	humidifier := elements.NewPower("Humidifier")
 	humidifier.TurnOn(false) // Start the power controller in off state
-	wood := elements.NewWood(20)
-	heater := elements.NewHeater("oven", 20, wood)
+	wood := elements.NewWood(float32(*initialMaterialTemp), float32(*environmentTemp))
+	heater := elements.NewHeater("oven", float32(*initialOvenTemp), float32(*environmentTemp), wood)
 	heater.TurnOn(false) // Start the heater power controller in off state
-	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven), Wood (material)")
+	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
+		*initialOvenTemp, *initialMaterialTemp, *environmentTemp)
 
 	// Build element lookup map
 	elementsByName := map[string]interface{}{
@@ -137,8 +141,11 @@ func main() {
 
 				// Log status summary at configured interval
 				if *statusInterval > 0 && tickCount%*statusInterval == 0 {
+					_, heaterPower := heater.Info()
+					_, fanPower := fan.Info()
+					_, humidifierPower := humidifier.Info()
 					log.Info("Simulation status - Tick #%d: Oven=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Humidifier=%v",
-						tickCount, heater.Temperature(), wood.Temperature(), heater.IsOn(), fan.IsOn(), humidifier.IsOn())
+						tickCount, heater.Temperature(), wood.Temperature(), heaterPower, fanPower, humidifierPower)
 				}
 			case <-stop:
 				log.Info("Stopping simulation loop at tick #%d", tickCount)

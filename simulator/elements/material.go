@@ -14,8 +14,8 @@ type (
 	}
 )
 
-func NewWood(minTemp float32) *Wood {
-	w := Wood{minTemp: minTemp, temperature: minTemp}
+func NewWood(initialTemp float32, envTemp float32) *Wood {
+	w := Wood{minTemp: envTemp, temperature: initialTemp}
 	return &w
 }
 
