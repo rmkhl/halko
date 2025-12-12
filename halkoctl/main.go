@@ -53,6 +53,9 @@ func main() {
 			case "running":
 				showRunningHelp()
 				os.Exit(exitSuccess)
+			case "history":
+				showHistoryHelp()
+				os.Exit(exitSuccess)
 			case "validate":
 				showValidateHelp()
 				os.Exit(exitSuccess)
@@ -90,6 +93,8 @@ func main() {
 		handleStatusCommand()
 	case "running":
 		handleRunningCommand()
+	case "history":
+		handleHistoryCommand()
 	case "validate":
 		handleValidateCommand()
 	case "display":

@@ -25,7 +25,7 @@ func handleProgramsCommand() {
 
 	// Check for help flag
 	for _, arg := range os.Args[3:] {
-		if arg == "-h" || arg == "--help" {
+		if arg == "-h" || arg == helpFlag {
 			showProgramsHelp()
 			os.Exit(exitSuccess)
 		}
