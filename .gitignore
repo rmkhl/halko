@@ -39,3 +39,6 @@ tmp
 .nodejs
 
 .github
+
+# Local test programs
+*-test.json

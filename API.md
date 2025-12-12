@@ -445,6 +445,17 @@ The ControlUnit also provides program storage management at `/storage/*` endpoin
 
 Gets the health status of the storage subsystem. Follows the standard status endpoint format (see Common Response Patterns).
 
+**Storage Directory Structure:**
+
+The ControlUnit maintains a file-based storage system with the following structure:
+- `{base_path}/programs/` - Stored program templates
+- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log)
+- `{base_path}/history/` - Completed program executions (JSON)
+- `{base_path}/history/logs/` - Completed execution logs (CSV)
+- `{base_path}/history/status/` - Completed program status files (TXT)
+
+When a program starts executing, files are created in `running/`. Upon completion (whether successful, failed, or canceled), these files are automatically moved to the appropriate `history/` subdirectories. On startup, the ControlUnit performs cleanup of any orphaned files in `running/` from previous crashes.
+
 **Response Format:**
 
 ```json

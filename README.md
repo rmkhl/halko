@@ -72,6 +72,15 @@ heating elements, and with the SensorUnit (or Simulator) to monitor
 temperatures. It also provides a REST API to manage and monitor program
 execution, as well as storage management for drying programs and execution logs.
 
+The ControlUnit uses a file-based storage system with separate directories for active
+and completed program executions:
+- `{base_path}/running/` - Files for currently executing programs
+- `{base_path}/history/` - Completed program executions and their logs
+
+When a program starts, execution files are created in the `running/` directory. Upon
+completion, these files are automatically moved to the appropriate `history/` subdirectories.
+On startup, any orphaned files in `running/` from previous crashes are cleaned up.
+
 The ControlUnit includes a heartbeat service that periodically reports its IP
 address to a configured status endpoint. This allows monitoring systems to
 track the location and availability of the controlunit service in distributed
@@ -211,7 +220,10 @@ example configuration:
 
 ### ControlUnit Configuration Options
 
-- **`base_path`**: Directory for storing program data and execution logs
+- **`base_path`**: Base directory for program storage. Contains:
+  - `programs/` - Stored program templates
+  - `running/` - Active program executions (auto-created)
+  - `history/` - Completed executions with `logs/` and `status/` subdirectories (auto-created)
 - **`tick_length`**: Execution tick duration in milliseconds
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")

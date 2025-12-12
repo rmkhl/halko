@@ -4,18 +4,20 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/rmkhl/halko/controlunit/heartbeat"
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
 type (
 	ControlEngine struct {
-		wg          *sync.WaitGroup
-		config      *types.ControlUnitConfig
-		halkoConfig *types.HalkoConfig
-		storage     *storagefs.ExecutorFileStorage
-		runner      *programRunner
-		endpoints   *types.APIEndpoints
+		wg               *sync.WaitGroup
+		config           *types.ControlUnitConfig
+		halkoConfig      *types.HalkoConfig
+		storage          *storagefs.ExecutorFileStorage
+		runner           *programRunner
+		endpoints        *types.APIEndpoints
+		heartbeatManager *heartbeat.Manager
 	}
 )
 
@@ -24,14 +26,15 @@ var (
 	ErrNoProgramRunning      = errors.New("no program running")
 )
 
-func NewEngine(halkoConfig *types.HalkoConfig, storage *storagefs.ExecutorFileStorage, endpoints *types.APIEndpoints) *ControlEngine {
+func NewEngine(halkoConfig *types.HalkoConfig, storage *storagefs.ExecutorFileStorage, endpoints *types.APIEndpoints, heartbeatMgr *heartbeat.Manager) *ControlEngine {
 	engine := ControlEngine{
-		halkoConfig: halkoConfig,
-		config:      halkoConfig.ControlUnitConfig,
-		runner:      nil,
-		storage:     storage,
-		endpoints:   endpoints,
-		wg:          new(sync.WaitGroup),
+		halkoConfig:      halkoConfig,
+		config:           halkoConfig.ControlUnitConfig,
+		runner:           nil,
+		storage:          storage,
+		endpoints:        endpoints,
+		heartbeatManager: heartbeatMgr,
+		wg:               new(sync.WaitGroup),
 	}
 
 	return &engine
@@ -54,7 +57,7 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 		return ErrProgramAlreadyRunning
 	}
 
-	runner, err := newProgramRunner(engine.halkoConfig, engine.storage, program, engine.endpoints)
+	runner, err := newProgramRunner(engine.halkoConfig, engine.storage, program, engine.endpoints, engine.heartbeatManager)
 	if err != nil {
 		return err
 	}

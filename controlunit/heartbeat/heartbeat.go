@@ -22,6 +22,9 @@ type (
 		cancel           context.CancelFunc
 		wg               *sync.WaitGroup
 		executorIP       string
+		displayMessage   string
+		displayMutex     sync.RWMutex
+		alternate        bool // Toggle between IP and message
 	}
 )
 
@@ -68,6 +71,14 @@ func (hm *Manager) Stop() error {
 	return nil
 }
 
+// SetDisplayMessage sets a custom message to be displayed, alternating with the IP address
+func (hm *Manager) SetDisplayMessage(message string) {
+	hm.displayMutex.Lock()
+	defer hm.displayMutex.Unlock()
+	hm.displayMessage = message
+	log.Debug("Heartbeat: Display message set to: %s", message)
+}
+
 func (hm *Manager) run() {
 	defer hm.wg.Done()
 
@@ -92,8 +103,26 @@ func (hm *Manager) run() {
 }
 
 func (hm *Manager) sendHeartbeat() error {
+	hm.displayMutex.RLock()
+	customMessage := hm.displayMessage
+	hm.displayMutex.RUnlock()
+
+	var message string
+	if customMessage == "" {
+		// No custom message, always send IP
+		message = hm.executorIP
+	} else {
+		// Alternate between IP and custom message
+		if hm.alternate {
+			message = customMessage
+		} else {
+			message = hm.executorIP
+		}
+		hm.alternate = !hm.alternate
+	}
+
 	payload := types.DisplayRequest{
-		Message: hm.executorIP,
+		Message: message,
 	}
 
 	jsonData, err := json.Marshal(payload)

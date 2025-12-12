@@ -27,7 +27,7 @@ type (
 
 func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolution int64) *ExecutionLogWriter {
 	log.Info("Creating execution log writer for program '%s'", name)
-	filePath := filepath.Join(fileStorage.logPath, name+".csv")
+	filePath := filepath.Join(fileStorage.runningPath, name+".csv")
 	logFile, err := os.Create(filePath)
 	if err != nil {
 		log.Error("Failed to create execution log file for program '%s': %v", name, err)
@@ -66,9 +66,17 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		return
 	}
 	now := time.Now().Unix()
-	if now-writer.lastUpdate > writer.resolution && status.CurrentStep == writer.lastStep {
+
+	// Log if: step changed OR resolution time has elapsed
+	stepChanged := status.CurrentStep != writer.lastStep
+	timeElapsed := now-writer.lastUpdate >= writer.resolution
+
+	if !stepChanged && !timeElapsed {
+		log.Trace("Execution log: Skipping line - step unchanged and resolution not met (last update %ds ago)", now-writer.lastUpdate)
 		return
 	}
+
+	log.Trace("Execution log: Adding line for step '%s' (changed=%v, elapsed=%v)", status.CurrentStep, stepChanged, timeElapsed)
 	_ = writer.csvWriter.Write([]string{
 		strconv.FormatInt(now-writer.startedAt, 10),
 		status.CurrentStep,

@@ -1,14 +1,12 @@
 package engine
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
+	"github.com/rmkhl/halko/controlunit/heartbeat"
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
@@ -36,9 +34,10 @@ type (
 		programStatus              *types.ExecutionStatus
 		statusWriter               *storagefs.StateWriter
 		logWriter                  *storagefs.ExecutionLogWriter
-		displayURL                 string
-		httpClient                 *http.Client
 		previousStep               string
+		heartbeatManager           *heartbeat.Manager
+		programName                string
+		programStorage             *storagefs.ExecutorFileStorage
 		// Note, we rely on the fact that the runner is the only one updating these and fsmController
 		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
 		psuStatus         fsmPSUStatus
@@ -48,7 +47,7 @@ type (
 	}
 )
 
-func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.ExecutorFileStorage, program *types.Program, endpoints *types.APIEndpoints) (*programRunner, error) {
+func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.ExecutorFileStorage, program *types.Program, endpoints *types.APIEndpoints, heartbeatMgr *heartbeat.Manager) (*programRunner, error) {
 	runner := programRunner{
 		wg:                         new(sync.WaitGroup),
 		active:                     false,
@@ -59,6 +58,8 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 		currentProgram:             program,
 		programStatus:              &types.ExecutionStatus{Program: *program},
 		defaults:                   halkoConfig.ControlUnitConfig.Defaults,
+		heartbeatManager:           heartbeatMgr,
+		programStorage:             programStorage,
 	}
 
 	if halkoConfig.APIEndpoints == nil {
@@ -82,11 +83,10 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	}
 
 	runner.fsmController = newProgramFSMController(psuController, &runner.psuStatus, &runner.temperatureStatus, runner.defaults)
-	runner.displayURL = endpoints.SensorUnit.URL + endpoints.SensorUnit.Display
-	runner.httpClient = &http.Client{Timeout: 5 * time.Second}
 	runner.previousStep = ""
 
 	programName := fmt.Sprintf("%s@%s", program.ProgramName, time.Now().Format(time.RFC3339))
+	runner.programName = programName
 	err = programStorage.CreateExecutedProgram(programName, program)
 	if err != nil {
 		return nil, err
@@ -146,35 +146,26 @@ func (runner *programRunner) Run() {
 	}
 	runner.logWriter.Close()
 	runner.fsmController.shutdown()
+
+	// Move files from running to history
+	runner.statusWriter.MarkCompleted()
+	if err := runner.programStorage.MoveToHistory(runner.programName); err != nil {
+		log.Error("Failed to move program files to history: %v", err)
+	}
+
 	runner.psuSensorCommands <- controllerDone
 	runner.temperatureSensorCommands <- controllerDone
 }
 
-// updateDisplay sends the current step information to the sensorunit display
+// updateDisplay sets the display message via heartbeat manager
 func (runner *programRunner) updateDisplay(stepName string) {
-	if runner.displayURL == "" {
-		log.Trace("Runner: Display URL not configured, skipping display update")
+	if runner.heartbeatManager == nil {
+		log.Trace("Runner: Heartbeat manager not available, skipping display update")
 		return
 	}
 
-	payload := types.DisplayRequest{
-		Message: stepName,
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		log.Warning("Runner: Failed to marshal display message: %v", err)
-		return
-	}
-
-	resp, err := runner.httpClient.Post(runner.displayURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Warning("Runner: Failed to update display: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	log.Debug("Runner: Display updated to: %s", stepName)
+	runner.heartbeatManager.SetDisplayMessage(stepName)
+	log.Debug("Runner: Display message updated to: %s", stepName)
 }
 
 func (runner *programRunner) Stop() {

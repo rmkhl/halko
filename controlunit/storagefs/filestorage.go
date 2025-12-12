@@ -15,6 +15,7 @@ type ExecutorFileStorage struct {
 	executedProgramsPath string
 	statusPath           string
 	logPath              string
+	runningPath          string
 }
 
 func NewExecutorFileStorage(basePath string) (*ExecutorFileStorage, error) {
@@ -54,8 +55,16 @@ func NewExecutorFileStorage(basePath string) (*ExecutorFileStorage, error) {
 		return nil, err
 	}
 
-	log.Info("Successfully created ExecutorFileStorage with paths - history: %s, status: %s, logs: %s",
-		executorStorage.executedProgramsPath, executorStorage.statusPath, executorStorage.logPath)
+	executorStorage.runningPath = filepath.Join(baseStorage.BasePath, "running")
+	log.Debug("Creating running directory: %s", executorStorage.runningPath)
+	err = os.MkdirAll(executorStorage.runningPath, os.ModePerm)
+	if err != nil {
+		log.Error("Failed to create running directory: %v", err)
+		return nil, err
+	}
+
+	log.Info("Successfully created ExecutorFileStorage with paths - history: %s, status: %s, logs: %s, running: %s",
+		executorStorage.executedProgramsPath, executorStorage.statusPath, executorStorage.logPath, executorStorage.runningPath)
 	return executorStorage, nil
 }
 
@@ -119,7 +128,7 @@ func (storage *ExecutorFileStorage) LoadExecutedProgram(programName string) (*ty
 }
 
 func (storage *ExecutorFileStorage) CreateExecutedProgram(programName string, program *types.Program) error {
-	filePath := filepath.Join(storage.executedProgramsPath, programName+".json")
+	filePath := filepath.Join(storage.runningPath, programName+".json")
 
 	_, err := os.Stat(filePath)
 	if err == nil {
@@ -170,5 +179,82 @@ func (storage *ExecutorFileStorage) DeleteExecutedProgram(programName string) er
 	}
 
 	log.Info("Successfully deleted all files for executed program '%s'", programName)
+	return nil
+}
+
+func (storage *ExecutorFileStorage) MoveToHistory(programName string) error {
+	log.Info("Moving program '%s' from running to history", programName)
+	var errors []string
+
+	// Move program JSON file
+	runningProgram := filepath.Join(storage.runningPath, programName+".json")
+	historyProgram := filepath.Join(storage.executedProgramsPath, programName+".json")
+	if err := os.Rename(runningProgram, historyProgram); err != nil && !os.IsNotExist(err) {
+		log.Error("Failed to move program file for '%s': %v", programName, err)
+		errors = append(errors, "failed to move program file: "+err.Error())
+	} else if err == nil {
+		log.Debug("Moved program file for '%s' to history", programName)
+	}
+
+	// Move status file
+	runningStatus := filepath.Join(storage.runningPath, programName+".txt")
+	historyStatus := filepath.Join(storage.statusPath, programName+".txt")
+	if err := os.Rename(runningStatus, historyStatus); err != nil && !os.IsNotExist(err) {
+		log.Error("Failed to move status file for '%s': %v", programName, err)
+		errors = append(errors, "failed to move status file: "+err.Error())
+	} else if err == nil {
+		log.Debug("Moved status file for '%s' to history", programName)
+	}
+
+	// Move execution log
+	runningLog := filepath.Join(storage.runningPath, programName+".csv")
+	historyLog := filepath.Join(storage.logPath, programName+".csv")
+	if err := os.Rename(runningLog, historyLog); err != nil && !os.IsNotExist(err) {
+		log.Error("Failed to move execution log for '%s': %v", programName, err)
+		errors = append(errors, "failed to move execution log: "+err.Error())
+	} else if err == nil {
+		log.Debug("Moved execution log for '%s' to history", programName)
+	}
+
+	if len(errors) > 0 {
+		log.Warning("Some file moves failed for program '%s': %s", programName, strings.Join(errors, "; "))
+		return fmt.Errorf("move errors: %s", strings.Join(errors, "; "))
+	}
+
+	log.Info("Successfully moved all files for program '%s' to history", programName)
+	return nil
+}
+
+func (storage *ExecutorFileStorage) ListRunningPrograms() ([]string, error) {
+	searchPath := filepath.Join(storage.runningPath, "*.json")
+	return storage.ListPrograms(searchPath)
+}
+
+func (storage *ExecutorFileStorage) CleanupOrphanedRunning() error {
+	log.Info("Checking for orphaned running programs")
+	runningPrograms, err := storage.ListRunningPrograms()
+	if err != nil {
+		log.Error("Failed to list running programs: %v", err)
+		return err
+	}
+
+	if len(runningPrograms) == 0 {
+		log.Debug("No orphaned running programs found")
+		return nil
+	}
+
+	log.Warning("Found %d orphaned running program(s), moving to history with 'canceled' status", len(runningPrograms))
+	for _, programName := range runningPrograms {
+		// Update status to canceled before moving
+		statusPath := filepath.Join(storage.runningPath, programName+".txt")
+		if err := os.WriteFile(statusPath, []byte(types.ProgramStateCanceled), 0644); err != nil {
+			log.Warning("Failed to update status for orphaned program '%s': %v", programName, err)
+		}
+
+		if err := storage.MoveToHistory(programName); err != nil {
+			log.Error("Failed to move orphaned program '%s' to history: %v", programName, err)
+		}
+	}
+
 	return nil
 }

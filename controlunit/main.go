@@ -52,17 +52,23 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Clean up any orphaned running programs from previous crashes
+	if err := storage.CleanupOrphanedRunning(); err != nil {
+		log.Printf("Warning: Failed to cleanup orphaned running programs: %v", err)
+	}
+
 	programStorage, err := storagefs.NewProgramStorage(configuration.ControlUnitConfig.BasePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	engine := engine.NewEngine(configuration, storage, configuration.APIEndpoints)
-
 	heartbeatManager, err := heartbeat.NewManager(configuration.ControlUnitConfig.NetworkInterface, configuration.APIEndpoints)
 	if err != nil {
 		log.Fatalf("Failed to create heartbeat manager: %v", err)
 	}
+
+	engine := engine.NewEngine(configuration, storage, configuration.APIEndpoints, heartbeatManager)
+
 	if err := heartbeatManager.Start(); err != nil {
 		log.Fatalf("Failed to start heartbeat manager: %v", err)
 	}
