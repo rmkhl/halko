@@ -66,6 +66,13 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 	engine.wg.Add(1)
 	engine.runner.Start()
 
+	// Monitor runner completion to clean up
+	go func() {
+		engine.runner.wg.Wait()
+		engine.runner = nil
+		engine.wg.Done()
+	}()
+
 	return nil
 }
 

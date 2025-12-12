@@ -117,19 +117,24 @@ func (h *startStateHandler) executeState() fsmState {
 func (h *startStateHandler) enterState() {
 	h.fsm.started = time.Now().Unix()
 	h.fsm.stopped = 0
-	log.Info("FSM: Entered start state - program started at %d", h.fsm.started)
+	log.Info("FSM: Entered start state - program started at %s", time.Unix(h.fsm.started, 0).Format(time.RFC3339))
 }
 
 func (h *waitingStateHandler) executeState() fsmState {
 	// Make sure we have received updated temperature and psu status
 	if h.fsm.currentPSUStatus.updated >= h.fsm.started && h.fsm.currentTemperatures.updated >= h.fsm.started {
-		log.Debug("FSM: waiting state - sensors ready (PSU: %d, Temp: %d), transitioning to preheat",
-			h.fsm.currentPSUStatus.updated, h.fsm.currentTemperatures.updated)
+		log.Debug("FSM: waiting state - sensors ready (PSU: %s, Temp: %s), transitioning to preheat",
+			time.Unix(h.fsm.currentPSUStatus.updated, 0).Format(time.RFC3339),
+			time.Unix(h.fsm.currentTemperatures.updated, 0).Format(time.RFC3339))
 		return fsmStatePreHeat
 	}
-	log.Trace("FSM: waiting state - waiting for sensors (PSU: %d >= %d: %v, Temp: %d >= %d: %v)",
-		h.fsm.currentPSUStatus.updated, h.fsm.started, h.fsm.currentPSUStatus.updated >= h.fsm.started,
-		h.fsm.currentTemperatures.updated, h.fsm.started, h.fsm.currentTemperatures.updated >= h.fsm.started)
+	log.Trace("FSM: waiting state - waiting for sensors (PSU: %s >= %s: %v, Temp: %s >= %s: %v)",
+		time.Unix(h.fsm.currentPSUStatus.updated, 0).Format(time.RFC3339),
+		time.Unix(h.fsm.started, 0).Format(time.RFC3339),
+		h.fsm.currentPSUStatus.updated >= h.fsm.started,
+		time.Unix(h.fsm.currentTemperatures.updated, 0).Format(time.RFC3339),
+		time.Unix(h.fsm.started, 0).Format(time.RFC3339),
+		h.fsm.currentTemperatures.updated >= h.fsm.started)
 	return fsmStateWaiting
 }
 
@@ -219,6 +224,9 @@ func (h *heatUpStateHandler) executeState() fsmState {
 		humidifierResult := h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuHumidifier, humidifierResult)
 		log.Trace("FSM: heat_up - humidifier power: %d%%", humidifierResult)
+
+		// Mark these temperature readings as processed
+		h.fsm.temperatures.updated = h.fsm.currentTemperatures.updated
 	}
 	return fsmStateHeatUp
 }
@@ -242,6 +250,8 @@ func (h *acclimateStateHandler) executeState() fsmState {
 		elapsed, required, h.fsm.temperatures.reading.Material, h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
+		log.Debug("FSM: acclimate - updating power (oven: %.1f°C, material: %.1f°C)",
+			h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
 
 		fanPower := uint8(0)
@@ -255,6 +265,9 @@ func (h *acclimateStateHandler) executeState() fsmState {
 			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
 		}
 		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		// Mark these temperature readings as processed
+		h.fsm.temperatures.updated = h.fsm.currentTemperatures.updated
 	}
 	return fsmStateAcclimate
 }
@@ -288,6 +301,8 @@ func (h *coolDownStateHandler) executeState() fsmState {
 		h.fsm.temperatures.reading.Material, h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, elapsed)
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
+		log.Debug("FSM: cool_down - updating power (oven: %.1f°C, material: %.1f°C)",
+			h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
 
 		fanPower := uint8(0)
@@ -301,6 +316,9 @@ func (h *coolDownStateHandler) executeState() fsmState {
 			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
 		}
 		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Oven, h.fsm.temperatures.reading.Material))
+
+		// Mark these temperature readings as processed
+		h.fsm.temperatures.updated = h.fsm.currentTemperatures.updated
 	}
 	return fsmStateCoolDown
 }

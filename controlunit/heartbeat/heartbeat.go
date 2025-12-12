@@ -48,6 +48,7 @@ func NewManager(networkInterface string, apiEndpoints *types.APIEndpoints) (*Man
 		cancel:           cancel,
 		wg:               new(sync.WaitGroup),
 		executorIP:       executorIP,
+		displayMessage:   "idle",
 	}, nil
 }
 

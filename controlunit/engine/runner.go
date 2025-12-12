@@ -147,6 +147,9 @@ func (runner *programRunner) Run() {
 	runner.logWriter.Close()
 	runner.fsmController.shutdown()
 
+	// Reset display to idle
+	runner.heartbeatManager.SetDisplayMessage("idle")
+
 	// Move files from running to history
 	runner.statusWriter.MarkCompleted()
 	if err := runner.programStorage.MoveToHistory(runner.programName); err != nil {
