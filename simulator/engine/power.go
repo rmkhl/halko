@@ -2,6 +2,8 @@ package engine
 
 import (
 	"sync"
+
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -23,6 +25,7 @@ func (p *Power) Start(initialState bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	log.Debug("Power: Starting with initial state: %v", initialState)
 	p.running = true
 	p.current = initialState
 	p.upcoming = false
@@ -33,6 +36,7 @@ func (p *Power) Stop() {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	log.Debug("Power: Stopping (was running: %v, current: %v)", p.running, p.current)
 	p.running = false
 	p.current = false
 	p.upcoming = false
@@ -43,6 +47,9 @@ func (p *Power) SwitchTo(upcoming bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	if p.upcoming != upcoming {
+		log.Debug("Power: Switching upcoming state from %v to %v (current: %v)", p.upcoming, upcoming, p.current)
+	}
 	p.upcoming = upcoming
 }
 
@@ -59,7 +66,11 @@ func (p *Power) Tick() {
 
 	if p.tick < 9 {
 		p.tick++
+		log.Trace("Power: Tick %d/10, current: %v, upcoming: %v", p.tick, p.current, p.upcoming)
 	} else {
+		if p.current != p.upcoming {
+			log.Info("Power: State transition at tick 10 - %v -> %v", p.current, p.upcoming)
+		}
 		p.current = p.upcoming
 		p.tick = 0
 	}

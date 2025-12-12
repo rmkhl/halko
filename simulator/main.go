@@ -48,11 +48,34 @@ func main() {
 		shellyPort, sensorPort)
 
 	fan := elements.NewPower("Fan")
+	fan.TurnOn(false) // Start the power controller in off state
 	humidifier := elements.NewPower("Humidifier")
+	humidifier.TurnOn(false) // Start the power controller in off state
 	wood := elements.NewWood(20)
 	heater := elements.NewHeater("oven", 20, wood)
+	heater.TurnOn(false) // Start the heater power controller in off state
+	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven), Wood (material)")
+
+	// Build element lookup map
+	elementsByName := map[string]interface{}{
+		"heater":     heater,
+		"fan":        fan,
+		"humidifier": humidifier,
+	}
+
+	// Map power controls using configuration
+	shellyControls := make(map[int8]interface{})
+	for name, id := range config.PowerUnit.PowerMapping {
+		if element, exists := elementsByName[name]; exists {
+			shellyControls[int8(id)] = element
+			log.Debug("Mapped Shelly switch %d to %s", id, name)
+		} else {
+			log.Warning("Power mapping references unknown element: %s", name)
+		}
+	}
+	log.Info("Configured %d Shelly switch mappings from power_unit.power_mapping", len(shellyControls))
+
 	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
-	shellyControls := map[int8]interface{}{0: heater, 1: fan, 2: heater}
 
 	ticker := time.NewTicker(6000 * time.Millisecond)
 	stop := make(chan struct{})
@@ -84,16 +107,24 @@ func main() {
 	go func() {
 		defer wg.Done()
 		log.Info("Starting simulation loop")
+		tickCount := 0
 
 		for {
 			select {
 			case <-ticker.C:
-				log.Trace("Simulation tick: updating elements")
+				tickCount++
+				log.Trace("Simulation tick #%d: updating elements", tickCount)
 				fan.Tick()
 				humidifier.Tick()
 				heater.Tick()
+
+				// Log status summary every 10 ticks (1 minute)
+				if tickCount%10 == 0 {
+					log.Info("Simulation status - Tick #%d: Oven=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v",
+						tickCount, heater.Temperature(), wood.Temperature(), heater.IsOn(), fan.IsOn())
+				}
 			case <-stop:
-				log.Info("Stopping simulation loop")
+				log.Info("Stopping simulation loop at tick #%d", tickCount)
 				ticker.Stop()
 				return
 			}

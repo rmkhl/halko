@@ -121,6 +121,7 @@ func setSwitchState(powers map[int8]interface{}) http.HandlerFunc {
 		log.Info("Setting switch %d to %v (was %v)", id, newState, previousState)
 
 		switcher.SwitchTo(newState)
+		log.Debug("Switch %d state change queued successfully", id)
 
 		response := types.ShellySwitchSetResponse{
 			WasOn: previousState,
