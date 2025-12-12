@@ -52,15 +52,19 @@ export const controlunitApi = createApi({
         method: "POST",
         body: JSON.stringify({
           name: p.name,
-          default_step_time: p.defaultStepRuntime,
-          steps: p.steps.map((s) => ({
-            name: s.name,
-            time_constraint: s.timeConstraint,
-            temperature_constraint: s.temperatureConstraint,
-            heater: s.heater,
-            fan: s.fan,
-            humidifier: s.humidifier,
-          })),
+          steps: p.steps.map((s) => {
+            // Only include fields present in the step, do not use defaults
+            const step: any = {
+              name: s.name,
+              type: s.type,
+              temperature_target: s.temperature_target,
+            };
+            if (s.runtime !== undefined) step.runtime = s.runtime;
+            if (s.heater !== undefined) step.heater = s.heater;
+            if (s.fan !== undefined) step.fan = s.fan;
+            if (s.humidifier !== undefined) step.humidifier = s.humidifier;
+            return step;
+          }),
         }),
         headers: { "Content-type": "application/json" },
       }),

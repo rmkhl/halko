@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useGetProgramsQuery, useGetProgramQuery, useDeleteProgramMutation } from "../../store/services";
+import { useStartProgramMutation } from "../../store/services/controlunitApi";
+import { useDispatch } from "react-redux";
+import { setEditProgram } from "../../store/features/programsSlice";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -44,17 +47,31 @@ const formatTimestamp = (timestamp: string): string => {
 };
 
 export const Programs: React.FC = () => {
+  const [startProgram, { isLoading: isStarting }] = useStartProgramMutation();
+
+  const handleRun = async () => {
+    if (!selectedProgramData) return;
+    try {
+      await startProgram(selectedProgramData).unwrap();
+      navigate("/status");
+    } catch (e: any) {
+      // Optionally show error
+      alert("Failed to start program: " + (e?.data?.error || e?.message || e));
+    }
+  };
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<string | null>(null);
-  const { data, isLoading, error } = useGetProgramsQuery();
+  const { data, isLoading, error } = useGetProgramsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: programData, isLoading: isLoadingProgram } = useGetProgramQuery(selectedProgram || "", {
     skip: !selectedProgram,
+    refetchOnMountOrArgChange: true,
   });
   const [deleteProgram] = useDeleteProgramMutation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const programInfos = (() => {
     if (!data) return [];
@@ -134,6 +151,10 @@ export const Programs: React.FC = () => {
   };
 
   const handleEdit = (name: string) => {
+    // Find the selected program data
+    if (selectedProgramData && selectedProgramData.name === name) {
+      dispatch(setEditProgram(selectedProgramData));
+    }
     navigate(`/programs/${encodeURIComponent(name)}`);
   };
 
@@ -287,13 +308,23 @@ export const Programs: React.FC = () => {
             <Paper sx={{ padding: 3, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                 <Typography variant="h5">{selectedProgramData.name}</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<EditIcon />}
-                  onClick={() => handleEdit(selectedProgram)}
-                >
-                  Edit
-                </Button>
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    variant="contained"
+                    startIcon={<EditIcon />}
+                    onClick={() => handleEdit(selectedProgram)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleRun}
+                    disabled={isStarting}
+                  >
+                    Run
+                  </Button>
+                </Stack>
               </Box>
               <Divider sx={{ marginBottom: 2 }} />
               <Typography variant="h6" gutterBottom>

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { Program as ApiProgram } from "../../types/api";
 import { setEditProgram } from "../../store/features/programsSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -59,32 +59,23 @@ const getValidationErrors = (editProgram: ApiProgram | null, nameUsed: boolean):
 };
 
 export const Program: React.FC = () => {
+
+  // All hooks and variables declared once at the top
   const { name } = useParams();
-  const navigate = useNavigate();
-  const { data } = useGetProgramQuery(name || "", { skip: !name || name === "new" });
+  const { data } = useGetProgramQuery(name || "", { skip: !name || name === "new", refetchOnMountOrArgChange: true });
   const [saveProgram, { isSuccess }] = useSaveProgramMutation();
-  const editProgram = useSelector(
-    (state: RootState) => state.programs.editRecord
-  );
+  const editProgram = useSelector((state: RootState) => state.programs.editRecord);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const program = useMemo(() => {
-    if (!data) return undefined;
-    const responseData = data as any;
-    if (responseData.data) {
-      return responseData.data as ApiProgram;
-    }
-    return data as ApiProgram;
-  }, [data]);
-
+  // useFormData must be above any useMemo that uses nameUsed
   const {
     editing,
-    formData: displayProgram,
     nameUsed,
     handleCancel,
-    handleEdit,
     handleSave,
   } = useFormData({
-    allData: program ? [program] : [],
+    allData: data ? [data as ApiProgram] : [],
     defaultData: emptyProgram(),
     editData: editProgram,
     rootPath: "/programs",
@@ -94,19 +85,44 @@ export const Program: React.FC = () => {
     setEditData: setEditProgram,
   });
 
-  const dispatch = useDispatch();
+  // Place this just before return:
+  useEffect(() => {
+    if (isSuccess) {
+      dispatch(setEditProgram(null));
+      navigate("/programs");
+    }
+  }, [isSuccess, dispatch, navigate]);
 
-  const updateEdited =
-    <Key extends keyof ApiProgram, Value extends ApiProgram[Key]>(field: Key) =>
-    (value: Value) => {
-      if (editProgram) {
-        dispatch(setEditProgram({ ...editProgram, [field]: value }));
+  const program = useMemo(() => {
+    if (!data) return undefined;
+    if (typeof data === 'object' && data !== null && 'data' in data) {
+      return (data as { data: ApiProgram }).data;
+    }
+    return data as ApiProgram;
+  }, [data]);
+
+
+  // ...existing code...
+
+  // Ensure editRecord is set from loaded program if missing or mismatched
+  useEffect(() => {
+    if (typeof program === 'undefined') return;
+    if (name && name !== "new") {
+      if (!editProgram || editProgram.name !== program.name) {
+        dispatch(setEditProgram(program));
       }
-    };
+    }
+    if (name === "new" && (!editProgram || editProgram.name)) {
+      // For new, clear editRecord if it has a name (should be empty)
+      dispatch(setEditProgram(emptyProgram()));
+    }
+  }, [name, program, editProgram, dispatch]);
 
-  const updateName = (e: React.ChangeEvent<HTMLInputElement>) =>
-    updateEdited("name")(e.currentTarget.value);
 
+
+
+
+  // Place isValid here, after all hooks/vars
   const isValid = useMemo(() => {
     if (!editProgram) {
       return false;
@@ -129,8 +145,34 @@ export const Program: React.FC = () => {
     return true;
   }, [editProgram, nameUsed]);
 
+  // Ensure editRecord is set from loaded program if missing or mismatched
+  useEffect(() => {
+    if (typeof program === 'undefined') return;
+    if (name && name !== "new") {
+      if (!editProgram || editProgram.name !== program.name) {
+        dispatch(setEditProgram(program));
+      }
+    }
+    if (name === "new" && (!editProgram || editProgram.name)) {
+      // For new, clear editRecord if it has a name (should be empty)
+      dispatch(setEditProgram(emptyProgram()));
+    }
+  }, [name, program, editProgram, dispatch]);
+
+
+  const updateEdited =
+    <Key extends keyof ApiProgram, Value extends ApiProgram[Key]>(field: Key) =>
+    (value: Value) => {
+      if (editProgram) {
+        dispatch(setEditProgram({ ...editProgram, [field]: value }));
+      }
+    };
+
+  const updateName = (e: React.ChangeEvent<HTMLInputElement>) =>
+    updateEdited("name")(e.currentTarget.value);
+
   const validationErrors = useMemo(() => {
-    return getValidationErrors(editProgram, nameUsed);
+    return getValidationErrors(editProgram ?? null, nameUsed);
   }, [editProgram, nameUsed]);
 
   return (

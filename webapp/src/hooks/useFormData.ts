@@ -33,7 +33,6 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
   } = props;
 
   const [mode, setMode] = useState<FormMode>("view");
-  const [formData, setFormData] = useState<T>(defaultData);
 
   const { name } = useParams();
   const navigate = useNavigate();
@@ -45,13 +44,9 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     if (name === "new") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("edit");
-
-      if (editData && !editData.name) {
-        return;
+      if (!editData) {
+        dispatch(setEditData(defaultData));
       }
-
-      dispatch(setEditData(defaultData));
-
       return;
     }
 
@@ -59,8 +54,9 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
       return;
     }
 
-    // Don't reset if already editing
-    if (editData) {
+
+    // Only reset if not already editing (mode !== 'edit') and editData is not set
+    if (editData || mode === 'edit') {
       return;
     }
 
@@ -74,7 +70,6 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     // When loading an existing program, start in edit mode
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode("edit");
-    setFormData(data);
     dispatch(setEditData(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, allData]);
@@ -98,8 +93,10 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
   }, [saveSuccess]);
 
   const handleEdit = () => {
-    dispatch(setEditData(formData));
-    setMode("edit");
+    if (editData) {
+      dispatch(setEditData(editData));
+      setMode("edit");
+    }
   };
 
   const handleSave = () => {
@@ -108,13 +105,26 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     }
 
     const normalized = normalizeData?.(editData) || editData;
-    saveData({ id: name !== "new" ? name : undefined, ...normalized });
+
+
+    // Always use POST. If name is unchanged, POST to /programs/{name}. If new or renamed, POST to /programs.
+    const isRename = name !== "new" && name !== editData.name;
+    const isNew = name === "new";
+    if (isNew || isRename) {
+      // POST to /programs (no id)
+      const { id, ...rest } = { ...normalized } as any;
+      saveData({ ...rest, isNew: true });
+    } else {
+      // POST to /programs/{name}
+      saveData({ id: name, ...normalized, isNew: false });
+    }
 
     const { name: editName } = editData;
 
     dispatch(setEditData(undefined));
 
-    if (name === "new") {
+    if (name === "new" || (name !== "new" && name !== editName)) {
+      // Navigating to new name if created or renamed
       navigate(`${rootPath}${editName.length ? `/${editName}` : ""}`);
     }
 
@@ -141,11 +151,16 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     }
 
     for (const p of allData) {
-      if (p.name === formData.name) {
+      if (!editData) continue;
+      if (p.name === editData.name) {
         continue;
       }
 
-      if (p.name.trim() === editData.name.trim()) {
+      if (
+        typeof p.name === "string" &&
+        typeof editData.name === "string" &&
+        p.name.trim() === editData.name.trim()
+      ) {
         return true;
       }
     }
@@ -156,7 +171,6 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
 
   return {
     editing: useMemo(() => mode === "edit", [mode]),
-    formData,
     nameUsed,
     handleCancel,
     handleEdit,
