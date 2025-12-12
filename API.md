@@ -366,29 +366,54 @@ Gets the status of the currently running program.
 
 **Response Format:**
 
+When a program is running:
+
 ```json
 {
   "data": {
-    "status": "running",
     "program": {
-      "name": "Standard Drying",
-      "currentPhase": "Initial Heating",
-      "elapsedTime": 1200,
-      "currentTemperature": 42.5,
-      "targetTemperature": 45,
-      "remainingTime": 2400
+      "program_name": "Four-Stage Kiln Drying Program using delta acclimation",
+      "program_steps": [
+        {
+          "name": "Initial Heating",
+          "target_temperature": 50,
+          "runtime": 7200
+        }
+      ]
+    },
+    "started_at": 1734007854,
+    "current_step": "Initial Heating",
+    "current_step_started_at": 1734007890,
+    "temperatures": {
+      "material": 42.5,
+      "oven": 45.2
+    },
+    "power_status": {
+      "heater": 75,
+      "fan": 50,
+      "humidifier": 0
     }
   }
 }
 ```
 
-If no program is running:
+**Response Fields:**
+
+- `program`: The complete program definition being executed
+- `started_at`: Unix timestamp when program execution began
+- `current_step`: Name of the currently executing step
+- `current_step_started_at`: Unix timestamp when current step began
+- `temperatures.material`: Current material (wood) temperature in °C
+- `temperatures.oven`: Current oven temperature in °C
+- `power_status.heater`: Heater power level (0-100%)
+- `power_status.fan`: Fan power level (0-100%)
+- `power_status.humidifier`: Humidifier power level (0-100%)
+
+If no program is running, returns HTTP 204 No Content with error message:
 
 ```json
 {
-  "data": {
-    "status": "idle"
-  }
+  "error": "No program running"
 }
 ```
 
