@@ -117,6 +117,10 @@ func (storage *ExecutorFileStorage) MaybeDeleteExecutionLog(name string) {
 	os.Remove(filePath)
 }
 
+func (storage *ExecutorFileStorage) GetLogPath(name string) string {
+	return filepath.Join(storage.logPath, name+".csv")
+}
+
 func (storage *ExecutorFileStorage) ListExecutedPrograms() ([]string, error) {
 	searchPath := filepath.Join(storage.executedProgramsPath, "*.json")
 	return storage.ListPrograms(searchPath)

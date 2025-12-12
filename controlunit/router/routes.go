@@ -27,6 +27,7 @@ func SetupRoutes(mux *http.ServeMux, execStorage *storagefs.ExecutorFileStorage,
 	// Engine execution endpoints
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history", listAllRuns(execStorage))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}", getRun(execStorage))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}/log", getRunLog(execStorage))
 	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Engine+"/history/{name}", deleteRun(execStorage))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running", getCurrentProgram(engine))
 	mux.HandleFunc("POST "+endpoints.ControlUnit.Engine+"/running", startNewProgram(engine))

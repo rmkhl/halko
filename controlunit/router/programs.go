@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -71,5 +72,22 @@ func deleteRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, types.APIResponse[string]{Data: "deleted"})
+	}
+}
+
+func getRunLog(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		programName := r.PathValue("name")
+		logPath := storage.GetLogPath(programName)
+
+		content, err := os.ReadFile(logPath)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "Log file not found")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/csv")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(content)
 	}
 }
