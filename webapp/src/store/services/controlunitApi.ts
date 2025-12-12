@@ -14,12 +14,27 @@ export interface EngineDefaults {
   min_delta_heating: number;
 }
 
+export interface RunHistory {
+  name: string;
+  state: "completed" | "failed" | "canceled" | "running" | "pending" | "unknown";
+  started_at?: number;
+  completed_at?: number;
+}
+
+export interface ExecutedProgram {
+  name: string;
+  state: string;
+  started_at?: number;
+  completed_at?: number;
+  program: Program;
+}
+
 export const controlunitApi = createApi({
   reducerPath: "controlunitApi",
   baseQuery: fetchBaseQuery({
     baseUrl: API_ENDPOINTS.controlunit,
   }),
-  tagTypes: [runningProgramTag, defaultsTag],
+  tagTypes: [runningProgramTag, defaultsTag, "history"],
   endpoints: (builder) => ({
     getRunningProgram: fetchSingleQuery(
       builder,
@@ -58,6 +73,24 @@ export const controlunitApi = createApi({
       invalidatesTags: (_, error) =>
         error ? [] : [{ type: runningProgramTag, id: list }],
     }),
+    getExecutionHistory: builder.query<RunHistory[], void>({
+      query: () => "/engine/history",
+      providesTags: ["history"],
+      transformResponse: (response: { data: RunHistory[] }) => response.data,
+    }),
+    getExecutionLog: builder.query<string, string>({
+      query: (name) => ({
+        url: `/engine/history/${encodeURIComponent(name)}/log`,
+        responseHandler: (response) => response.text(),
+      }),
+    }),
+    deleteExecution: builder.mutation<void, string>({
+      query: (name) => ({
+        url: `/engine/history/${encodeURIComponent(name)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["history"],
+    }),
   }),
 });
 
@@ -66,4 +99,7 @@ export const {
   useGetDefaultsQuery,
   useStartProgramMutation,
   useStopRunningProgramMutation,
+  useGetExecutionHistoryQuery,
+  useGetExecutionLogQuery,
+  useDeleteExecutionMutation,
 } = controlunitApi;

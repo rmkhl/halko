@@ -19,6 +19,13 @@ export const configuratorApi = createApi({
       providesTags: [programsTag],
     }),
     saveProgram: saveMutation(builder, programsEndpoint, programsTag),
+    deleteProgram: builder.mutation<void, string>({
+      query: (name: string) => ({
+        url: `${programsEndpoint}/${encodeURIComponent(name)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [programsTag],
+    }),
   }),
 });
 
@@ -26,4 +33,5 @@ export const {
   useGetProgramsQuery,
   useGetProgramQuery,
   useSaveProgramMutation,
+  useDeleteProgramMutation,
 } = configuratorApi;
