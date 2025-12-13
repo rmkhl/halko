@@ -8,12 +8,14 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/rmkhl/halko/types"
 )
 
 func handleStatusCommand() {
 	opts, err := ParseStatusOptions()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing arguments: %v\n", err)
 		os.Exit(exitError)
 	}
 
@@ -22,62 +24,88 @@ func handleStatusCommand() {
 		os.Exit(exitSuccess)
 	}
 
-	executorURL := getExecutorAPIURL(globalConfig)
-	if executorURL == "" {
-		fmt.Fprintf(os.Stderr, "Error: Could not determine executor URL from config\n")
-		os.Exit(exitError)
-	}
-
-	if globalOpts.Verbose {
-		fmt.Printf("Querying executor status at: %s/engine/running\n", executorURL)
-		fmt.Println()
-	}
-
-	err = getStatus(executorURL, globalOpts.Verbose)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get status: %v\n", err)
-		os.Exit(exitError)
+	// Check status for each requested service
+	for _, service := range opts.Services {
+		switch service {
+		case "controlunit":
+			queryControlUnitStatus(globalOpts.Verbose, opts.Details)
+		case "sensorunit":
+			querySensorUnitStatus(globalOpts.Verbose, opts.Details)
+		case "powerunit":
+			queryPowerUnitStatus(globalOpts.Verbose, opts.Details)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown service: %s\n", service)
+		}
 	}
 
 	os.Exit(exitSuccess)
 }
 
 func showStatusHelp() {
-	fmt.Println("halkoctl status - Get program status")
+	fmt.Println("halkoctl status - Get service status")
 	fmt.Println()
-	fmt.Println("Gets the status of the currently running program from the Halko executor.")
+	fmt.Println("Gets the status of Halko services. If no services are specified, checks all available services.")
+	fmt.Println("Connection failures are reported as 'unavailable' status.")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Printf("  %s [global-options] status [options]\n", os.Args[0])
+	fmt.Printf("  %s [global-options] status [options] [service...]\n", os.Args[0])
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("  service")
+	fmt.Println("        Service name to check (controlunit, sensorunit, powerunit)")
+	fmt.Println("        If no services specified, checks all available services")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -h, --help")
 	fmt.Println("        Show this help message")
+	fmt.Println("  --details")
+	fmt.Println("        Show detailed status information")
 	fmt.Println()
 	fmt.Println("Global Options:")
 	fmt.Println("  -c, --config string")
 	fmt.Println("        Path to the halko.cfg configuration file")
 	fmt.Println("  -v, --verbose")
-	fmt.Println("        Enable verbose output")
+	fmt.Println("        Enable verbose output for HTTP requests")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Printf("  %s status\n", os.Args[0])
-	fmt.Printf("  %s --config /path/to/halko.cfg status\n", os.Args[0])
-	fmt.Printf("  %s --verbose status\n", os.Args[0])
+	fmt.Printf("  %s status                       # Check all services\n", os.Args[0])
+	fmt.Printf("  %s status controlunit           # Check controlunit service only\n", os.Args[0])
+	fmt.Printf("  %s status --details             # Check all services with details\n", os.Args[0])
+	fmt.Printf("  %s --verbose status --details   # Verbose HTTP requests + detailed status\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The status will be retrieved from the executor's GET /engine/running endpoint.")
 }
 
-func getStatus(executorURL string, verbose bool) error {
+func queryControlUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("ControlUnit", &globalConfig.APIEndpoints.ControlUnit, verbose, details)
+}
+
+func querySensorUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("SensorUnit", &globalConfig.APIEndpoints.SensorUnit, verbose, details)
+}
+
+func queryPowerUnitStatus(verbose bool, details bool) {
+	queryServiceStatus("PowerUnit", &globalConfig.APIEndpoints.PowerUnit, verbose, details)
+}
+
+func queryServiceStatus(serviceName string, endpoint types.EndpointWithStatus, verbose bool, details bool) {
+	url := endpoint.GetStatusURL()
+
 	if verbose {
-		fmt.Printf("Querying status from: %s\n", executorURL)
+		fmt.Printf("Querying %s status at: %s\n", serviceName, url)
+		fmt.Println()
+	}
+
+	getServiceStatus(serviceName, url, verbose, details)
+}
+
+func getServiceStatus(serviceName string, url string, verbose bool, details bool) {
+	if verbose {
+		fmt.Printf("Querying status from: %s\n", url)
 	}
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-
-	url := executorURL + "/engine/running"
 
 	if verbose {
 		fmt.Printf("GET %s\n", url)
@@ -85,20 +113,26 @@ func getStatus(executorURL string, verbose bool) error {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create HTTP request: %w", err)
+		fmt.Printf("%s Status: unavailable (failed to create HTTP request: %v)\n", serviceName, err)
+		return
 	}
 
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send HTTP request: %w", err)
+		fmt.Printf("%s Status: unavailable (connection failed)\n", serviceName)
+		if verbose {
+			fmt.Printf("  Error: %v\n", err)
+		}
+		return
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
+		fmt.Printf("%s Status: unavailable (failed to read response: %v)\n", serviceName, err)
+		return
 	}
 
 	if verbose {
@@ -110,73 +144,31 @@ func getStatus(executorURL string, verbose bool) error {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		errorMsg := fmt.Sprintf("HTTP request failed with status %d", resp.StatusCode)
-		if len(respBody) > 0 {
-			errorMsg += ": " + strings.TrimSpace(string(respBody))
+		fmt.Printf("%s Status: unavailable (HTTP %d)\n", serviceName, resp.StatusCode)
+		if verbose && len(respBody) > 0 {
+			fmt.Printf("  Error: %s\n", strings.TrimSpace(string(respBody)))
 		}
-		return fmt.Errorf("%s", errorMsg)
+		return
 	}
 
-	var response map[string]interface{}
+	// Only try to parse JSON if we have a body
+	if len(respBody) == 0 {
+		fmt.Printf("%s Status: unavailable (empty response body)\n", serviceName)
+		return
+	}
+
+	var response types.APIResponse[types.ServiceStatusResponse]
 	if err := json.Unmarshal(respBody, &response); err != nil {
-		return fmt.Errorf("failed to parse response JSON: %w", err)
-	}
-
-	data, ok := response["data"]
-	if !ok {
-		fmt.Println("No data field in response")
-		return nil
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		fmt.Println("Invalid data format in response")
-		return nil
-	}
-
-	status, ok := dataMap["status"]
-	if !ok {
-		fmt.Println("No status field in response")
-		return nil
-	}
-
-	fmt.Printf("Executor Status: %v\n", status)
-
-	displayProgramDetails(dataMap)
-
-	return nil
-}
-
-func displayProgramDetails(dataMap map[string]interface{}) {
-	program, ok := dataMap["program"]
-	if !ok {
+		fmt.Printf("%s Status: unavailable (failed to parse response: %v)\n", serviceName, err)
 		return
 	}
 
-	programMap, ok := program.(map[string]interface{})
-	if !ok {
-		return
-	}
+	fmt.Printf("%s Status: %v\n", serviceName, response.Data.Status)
 
-	fmt.Println()
-	fmt.Println("Running Program Details:")
-
-	if name, ok := programMap["name"]; ok {
-		fmt.Printf("  Program Name: %v\n", name)
-	}
-	if currentPhase, ok := programMap["currentPhase"]; ok {
-		fmt.Printf("  Current Phase: %v\n", currentPhase)
-	}
-	if elapsedTime, ok := programMap["elapsedTime"]; ok {
-		fmt.Printf("  Elapsed Time: %v seconds\n", elapsedTime)
-	}
-	if currentTemp, ok := programMap["currentTemperature"]; ok {
-		fmt.Printf("  Current Temperature: %v°C\n", currentTemp)
-	}
-	if targetTemp, ok := programMap["targetTemperature"]; ok {
-		fmt.Printf("  Target Temperature: %v°C\n", targetTemp)
-	}
-	if remainingTime, ok := programMap["remainingTime"]; ok {
-		fmt.Printf("  Remaining Time: %v seconds\n", remainingTime)
+	// Display details if details flag is set
+	if details && len(response.Data.Details) > 0 {
+		for key, value := range response.Data.Details {
+			fmt.Printf("  %s: %v\n", key, value)
+		}
 	}
 }

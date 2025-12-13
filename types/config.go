@@ -5,16 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
+
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
-	ServiceType string
+	EndpointWithStatus interface {
+		GetStatusURL() string
+	}
 
-	ServiceEndpoint struct {
-		Host string `json:"host"`
-		Port int    `json:"port"`
+	Endpoint struct {
+		URL    string `json:"url"`
+		Status string `json:"status"`
 	}
 
 	Defaults struct {
@@ -23,94 +28,144 @@ type (
 		MinDeltaHeating float32                   `json:"min_delta_heating"`
 	}
 
-	ExecutorConfig struct {
-		ServiceEndpoint  `json:",inline"`
+	ControlUnitConfig struct {
 		BasePath         string    `json:"base_path"`
 		TickLength       int       `json:"tick_length"`
-		PowerUnitHost    string    `json:"power_unit_host"`
-		SensorUnitHost   string    `json:"sensor_unit_host"`
-		StatusMessageURL string    `json:"status_message_url"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
 	}
 
 	PowerUnit struct {
-		ServiceEndpoint `json:",inline"`
-		ShellyAddress   string         `json:"shelly_address"`
-		CycleLength     int            `json:"cycle_length"`
-		PowerMapping    map[string]int `json:"power_mapping"`
-		MaxIdleTime     int            `json:"max_idle_time"`
+		ShellyAddress string         `json:"shelly_address"`
+		CycleLength   int            `json:"cycle_length"`
+		PowerMapping  map[string]int `json:"power_mapping"`
+		MaxIdleTime   int            `json:"max_idle_time"`
 	}
 
 	SensorUnitConfig struct {
-		ServiceEndpoint `json:",inline"`
-		SerialDevice    string `json:"serial_device"`
-		BaudRate        int    `json:"baud_rate"`
+		SerialDevice string `json:"serial_device"`
+		BaudRate     int    `json:"baud_rate"`
 	}
 
 	StorageConfig struct {
-		ServiceEndpoint `json:",inline"`
-		BasePath        string `json:"base_path"`
+		BasePath string `json:"base_path"`
+	}
+
+	ControlUnitEndpoints struct {
+		Endpoint `json:",inline"`
+		Engine   string `json:"engine"`
+		Programs string `json:"programs"`
+		Status   string `json:"status"`
+	}
+
+	SensorUnitEndpoints struct {
+		Endpoint     `json:",inline"`
+		Temperatures string `json:"temperatures"`
+		Display      string `json:"display"`
+		Status       string `json:"status"`
+	}
+
+	PowerUnitEndpoints struct {
+		Endpoint `json:",inline"`
+		Power    string `json:"power"`
+		Status   string `json:"status"`
 	}
 
 	APIEndpoints struct {
-		Programs     string `json:"programs"`
-		Running      string `json:"running"`
-		Temperatures string `json:"temperatures"`
-		Status       string `json:"status"`
-		Root         string `json:"root"`
+		ControlUnit ControlUnitEndpoints `json:"controlunit"`
+		SensorUnit  SensorUnitEndpoints  `json:"sensorunit"`
+		PowerUnit   PowerUnitEndpoints   `json:"powerunit"`
 	}
 
 	HalkoConfig struct {
-		ExecutorConfig *ExecutorConfig   `json:"executor"`
-		PowerUnit      *PowerUnit        `json:"power_unit"`
-		SensorUnit     *SensorUnitConfig `json:"sensorunit"`
-		StorageConfig  *StorageConfig    `json:"storage"`
-		APIEndpoints   *APIEndpoints     `json:"api_endpoints"`
+		ControlUnitConfig *ControlUnitConfig `json:"controlunit"`
+		PowerUnit         *PowerUnit         `json:"power_unit"`
+		SensorUnit        *SensorUnitConfig  `json:"sensorunit"`
+		APIEndpoints      *APIEndpoints      `json:"api_endpoints"`
 	}
 )
 
-const (
-	ServiceExecutor   ServiceType = "executor"
-	ServicePowerUnit  ServiceType = "power_unit"
-	ServiceSensorUnit ServiceType = "sensor_unit"
-	ServiceStorage    ServiceType = "storage"
-)
+// GetURL returns the base URL for this endpoint
+func (e *Endpoint) GetURL() string {
+	return e.URL
+}
 
-// GetBaseUrl returns the complete base URL for the specified service
-func (c *HalkoConfig) GetBaseUrl(service ServiceType) (string, error) {
-	switch service {
-	case ServiceExecutor:
-		return fmt.Sprintf("http://%s:%d", c.ExecutorConfig.Host, c.ExecutorConfig.Port), nil
-	case ServicePowerUnit:
-		return fmt.Sprintf("http://%s:%d", c.PowerUnit.Host, c.PowerUnit.Port), nil
-	case ServiceSensorUnit:
-		return fmt.Sprintf("http://%s:%d", c.SensorUnit.Host, c.SensorUnit.Port), nil
-	case ServiceStorage:
-		return fmt.Sprintf("http://%s:%d", c.StorageConfig.Host, c.StorageConfig.Port), nil
+// GetStatusURL returns the full status endpoint URL
+func (e *Endpoint) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for ControlUnitEndpoints
+func (e *ControlUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for SensorUnitEndpoints
+func (e *SensorUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for PowerUnitEndpoints
+func (e *PowerUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetPort extracts the port as a string from the URL or provided urlStr
+// Returns "80" for HTTP and "443" for HTTPS if port is not explicitly specified
+func (e *Endpoint) GetPort(urlStr ...string) (string, error) {
+	var targetURL string
+	if len(urlStr) > 0 && urlStr[0] != "" {
+		targetURL = urlStr[0]
+	} else {
+		targetURL = e.URL
+	}
+
+	if targetURL == "" {
+		return "", errors.New("empty URL")
+	}
+
+	parsedURL, err := url.Parse(targetURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	port := parsedURL.Port()
+	if port != "" {
+		return port, nil
+	}
+
+	// Use standard ports based on scheme
+	switch parsedURL.Scheme {
+	case "http":
+		return "80", nil
+	case "https":
+		return "443", nil
 	default:
-		return "", fmt.Errorf("unknown service type: %s", service)
+		return "", fmt.Errorf("unsupported scheme: %s", parsedURL.Scheme)
 	}
 }
 
-// GetExecutorUrl returns the complete base URL for the executor service
-func (c *HalkoConfig) GetExecutorUrl() (string, error) {
-	return c.GetBaseUrl(ServiceExecutor)
+// ControlUnitEndpoints methods
+func (e *ControlUnitEndpoints) GetProgramsURL() string {
+	return e.URL + e.Programs
 }
 
-// GetPowerUnitUrl returns the complete base URL for the power unit service
-func (c *HalkoConfig) GetPowerUnitUrl() (string, error) {
-	return c.GetBaseUrl(ServicePowerUnit)
+func (e *ControlUnitEndpoints) GetEngineURL() string {
+	return e.URL + e.Engine
 }
 
-// GetSensorUnitUrl returns the complete base URL for the sensor unit service
-func (c *HalkoConfig) GetSensorUnitUrl() (string, error) {
-	return c.GetBaseUrl(ServiceSensorUnit)
+// SensorUnitEndpoints methods
+func (e *SensorUnitEndpoints) GetTemperaturesURL() string {
+	return e.URL + e.Temperatures
 }
 
-// GetStorageUrl returns the complete base URL for the storage service
-func (c *HalkoConfig) GetStorageUrl() (string, error) {
-	return c.GetBaseUrl(ServiceStorage)
+func (e *SensorUnitEndpoints) GetDisplayURL() string {
+	return e.URL + e.Display
+}
+
+// PowerUnitEndpoints methods
+func (e *PowerUnitEndpoints) GetPowerURL() string {
+	return e.URL + e.Power
 }
 
 func LoadConfig(configPath string) (*HalkoConfig, error) {
@@ -121,6 +176,8 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 		}
 	}
 
+	log.Info("Loading configuration from: %s", configPath)
+
 	config, err := readHalkoConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configPath, err)
@@ -130,27 +187,44 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	log.Info("Configuration loaded successfully from: %s", configPath)
 	return config, nil
 }
 
 func findDefaultConfigPath() string {
-	possiblePaths := []string{
-		"halko.cfg",
-		"/etc/halko/halko.cfg",
-		"/var/opt/halko/halko.cfg",
-	}
-
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			return path
+	// Check environment variable first
+	if configPath := os.Getenv("HALKO_CONFIG"); configPath != "" {
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath
 		}
 	}
 
+	// Define search paths in priority order
+	searchPaths := []string{
+		"halko.cfg", // Current directory
+	}
+
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		searchPaths = append(searchPaths,
+			filepath.Join(homeDir, ".halko.cfg"),           // ~/.halko.cfg
+			filepath.Join(homeDir, ".config", "halko.cfg"), // ~/.config/halko.cfg
+		)
+	}
+
+	searchPaths = append(searchPaths,
+		"/etc/halko/halko.cfg",     // System config directory
+		"/etc/opt/halko/halko.cfg", // Optional system config directory
+	)
+
 	if exePath, err := os.Executable(); err == nil {
 		exeDir := filepath.Dir(exePath)
-		configPath := filepath.Join(exeDir, "halko.cfg")
-		if _, err := os.Stat(configPath); err == nil {
-			return configPath
+		executablePath := filepath.Join(exeDir, "halko.cfg")
+		searchPaths = append(searchPaths, executablePath)
+	}
+
+	for _, path := range searchPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
 		}
 	}
 
@@ -180,23 +254,14 @@ func readHalkoConfig(path string) (*HalkoConfig, error) {
 }
 
 func (c *HalkoConfig) ValidateRequired() error {
-	if c.ExecutorConfig == nil {
-		return errors.New("executor configuration is required")
+	if c.ControlUnitConfig == nil {
+		return errors.New("controlunit configuration is required")
 	}
-	if c.ExecutorConfig.Port <= 0 {
-		return errors.New("executor port is required and must be positive")
+	if c.ControlUnitConfig.BasePath == "" {
+		return errors.New("controlunit base path is required")
 	}
-	if c.ExecutorConfig.SensorUnitHost == "" {
-		return errors.New("sensor unit host is required")
-	}
-	if c.ExecutorConfig.PowerUnitHost == "" {
-		return errors.New("power unit host is required")
-	}
-	if c.ExecutorConfig.BasePath == "" {
-		return errors.New("executor base path is required")
-	}
-	if c.ExecutorConfig.TickLength <= 0 {
-		return errors.New("executor tick length is required and must be positive")
+	if c.ControlUnitConfig.TickLength <= 0 {
+		return errors.New("controlunit tick length is required and must be positive")
 	}
 
 	if c.SensorUnit == nil {
@@ -207,9 +272,6 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if c.SensorUnit.BaudRate <= 0 {
 		return errors.New("sensor unit baud rate is required and must be positive")
-	}
-	if c.SensorUnit.Port <= 0 {
-		return errors.New("sensor unit port is required and must be positive")
 	}
 
 	if c.PowerUnit == nil {
@@ -224,40 +286,51 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.PowerUnit.MaxIdleTime <= 0 {
 		return errors.New("power unit max idle time is required and must be positive")
 	}
-	if c.PowerUnit.Port <= 0 {
-		return errors.New("power unit port is required and must be positive")
-	}
 	if len(c.PowerUnit.PowerMapping) == 0 {
 		return errors.New("power unit power mapping is required")
-	}
-
-	if c.StorageConfig == nil {
-		return errors.New("storage configuration is required")
-	}
-	if c.StorageConfig.BasePath == "" {
-		return errors.New("storage base path is required")
-	}
-	if c.StorageConfig.Port <= 0 {
-		return errors.New("storage port is required and must be positive")
 	}
 
 	if c.APIEndpoints == nil {
 		return errors.New("API endpoints configuration is required")
 	}
-	if c.APIEndpoints.Programs == "" {
-		return errors.New("API endpoints programs path is required")
+
+	// Validate controlunit endpoints
+	if c.APIEndpoints.ControlUnit.URL == "" {
+		return errors.New("controlunit endpoints URL is required")
 	}
-	if c.APIEndpoints.Running == "" {
-		return errors.New("API endpoints running path is required")
+	if c.APIEndpoints.ControlUnit.Engine == "" {
+		return errors.New("controlunit endpoints engine path is required")
 	}
-	if c.APIEndpoints.Temperatures == "" {
-		return errors.New("API endpoints temperatures path is required")
+	if c.APIEndpoints.ControlUnit.Programs == "" {
+		return errors.New("controlunit endpoints programs path is required")
 	}
-	if c.APIEndpoints.Status == "" {
-		return errors.New("API endpoints status path is required")
+	if c.APIEndpoints.ControlUnit.Status == "" {
+		return errors.New("controlunit endpoints status path is required")
 	}
-	if c.APIEndpoints.Root == "" {
-		return errors.New("API endpoints root path is required")
+
+	// Validate sensorunit endpoints
+	if c.APIEndpoints.SensorUnit.URL == "" {
+		return errors.New("sensorunit endpoints URL is required")
+	}
+	if c.APIEndpoints.SensorUnit.Temperatures == "" {
+		return errors.New("sensorunit endpoints temperatures path is required")
+	}
+	if c.APIEndpoints.SensorUnit.Display == "" {
+		return errors.New("sensorunit endpoints display path is required")
+	}
+	if c.APIEndpoints.SensorUnit.Status == "" {
+		return errors.New("sensorunit endpoints status path is required")
+	}
+
+	// Validate powerunit endpoints
+	if c.APIEndpoints.PowerUnit.URL == "" {
+		return errors.New("powerunit endpoints URL is required")
+	}
+	if c.APIEndpoints.PowerUnit.Status == "" {
+		return errors.New("powerunit endpoints status path is required")
+	}
+	if c.APIEndpoints.PowerUnit.Power == "" {
+		return errors.New("powerunit endpoints power path is required")
 	}
 
 	return nil

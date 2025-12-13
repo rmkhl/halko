@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,73 +11,93 @@ import (
 	"github.com/rmkhl/halko/sensorunit/router"
 	"github.com/rmkhl/halko/sensorunit/serial"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 func main() {
+	log.Trace("Starting sensorunit main function")
+
+	log.Trace("Parsing global options")
 	opts, err := types.ParseGlobalOptions()
 	if err != nil {
-		log.Fatalf("Failed to parse options: %v", err)
+		log.Fatal("Failed to parse options: %v", err)
 	}
+	log.Trace("Global options parsed successfully")
+
+	opts.ApplyLogLevel()
+	log.Info("Sensorunit service starting")
 
 	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatal("Failed to load configuration: %v", err)
 	}
 
 	serialDevice := halkoConfig.SensorUnit.SerialDevice
 	baudRate := halkoConfig.SensorUnit.BaudRate
+	log.Trace("Serial device configuration: device=%s, baudRate=%d", serialDevice, baudRate)
 
-	port := halkoConfig.SensorUnit.Port
-	if port == 0 {
-		port = 8093 // Default port
-	}
-
+	log.Trace("Creating new sensor unit instance")
 	sensorUnit, err := serial.NewSensorUnit(serialDevice, baudRate)
 	if err != nil {
-		log.Fatalf("Failed to create sensor unit: %v", err)
+		log.Fatal("Failed to create sensor unit: %v", err)
+	}
+	log.Trace("Sensor unit instance created successfully")
+
+	log.Info("Initializing sensor unit connection on device: %s (baud: %d)", serialDevice, baudRate)
+	if err := sensorUnit.Connect(); err != nil {
+		log.Warning("Failed initial connection to sensor unit: %v", err)
+		log.Info("Sensor unit connection will be established on demand")
+	} else {
+		log.Info("Sensor unit connected successfully on %s", serialDevice)
+		defer sensorUnit.Close()
 	}
 
-	if err := sensorUnit.Connect(); err != nil {
-		log.Printf("Warning: Failed to connect to sensor unit: %v", err)
-		log.Printf("Will retry connection when handling requests")
-	} else {
-		log.Printf("Connected to sensor unit on %s", serialDevice)
-		defer sensorUnit.Close()
+	port, err := halkoConfig.APIEndpoints.SensorUnit.GetPort()
+	if err != nil {
+		log.Error("Failed to get sensorunit port: %v", err)
+		return
 	}
 
 	api := router.NewAPI(sensorUnit)
 	r := router.SetupRouter(api, halkoConfig.APIEndpoints)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    ":" + port,
 		Handler: r,
 	}
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	go func() {
-		log.Printf("Starting sensorunit service on port %d", port)
+		log.Info("Sensorunit HTTP server starting on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error starting server: %s", err)
+			log.Fatal("Error starting server: %s", err)
 		}
+		log.Info("HTTP server stopped")
 	}()
 
+	log.Info("Sensorunit service ready - waiting for requests")
 	sig := <-sigs
-	log.Printf("Shutdown signal received: %v", sig)
+	log.Info("Shutdown signal received: %v", sig)
 
+	log.Trace("Creating shutdown context with 5 second timeout")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	log.Println("Shutting down HTTP server...")
+	log.Info("Initiating graceful shutdown...")
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
+		log.Error("HTTP server forced shutdown: %v", err)
+	} else {
+		log.Info("HTTP server shutdown completed")
 	}
 
-	log.Println("Closing sensor unit connection...")
-	if err := sensorUnit.Close(); err != nil {
-		log.Printf("Error closing sensor unit connection: %v", err)
+	log.Info("Closing sensor unit connection...")
+	if err := sensorUnit.Shutdown(); err != nil {
+		log.Error("Error closing sensor unit connection: %v", err)
+	} else {
+		log.Info("Sensor unit connection closed")
 	}
 
-	log.Println("Sensorunit service exited gracefully")
+	log.Info("Sensorunit service shutdown complete")
+	log.Trace("Main function completed")
 }

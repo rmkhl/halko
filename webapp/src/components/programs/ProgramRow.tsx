@@ -3,7 +3,7 @@ import { Program as ApiProgram } from "../../types/api";
 import { Button, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { ClickableStack } from "../ClickableStack";
-import { useStartProgramMutation } from "../../store/services/executorApi";
+import { useStartProgramMutation } from "../../store/services/controlunitApi";
 
 interface Props {
   program: ApiProgram;

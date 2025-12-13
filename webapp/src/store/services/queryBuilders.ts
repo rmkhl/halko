@@ -53,11 +53,17 @@ export const saveMutation = <T extends Entity>(
   tag: EntityType
 ): MutationDefinition<T, ApiBaseQueryFunc, EntityType, string, reducerPath> =>
   builder.mutation<string, T>({
-    query: (record) => ({
-      url: !record.id ? endpoint : endpoint + `/${record.id}`,
-      method: !record.id ? "POST" : "PUT",
-      body: JSON.stringify(record),
-      headers: { "Content-type": "application/json" },
-    }),
+    query: (record: any) => {
+      // Use explicit isNew flag if present
+      const isNew = record.isNew === true;
+      // Remove isNew from payload
+      const { isNew: _isNew, ...payload } = record;
+      return {
+        url: isNew ? endpoint : `${endpoint}/${encodeURIComponent(record.name)}`,
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-type": "application/json" },
+      };
+    },
     invalidatesTags: (_, error) => (error ? [] : [{ type: tag, id: list }]),
   });

@@ -2,31 +2,54 @@
   "name": "halko",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "parcel index.html",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "parcel build index.html --public-url ./",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "keywords": [],
   "author": "",
+  "source": "index.html",
+  "targets": {
+    "default": {
+      "context": "browser"
+    }
+  },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@mui/base": "^5.0.0-beta.40",
     "@mui/icons-material": "^5.15.15",
     "@mui/material": "^5.15.15",
     "@reduxjs/toolkit": "^2.2.3",
+    "chart.js": "^4.5.1",
     "i18next": "^23.11.1",
     "react": "^18.2.0",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.2.0",
     "react-i18next": "^14.1.0",
     "react-redux": "^9.1.0",
     "react-router-dom": "^6.22.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/react": "^18.2.73",
     "@types/react-dom": "^18.2.23",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "parcel": "^2.12.0",
     "process": "^0.11.10",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "typescript-eslint": "^8.49.0"
   }
 }

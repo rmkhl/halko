@@ -4,7 +4,7 @@ export const getJSONFromSessionStorage = <T>(key: string): T | undefined => {
   return item ? (JSON.parse(item) as T) : undefined;
 };
 
-export const setJSONToSessionStorage = (key: string, item: any) => {
+export const setJSONToSessionStorage = (key: string, item: unknown) => {
   const obj = JSON.stringify(item);
 
   sessionStorage.setItem(key, obj);

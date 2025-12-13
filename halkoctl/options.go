@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 
@@ -22,12 +23,25 @@ type SendOptions struct {
 // StatusOptions represents options specific to the status command
 type StatusOptions struct {
 	CommonOptions
+	Services []string // Services to check (controlunit, sensorunit, etc.)
+	Details  bool     // Show detailed status information
 }
 
 // ValidateOptions represents options specific to the validate command
 type ValidateOptions struct {
 	CommonOptions
 	ProgramPath string // Path to the program.json file (positional argument)
+}
+
+// DisplayOptions represents options specific to the display command
+type DisplayOptions struct {
+	CommonOptions
+	Message string // Text message to display (positional argument)
+}
+
+// TemperaturesOptions represents options specific to the temperatures command
+type TemperaturesOptions struct {
+	CommonOptions
 }
 
 // ParseGlobalOptions parses global options from command line arguments
@@ -109,9 +123,32 @@ func ParseStatusOptions() (*StatusOptions, error) {
 	statusFlags := flag.NewFlagSet("status", flag.ExitOnError)
 
 	SetupCommonFlags(statusFlags, &opts.CommonOptions)
+	statusFlags.BoolVar(&opts.Details, "details", false, "Show detailed status information")
 
 	if err := statusFlags.Parse(os.Args[2:]); err != nil {
 		return nil, err
+	}
+
+	// Get positional arguments (service names)
+	args := statusFlags.Args()
+
+	// If no services specified, check all available services
+	if len(args) == 0 {
+		opts.Services = []string{"controlunit", "sensorunit", "powerunit"}
+	} else {
+		// Validate and set the specified services
+		validServices := map[string]bool{
+			"controlunit": true,
+			"sensorunit":  true,
+			"powerunit":   true,
+		}
+
+		for _, service := range args {
+			if !validServices[service] {
+				return nil, fmt.Errorf("unknown service '%s'. Valid services are: controlunit, sensorunit, powerunit", service)
+			}
+		}
+		opts.Services = args
 	}
 
 	return opts, nil
@@ -132,6 +169,40 @@ func ParseValidateOptions() (*ValidateOptions, error) {
 	args := validateFlags.Args()
 	if len(args) > 0 {
 		opts.ProgramPath = args[0]
+	}
+
+	return opts, nil
+}
+
+// ParseDisplayOptions parses command-line options for the display command
+func ParseDisplayOptions() (*DisplayOptions, error) {
+	opts := &DisplayOptions{}
+	displayFlags := flag.NewFlagSet("display", flag.ExitOnError)
+
+	SetupCommonFlags(displayFlags, &opts.CommonOptions)
+
+	if err := displayFlags.Parse(os.Args[2:]); err != nil {
+		return nil, err
+	}
+
+	// Get the message text from remaining arguments
+	args := displayFlags.Args()
+	if len(args) > 0 {
+		opts.Message = args[0]
+	}
+
+	return opts, nil
+}
+
+// ParseTemperaturesOptions parses command-line options for the temperatures command
+func ParseTemperaturesOptions() (*TemperaturesOptions, error) {
+	opts := &TemperaturesOptions{}
+	temperaturesFlags := flag.NewFlagSet("temperatures", flag.ExitOnError)
+
+	SetupCommonFlags(temperaturesFlags, &opts.CommonOptions)
+
+	if err := temperaturesFlags.Parse(os.Args[2:]); err != nil {
+		return nil, err
 	}
 
 	return opts, nil

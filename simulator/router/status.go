@@ -1,35 +1,27 @@
 package router
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
-func (r *Router) setStatus(c *gin.Context) {
-	var payload types.StatusRequest
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, types.APIErrorResponse{
-			Err: "Invalid request format: " + err.Error(),
-		})
-		return
+func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
+	log.Trace("Processing status check request from %s", req.RemoteAddr)
+
+	details := make(map[string]interface{})
+	details["arduino_connected"] = true
+
+	response := types.ServiceStatusResponse{
+		Status:  types.ServiceStatusHealthy,
+		Service: "sensorunit",
+		Details: details,
 	}
 
-	log.Printf("Simulator received status update: %s", payload.Message)
+	log.Trace("Returning sensor status: %s", response.Status)
 
-	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
-		Data: types.StatusResponse{
-			Status: types.SensorStatusOK,
-		},
-	})
-}
-
-func (r *Router) getStatus(c *gin.Context) {
-	c.JSON(http.StatusOK, types.APIResponse[types.StatusResponse]{
-		Data: types.StatusResponse{
-			Status: types.SensorStatusConnected,
-		},
+	writeJSON(w, http.StatusOK, types.APIResponse[types.ServiceStatusResponse]{
+		Data: response,
 	})
 }

@@ -1,4 +1,4 @@
-import { CssBaseline, Paper, ThemeProvider, Typography } from "@mui/material";
+import { CssBaseline, Paper, ThemeProvider } from "@mui/material";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,22 +11,23 @@ import { Navigation } from "./components/Navigation";
 import { theme } from "./material-ui/theme";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
-import { Phases } from "./components/phases/Phases";
-import { Phase } from "./components/phases/Phase";
 import { Programs } from "./components/programs/Programs";
 import { Program } from "./components/programs/Program";
+import { Running } from "./components/Running";
+import { History } from "./components/History";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const getRouter = (routes: Route[]) =>
   createBrowserRouter([
     {
       path: "/",
       element: <Navigation routes={routes} />,
+      errorElement: <ErrorBoundary />,
       children: [
         ...routes,
-        { path: "phases/:name", element: <Phase /> },
-        { path: "programs/:name", element: <Program /> },
-        { path: "/", element: <Navigate to="/current" /> },
-        { path: "*", element: <Navigate to="/current" /> },
+        { path: "programs/:name", element: <Program />, errorElement: <ErrorBoundary /> },
+        { path: "/", element: <Navigate to="/running" /> },
+        { path: "*", element: <Navigate to="/running" /> },
       ],
     },
   ]);
@@ -37,19 +38,19 @@ export const App: React.FC = () => {
   const routes: Route[] = useMemo(
     () => [
       {
-        name: t("tabs.current"),
-        path: "programs/current",
-        element: <Program />,
+        name: t("tabs.running"),
+        path: "running",
+        element: <Running />,
+      },
+      {
+        name: t("tabs.history"),
+        path: "history",
+        element: <History />,
       },
       {
         name: t("tabs.programs"),
         path: "programs",
         element: <Programs />,
-      },
-      {
-        name: t("tabs.phases"),
-        path: "phases",
-        element: <Phases />,
       },
     ],
     [t]

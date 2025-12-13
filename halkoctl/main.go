@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 const (
@@ -18,6 +19,15 @@ var globalOpts *types.GlobalOptions
 func main() {
 	var commandIndex int
 	globalOpts, commandIndex = ParseGlobalOptions()
+
+	// Set log level based on verbose flag
+	// For CLI tool, default to ERROR level (suppress INFO messages)
+	// Enable INFO level only when verbose mode is on
+	if globalOpts.Verbose {
+		log.SetLevel(log.INFO)
+	} else {
+		log.SetLevel(log.ERROR)
+	}
 
 	if commandIndex == -1 {
 		showHelp()
@@ -40,8 +50,26 @@ func main() {
 			case "status":
 				showStatusHelp()
 				os.Exit(exitSuccess)
+			case "running":
+				showRunningHelp()
+				os.Exit(exitSuccess)
+			case "history":
+				showHistoryHelp()
+				os.Exit(exitSuccess)
 			case "validate":
 				showValidateHelp()
+				os.Exit(exitSuccess)
+			case "display":
+				showDisplayHelp()
+				os.Exit(exitSuccess)
+			case "temperatures":
+				showTemperaturesHelp()
+				os.Exit(exitSuccess)
+			case "programs":
+				showProgramsHelp()
+				os.Exit(exitSuccess)
+			case "nginx":
+				showNginxHelp()
 				os.Exit(exitSuccess)
 			}
 		}
@@ -63,8 +91,20 @@ func main() {
 		handleSendCommand()
 	case "status":
 		handleStatusCommand()
+	case "running":
+		handleRunningCommand()
+	case "history":
+		handleHistoryCommand()
 	case "validate":
 		handleValidateCommand()
+	case "display":
+		handleDisplayCommand()
+	case "temperatures":
+		handleTemperaturesCommand()
+	case "programs":
+		handleProgramsCommand()
+	case "nginx":
+		handleNginxCommand()
 	case "help", "-help", helpFlag:
 		showHelp()
 		os.Exit(exitSuccess)

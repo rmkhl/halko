@@ -1,6 +1,6 @@
 package types
 
-// executor API
+// controlunit API
 const (
 	ProgramStateCanceled  ProgramState = "canceled"
 	ProgramStateCompleted ProgramState = "completed"
@@ -17,6 +17,13 @@ const (
 	SensorStatusOK           SensorStatus = "ok"
 )
 
+// ServiceStatus values for standardized health checks
+const (
+	ServiceStatusHealthy     ServiceStatus = "healthy"
+	ServiceStatusDegraded    ServiceStatus = "degraded"
+	ServiceStatusUnavailable ServiceStatus = "unavailable"
+)
+
 const (
 	// signals invalid temperature reading
 	InvalidTemperatureReading = -273.15 // Absolute zero in Celsius, used to indicate an invalid reading
@@ -27,18 +34,31 @@ type StatusRequest struct {
 	Message string `json:"message"`
 }
 
+// DisplayRequest defines the structure for a display update request body
+type DisplayRequest struct {
+	Message string `json:"message"`
+}
+
 type (
-	ProgramState string
-	SensorStatus string
+	ProgramState  string
+	SensorStatus  string
+	ServiceStatus string
 
 	// APIErrorResponse is a generic error response
 	APIErrorResponse struct {
 		Err string `json:"error"`
 	}
 
-	// StatusResponse defines the structure for a status API response
+	// StatusResponse defines the structure for a status API response (legacy sensorunit)
 	StatusResponse struct {
 		Status SensorStatus `json:"status"`
+	}
+
+	// ServiceStatusResponse defines the standard status response for all services
+	ServiceStatusResponse struct {
+		Status  ServiceStatus          `json:"status"`
+		Service string                 `json:"service"`
+		Details map[string]interface{} `json:"details,omitempty"`
 	}
 
 	APIResponse[T any] struct {
@@ -59,6 +79,11 @@ type (
 
 	ProgramListing struct {
 		Programs []RunHistory `json:"programs"`
+	}
+
+	StoredProgramInfo struct {
+		Name         string `json:"name"`
+		LastModified string `json:"last_modified"`
 	}
 
 	// TemperatureStatus represents the current temperature of the material and oven in Celsius.

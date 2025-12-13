@@ -273,7 +273,7 @@ The system applies default settings for components when not specified in the pro
   - Acclimate steps: Use configured PID defaults
   - Cooling steps: 0% power
 
-These defaults are defined in the main configuration file under `executor.defaults`.
+These defaults are defined in the main configuration file under `controlunit.defaults`.
 
 ## Program Execution Flow
 
@@ -288,7 +288,7 @@ These defaults are defined in the main configuration file under `executor.defaul
   - Progress to next step when conditions met
 5. **Complete**: Program ends when the final step (typically cooling) completes
 
-The executor maintains detailed logs of temperature readings, power outputs, and
+The controlunit maintains detailed logs of temperature readings, power outputs, and
 step transitions throughout the execution process. The program completes when the
 last step finishes executing, either by reaching its target temperature, runtime
 expiring, or both conditions being met (whichever comes first).

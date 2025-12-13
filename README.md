@@ -8,7 +8,7 @@ control, power management, and program execution capabilities.
 
 The system is built with a microservices architecture with these main components:
 
-- **Executor**: Runs drying programs and controls the kiln.
+- **ControlUnit**: Runs drying programs and controls the kiln.
 - **PowerUnit**: Interfaces with Shelly devices to control power.
 - **SensorUnit**: Reads temperature data from physical sensors and provides an API.
 - **Simulator**: Provides a simulated environment for testing.
@@ -27,11 +27,11 @@ The system is built with a microservices architecture with these main components
 The project uses a Makefile to simplify building and deployment:
 
 ```bash
-# Build all components
+# Build all Go backend components
 make all
 
 # Clean and rebuild all components from scratch
-make rebuild
+make build
 
 # Remove all built binaries
 make clean
@@ -50,23 +50,40 @@ make systemd-units
 
 # Reformat changed Go files
 make fmt-changed
+
+# WebApp development and deployment
+make webapp-install-node # Install Node.js 18 using nvm (if needed)
+make webapp-install      # Install webapp dependencies
+make webapp-dev          # Start development server
+make webapp-build        # Build for production
+make webapp-clean        # Clean webapp artifacts
+make webapp-docker-build # Build webapp Docker image
 ```
 
 ## Project Structure
 
 ### Components
 
-#### `/executor`
+#### `/controlunit`
 
-The Executor is the core service that executes drying programs. It manages the
+The ControlUnit is the core service that executes drying programs. It manages the
 state machine for program execution, interacts with the PowerUnit to control
 heating elements, and with the SensorUnit (or Simulator) to monitor
 temperatures. It also provides a REST API to manage and monitor program
-execution.
+execution, as well as storage management for drying programs and execution logs.
 
-The Executor includes a heartbeat service that periodically reports its IP
+The ControlUnit uses a file-based storage system with separate directories for active
+and completed program executions:
+- `{base_path}/running/` - Files for currently executing programs
+- `{base_path}/history/` - Completed program executions and their logs
+
+When a program starts, execution files are created in the `running/` directory. Upon
+completion, these files are automatically moved to the appropriate `history/` subdirectories.
+On startup, any orphaned files in `running/` from previous crashes are cleaned up.
+
+The ControlUnit includes a heartbeat service that periodically reports its IP
 address to a configured status endpoint. This allows monitoring systems to
-track the location and availability of the executor service in distributed
+track the location and availability of the controlunit service in distributed
 deployments.
 
 #### `/powerunit`
@@ -99,7 +116,9 @@ SensorUnit and parts of the PowerUnit (Shelly devices).
 
 A React-based frontend application that serves as the user interface for the
 Halko system. It allows users to create and modify drying programs, monitor
-active drying sessions, and control the overall system.
+active drying sessions, and control the overall system. Built with React 18,
+TypeScript, Material-UI, and Redux Toolkit. See [webapp/README.md](webapp/README.md)
+for detailed development and deployment instructions.
 
 ### Supporting Directories
 
@@ -145,13 +164,9 @@ example configuration:
 
 ```json
 {
-  "executor": {
+  "controlunit": {
     "base_path": "/var/opt/halko",
-    "port": 8090,
     "tick_length": 6000,
-    "sensor_unit_url": "http://localhost:8088/sensors",
-    "power_unit_url": "http://localhost:8092/powers",
-    "status_message_url": "http://localhost:8088/status",
     "network_interface": "eth0",
     "defaults": {
       "pid_settings": {
@@ -176,23 +191,40 @@ example configuration:
     "baud_rate": 9600
   },
   "api_endpoints": {
-    "programs": "/programs",
-    "running": "/running",
-    "temperatures": "/temperatures",
-    "status": "/status",
-    "root": "/"
+    "controlunit": {
+      "url": "http://localhost:8090",
+      "status": "/status",
+      "programs": "/programs",
+      "running": "/running"
+    },
+    "sensorunit": {
+      "url": "http://localhost:8093",
+      "status": "/status",
+      "temperatures": "/temperatures",
+      "display": "/display"
+    },
+    "powerunit": {
+      "url": "http://localhost:8092",
+      "status": "/status",
+      "power": "/power"
+    },
+    "storage": {
+      "url": "http://localhost:8090",
+      "status": "/storage/status",
+      "programs": "/storage/programs",
+      "execution_log": "/storage/execution_log"
+    }
   }
 }
 ```
 
-### Executor Configuration Options
+### ControlUnit Configuration Options
 
-- **`base_path`**: Directory for storing program data and execution logs
-- **`port`**: HTTP server port for the executor API
+- **`base_path`**: Base directory for program storage. Contains:
+  - `programs/` - Stored program templates
+  - `running/` - Active program executions (auto-created)
+  - `history/` - Completed executions with `logs/` and `status/` subdirectories (auto-created)
 - **`tick_length`**: Execution tick duration in milliseconds
-- **`sensor_unit_url`**: Base URL for sensor unit API calls
-- **`power_unit_url`**: Base URL for power unit API calls
-- **`status_message_url`**: URL endpoint for heartbeat status messages
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
@@ -202,13 +234,13 @@ example configuration:
 
 ### Heartbeat Service
 
-The executor includes an automatic heartbeat service that:
+The controlunit includes an automatic heartbeat service that:
 
-- Reports the executor's IP address every 30 seconds
+- Reports the controlunit's IP address every 30 seconds
 - Uses the configured `network_interface` to determine the IP address
-- Sends status messages to the `status_message_url` endpoint
-- Helps monitor executor availability in distributed deployments
-- Starts automatically when the executor service starts
+- Sends status messages to the sensorunit display endpoint (configured in `api_endpoints.sensorunit`)
+- Helps monitor controlunit availability in distributed deployments
+- Starts automatically when the controlunit service starts
 
 The heartbeat sends a JSON payload in the following format:
 
@@ -229,14 +261,46 @@ Each component can be controlled independently:
 
 ```bash
 # Start a specific component
-sudo systemctl start halko@executor
+sudo systemctl start halko@controlunit
 
 # Stop a component
-sudo systemctl stop halko@executor
+sudo systemctl stop halko@controlunit
 
 # Check status
 sudo systemctl status halko@powerunit
 ```
+
+### Docker Deployment
+
+The system can also be deployed using Docker Compose. The containers are
+configured to run as the host user to ensure proper file ownership.
+
+#### File Ownership Configuration
+
+By default, containers run as UID:GID 1000:1000. To use your current user's
+UID/GID for proper file ownership on the host:
+
+```bash
+# Set environment variables before starting containers
+export UID=$(id -u)
+export GID=$(id -g)
+```
+
+#### Starting the Services
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+Files created by the containers in the `fsdb/` directory will be owned by the
+specified UID:GID on the host system.
 
 ## Development
 

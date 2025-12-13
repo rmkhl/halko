@@ -1,29 +1,37 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchQuery, saveMutation } from "./queryBuilders";
+import { API_ENDPOINTS } from "../../config/api";
 
-const phasesTag = "phases" as const;
 const programsTag = "programs" as const;
-const phasesEndpoint = "phases";
-const programsEndpoint = "programs";
+const programsEndpoint = "/programs";
 
 export const configuratorApi = createApi({
   reducerPath: "configuratorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8091/storage",
+    baseUrl: API_ENDPOINTS.storage,
   }),
-  tagTypes: [phasesTag, programsTag],
+  tagTypes: [programsTag],
   endpoints: (builder) => ({
-    getPhases: fetchQuery(builder, phasesEndpoint, phasesTag),
-    savePhase: saveMutation(builder, phasesEndpoint, phasesTag),
     getPrograms: fetchQuery(builder, programsEndpoint, programsTag),
+    getProgram: builder.query({
+      query: (name: string) => `${programsEndpoint}/${encodeURIComponent(name)}`,
+      providesTags: [programsTag],
+    }),
     saveProgram: saveMutation(builder, programsEndpoint, programsTag),
+    deleteProgram: builder.mutation<void, string>({
+      query: (name: string) => ({
+        url: `${programsEndpoint}/${encodeURIComponent(name)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [programsTag],
+    }),
   }),
 });
 
 export const {
-  useGetPhasesQuery,
-  useSavePhaseMutation,
   useGetProgramsQuery,
+  useGetProgramQuery,
   useSaveProgramMutation,
+  useDeleteProgramMutation,
 } = configuratorApi;

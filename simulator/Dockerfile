@@ -1,9 +1,19 @@
-FROM golang:1.22
+FROM debian:bookworm-slim
 
-WORKDIR /simulator
+# Create halko user and group with configurable UID/GID
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} halko && \
+    useradd -u ${UID} -g halko -m -s /bin/bash halko
 
-RUN go install github.com/air-verse/air@v1.52.3
-RUN air init
+WORKDIR /app
 
-# Start the back end and listen to changes in files.
-ENTRYPOINT air --build.cmd "go build" --build.bin "./simulator"
+# Copy the precompiled binary
+COPY bin/simulator /app/simulator
+
+# Make the binary executable
+RUN chmod +x /app/simulator
+
+# Run the simulator with config file option
+ENTRYPOINT ["/app/simulator"]
+CMD ["-c", "/etc/halko/halko.cfg"]

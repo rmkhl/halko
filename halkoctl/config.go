@@ -6,17 +6,20 @@ import (
 
 var globalConfig *types.HalkoConfig
 
-// getExecutorAPIURL returns the base API URL for executor
-func getExecutorAPIURL(config *types.HalkoConfig) string {
-	if config == nil {
+// getControlUnitAPIURL returns the base API URL for controlunit
+func getControlUnitAPIURL(config *types.HalkoConfig) string {
+	if config == nil || config.APIEndpoints == nil {
 		return "http://localhost:8080"
 	}
 
-	url, err := config.GetExecutorUrl()
-	if err != nil {
-		// Fallback to default if there's an error
-		return "http://localhost:8080"
+	return config.APIEndpoints.ControlUnit.GetURL()
+}
+
+// getStorageAPIURL returns the base API URL for storage
+func getStorageAPIURL(config *types.HalkoConfig) string {
+	if config == nil || config.APIEndpoints == nil {
+		return "http://localhost:8091"
 	}
 
-	return url
+	return config.APIEndpoints.ControlUnit.GetURL()
 }

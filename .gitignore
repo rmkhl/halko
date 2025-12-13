@@ -34,3 +34,11 @@ tmp
 .golangci.bck.yaml
 
 .vscode
+
+# Local Node.js installation
+.nodejs
+
+.github
+
+# Local test programs
+*-test.json

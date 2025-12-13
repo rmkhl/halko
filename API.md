@@ -3,6 +3,47 @@
 This document provides detailed information about the REST APIs exposed by each
 component of the Halko wood drying kiln control system.
 
+## Common Response Patterns
+
+All Halko services use a consistent JSON response structure:
+
+```json
+{
+  "data": {
+    // Service-specific data
+  }
+}
+```
+
+### Standardized Status Endpoint
+
+All services implement a `/status` endpoint that returns health information using this format:
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "controlunit",
+    "details": {
+      // Service-specific status details
+    }
+  }
+}
+```
+
+**Status Values:**
+
+- `healthy`: Service is operating normally
+- `degraded`: Service is operational but experiencing issues
+- `unavailable`: Service is not operational
+
+**Service-Specific Details:**
+
+- **ControlUnit**: `program_running` (bool), `current_step` (int), `started_at` (string)
+- **PowerUnit**: `controller_initialized` (bool)
+- **Storage**: `accessible` (bool), `error` (string if not accessible)
+- **SensorUnit**: `arduino_connected` (bool)
+
 ## 1. SensorUnit API
 
 Base Path: `/sensors`
@@ -38,26 +79,30 @@ The response includes:
 
 #### GET `/status`
 
-Checks the connection status of the sensor unit.
+Checks the connection status of the sensor unit. Follows the standard status endpoint format (see Common Response Patterns).
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "status": "connected"
+    "status": "healthy",
+    "service": "sensorunit",
+    "details": {
+      "arduino_connected": true
+    }
   }
 }
 ```
 
-Possible status values:
+**Details:**
 
-- `connected`: The sensor unit is connected and responding
+- `arduino_connected`: Boolean indicating if the Arduino device is connected via USB serial
 - `disconnected`: The sensor unit is not connected or not responding
 
-#### POST `/status`
+#### POST `/display`
 
-Updates the status text displayed on the sensor unit's LCD.
+Updates the text displayed on the sensor unit's LCD.
 
 **Request Format:**
 
@@ -80,6 +125,32 @@ Updates the status text displayed on the sensor unit's LCD.
 ## 2. PowerUnit API
 
 Base Path: `/powers`
+
+### Status Endpoints
+
+#### GET `/status`
+
+Gets the health status of the PowerUnit service. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "powerunit",
+    "details": {
+      "controller_initialized": true
+    }
+  }
+}
+```
+
+**Details:**
+
+- `controller_initialized`: Boolean indicating if the power controller (Shelly device interface) is properly initialized
+
+### Power Control Endpoints
 
 ### GET `/`
 
@@ -149,18 +220,44 @@ Operates a specific power channel.
 }
 ```
 
-## 3. Executor API
+## 3. ControlUnit API
 
-Base Path: `/engine`
+Base Path: `/engine` and `/storage`
 Default Port: `8090`
 
-**Note:** Program storage endpoints (`/storage/*`) have been moved to the independent Storage Service API (Section 4).
+### Status Endpoints
+
+#### GET `/status`
+
+Gets the health status of the ControlUnit service. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "controlunit",
+    "details": {
+      "program_running": true,
+      "current_step": 3,
+      "started_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Details:**
+
+- `program_running`: Boolean indicating if a program is currently executing
+- `current_step`: Current step number in the program (only present if program is running)
+- `started_at`: ISO 8601 timestamp of program start (only present if program is running)
 
 ### Program Execution History Endpoints
 
 #### GET `/programs`
 
-Lists all available programs (definitions loaded by executor).
+Lists all available programs (definitions loaded by controlunit).
 
 **Response Format:**
 
@@ -225,39 +322,141 @@ Deletes/unloads a specific program definition.
 
 ### Engine Control Endpoints
 
-#### GET `/running`
+#### GET `/engine/running/logws` (WebSocket)
 
-Gets the status of the currently running program.
+Streams live program execution log data as CSV over a WebSocket connection while a program is running.
+
+**Protocol:**
+
+- Connect using a WebSocket client to `/engine/running/logws`.
+- On connection, the server sends the CSV header line (as in a fresh run log file).
+- While a program is running, the server sends a new CSV line every second with the latest status.
+- If the client disconnects, the stream stops. The server does not expect any messages from the client.
+- If no program is running, the server sends a text message: `No program running` and closes the connection.
+
+**CSV Format:**
+
+```
+time,step,steptime,material,oven,heater,fan,humidifier
+0,Initial Heating,0,42.5,45.2,75,50,0
+...
+```
+
+- `time`: Seconds since program start
+- `step`: Name of the current step
+- `steptime`: Seconds since current step started
+- `material`: Current material (wood) temperature in °C
+- `oven`: Current oven temperature in °C
+- `heater`: Heater power level (0-100%)
+- `fan`: Fan power level (0-100%)
+- `humidifier`: Humidifier power level (0-100%)
+
+**Example Usage:**
+
+```
+GET ws://<host>:8090/engine/running/logws
+```
+
+**Notes:**
+- This endpoint is intended for real-time monitoring and visualization.
+- For completed or historical logs, use the `/engine/history/{name}/log` HTTP endpoint.
+
+#### GET `/engine/defaults`
+
+Gets the configured default values for program steps. These defaults are applied to program steps that don't specify heater, fan, or humidifier settings.
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "status": "running",
+    "pid_settings": {
+      "acclimate": {
+        "kp": 2.0,
+        "ki": 1.0,
+        "kd": 0.5
+      }
+    },
+    "max_delta_heating": 10.0,
+    "min_delta_heating": 5.0
+  }
+}
+```
+
+**Response Fields:**
+
+- `pid_settings.acclimate`: Default PID control parameters used for acclimate steps when heater settings are not specified
+  - `kp`: Proportional gain coefficient
+  - `ki`: Integral gain coefficient
+  - `kd`: Derivative gain coefficient
+- `max_delta_heating`: Maximum temperature delta (oven - wood) in degrees for heating steps using delta control
+- `min_delta_heating`: Minimum temperature delta (oven - wood) in degrees for heating steps using delta control
+
+**Default Application Rules:**
+
+When a program step doesn't specify heater control settings, these defaults are applied based on step type:
+- **Heating steps**: Use delta control with `min_delta_heating` and `max_delta_heating`
+- **Acclimate steps**: Use PID control with `pid_settings.acclimate` parameters
+- **Cooling steps**: Use simple control with 0% power
+
+#### GET `/engine/running`
+
+Gets the status of the currently running program.
+
+**Response Format:**
+
+When a program is running:
+
+```json
+{
+  "data": {
     "program": {
-      "name": "Standard Drying",
-      "currentPhase": "Initial Heating",
-      "elapsedTime": 1200,
-      "currentTemperature": 42.5,
-      "targetTemperature": 45,
-      "remainingTime": 2400
+      "program_name": "Four-Stage Kiln Drying Program using delta acclimation",
+      "program_steps": [
+        {
+          "name": "Initial Heating",
+          "target_temperature": 50,
+          "runtime": 7200
+        }
+      ]
+    },
+    "started_at": 1734007854,
+    "current_step": "Initial Heating",
+    "current_step_started_at": 1734007890,
+    "temperatures": {
+      "material": 42.5,
+      "oven": 45.2
+    },
+    "power_status": {
+      "heater": 75,
+      "fan": 50,
+      "humidifier": 0
     }
   }
 }
 ```
 
-If no program is running:
+**Response Fields:**
+
+- `program`: The complete program definition being executed
+- `started_at`: Unix timestamp when program execution began
+- `current_step`: Name of the currently executing step
+- `current_step_started_at`: Unix timestamp when current step began
+- `temperatures.material`: Current material (wood) temperature in °C
+- `temperatures.oven`: Current oven temperature in °C
+- `power_status.heater`: Heater power level (0-100%)
+- `power_status.fan`: Fan power level (0-100%)
+- `power_status.humidifier`: Humidifier power level (0-100%)
+
+If no program is running, returns HTTP 204 No Content with error message:
 
 ```json
 {
-  "data": {
-    "status": "idle"
-  }
+  "error": "No program running"
 }
 ```
 
-#### POST `/running`
+#### POST `/engine/running`
 
 Starts a new program (by providing its definition or name).
 
@@ -294,7 +493,7 @@ OR
 }
 ```
 
-#### DELETE `/running`
+#### DELETE `/engine/running`
 
 Cancels the currently running program.
 
@@ -302,32 +501,90 @@ Cancels the currently running program.
 
 - Status 204 No Content on success
 
-## 4. Storage Service API
-
-Base Path: `/storage`
-Default Port: `8091`
-
-The storage service provides independent program storage management.
-
 ### Program Storage Endpoints
 
-#### GET `/programs`
+The ControlUnit also provides program storage management at `/storage/*` endpoints.
 
-Lists all stored programs.
+#### GET `/storage/status`
+
+Gets the health status of the storage subsystem. Follows the standard status endpoint format (see Common Response Patterns).
+
+**Storage Directory Structure:**
+
+The ControlUnit maintains a file-based storage system with the following structure:
+- `{base_path}/programs/` - Stored program templates
+- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log)
+- `{base_path}/history/` - Completed program executions (JSON)
+- `{base_path}/history/logs/` - Completed execution logs (CSV)
+- `{base_path}/history/status/` - Completed program status files (TXT)
+
+When a program starts executing, files are created in `running/`. Upon completion (whether successful, failed, or canceled), these files are automatically moved to the appropriate `history/` subdirectories. On startup, the ControlUnit performs cleanup of any orphaned files in `running/` from previous crashes.
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "storage",
+    "details": {
+      "accessible": true
+    }
+  }
+}
+```
+
+If storage is not accessible:
+
+```json
+{
+  "data": {
+    "status": "degraded",
+    "service": "storage",
+    "details": {
+      "accessible": false,
+      "error": "storage directory not accessible: /path/to/storage"
+    }
+  }
+}
+```
+
+**Details:**
+
+- `accessible`: Boolean indicating if the storage directory is accessible
+- `error`: Error message if storage is not accessible (only present when accessible is false)
+
+#### GET `/storage/programs`
+
+Lists all stored programs with their last modification times.
 
 **Response Format:**
 
 ```json
 {
   "data": [
-    "Standard Drying",
-    "Quick Drying",
-    "Pine Program"
+    {
+      "name": "Standard Drying",
+      "last_modified": "2023-12-17T14:30:00Z"
+    },
+    {
+      "name": "Quick Drying",
+      "last_modified": "2023-12-16T10:15:00Z"
+    },
+    {
+      "name": "Pine Program",
+      "last_modified": "2023-12-15T08:00:00Z"
+    }
   ]
 }
 ```
 
-#### GET `/programs/{name}`
+**Fields:**
+
+- `name`: The name of the stored program
+- `last_modified`: ISO 8601 formatted timestamp of the last modification time
+
+#### GET `/storage/programs/{name}`
 
 Gets a specific stored program by name.
 
@@ -354,7 +611,7 @@ Gets a specific stored program by name.
 }
 ```
 
-#### POST `/programs`
+#### POST `/storage/programs`
 
 Creates a new stored program.
 
@@ -373,7 +630,7 @@ Creates a new stored program.
 - Status 201 Created on success
 - Status 409 Conflict if program already exists
 
-#### POST `/programs/{name}`
+#### POST `/storage/programs/{name}`
 
 Updates an existing stored program.
 
@@ -396,7 +653,7 @@ Updates an existing stored program.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-#### DELETE `/programs/{name}`
+#### DELETE `/storage/programs/{name}`
 
 Deletes a stored program.
 
@@ -409,7 +666,7 @@ Deletes a stored program.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-## 5. Simulator API
+## 4. Simulator API
 
 The simulator mimics endpoints from the SensorUnit and Shelly devices.
 
@@ -448,9 +705,9 @@ Gets the simulated connection status.
 }
 ```
 
-#### Simulated POST `/status`
+#### Simulated POST `/display`
 
-Logs a status message (simulates updating an LCD).
+Logs a display message (simulates updating an LCD).
 
 **Request Format:**
 

@@ -31,11 +31,11 @@ func handleSendCommand() {
 		os.Exit(exitError)
 	}
 
-	url := getExecutorAPIURL(globalConfig)
+	url := getControlUnitAPIURL(globalConfig)
 
 	if globalOpts.Verbose {
 		fmt.Printf("Sending program: %s\n", opts.ProgramPath)
-		fmt.Printf("Executor endpoint: %s\n", url)
+		fmt.Printf("ControlUnit endpoint: %s\n", url)
 		fmt.Println()
 	}
 
@@ -50,9 +50,9 @@ func handleSendCommand() {
 }
 
 func showSendHelp() {
-	fmt.Println("halkoctl send - Send program to executor")
+	fmt.Println("halkoctl send - Send program to controlunit")
 	fmt.Println()
-	fmt.Println("Sends a program.json file to the Halko executor to start execution.")
+	fmt.Println("Sends a program.json file to the Halko controlunit to start execution.")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Printf("  %s [global-options] send <program-file> [options]\n", os.Args[0])
@@ -75,11 +75,11 @@ func showSendHelp() {
 	fmt.Printf("  %s --config /path/to/halko.cfg send my-program.json\n", os.Args[0])
 	fmt.Printf("  %s --verbose send my-program.json\n", os.Args[0])
 	fmt.Println()
-	fmt.Println("The program will be sent to the executor's POST /engine/running endpoint")
-	fmt.Println("to start immediate execution. The executor will validate the program.")
+	fmt.Println("The program will be sent to the controlunit's POST /engine/running endpoint")
+	fmt.Println("to start immediate execution. The controlunit will validate the program.")
 }
 
-func sendProgram(programPath, executorURL string, verbose bool) error {
+func sendProgram(programPath, controlunitURL string, verbose bool) error {
 	if _, err := os.Stat(programPath); os.IsNotExist(err) {
 		return fmt.Errorf("program file does not exist: %s", programPath)
 	}
@@ -112,11 +112,8 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 			program.ProgramName, len(program.ProgramSteps))
 	}
 
-	requestBody := map[string]interface{}{
-		"program": program,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
+	// Send the program directly without wrapping (consistent with storage endpoints)
+	jsonData, err := json.Marshal(program)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
@@ -129,7 +126,13 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 		Timeout: 10 * time.Second,
 	}
 
-	url := executorURL + "/engine/running"
+	// Construct the full URL using the running endpoint
+	var url string
+	if globalConfig != nil && globalConfig.APIEndpoints != nil {
+		url = globalConfig.APIEndpoints.ControlUnit.GetEngineURL() + "/running"
+	} else {
+		url = controlunitURL + "/engine/running"
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -165,7 +168,7 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 	}
 
 	if verbose {
-		fmt.Println("✓ Program sent and accepted by executor")
+		fmt.Println("✓ Program sent and accepted by controlunit")
 		displaySendResponse(respBody)
 	}
 
@@ -173,30 +176,11 @@ func sendProgram(programPath, executorURL string, verbose bool) error {
 }
 
 func displaySendResponse(respBody []byte) {
-	var response map[string]interface{}
+	var response types.APIResponse[types.Program]
 	if err := json.Unmarshal(respBody, &response); err != nil {
 		return
 	}
 
-	data, ok := response["data"]
-	if !ok {
-		return
-	}
-
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	if status, ok := dataMap["status"]; ok {
-		fmt.Printf("Executor status: %v\n", status)
-	}
-
-	if program, ok := dataMap["program"]; ok {
-		if programMap, ok := program.(map[string]interface{}); ok {
-			if name, ok := programMap["name"]; ok {
-				fmt.Printf("Started program: %v\n", name)
-			}
-		}
-	}
+	fmt.Printf("Started program: %s\n", response.Data.ProgramName)
+	fmt.Printf("Number of steps: %d\n", len(response.Data.ProgramSteps))
 }

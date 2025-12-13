@@ -1,10 +1,10 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { fetchSingleQuery } from "./queryBuilders";
+import { API_ENDPOINTS } from "../../config/api";
 
 export const sensorApi = createApi({
   reducerPath: "sensorApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: "http://localhost:8088/sensors",
+    baseUrl: API_ENDPOINTS.sensors,
   }),
   endpoints: (builder) => ({
     getTemperatures: builder.query({

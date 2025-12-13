@@ -47,7 +47,7 @@ func TestProgramValidation(t *testing.T) {
 			}
 
 			// Apply defaults before validation
-			program.ApplyDefaults(config.ExecutorConfig.Defaults)
+			program.ApplyDefaults(config.ControlUnitConfig.Defaults)
 
 			err = program.Validate()
 			if err != nil {
@@ -91,7 +91,7 @@ func TestProgramValidationWithCopy(t *testing.T) {
 	}
 
 	// Apply defaults to the copy and validate
-	programCopy.ApplyDefaults(config.ExecutorConfig.Defaults)
+	programCopy.ApplyDefaults(config.ControlUnitConfig.Defaults)
 	err = programCopy.Validate()
 	if err != nil {
 		t.Errorf("Program validation failed on copy: %v", err)
