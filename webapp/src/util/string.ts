@@ -1,7 +1,7 @@
 const degreesCelsius = "°C";
 
 export const celsius = (value?: number) => {
-  return `${value}${degreesCelsius}`;
+  return value !== undefined ? `${value.toFixed(1)}${degreesCelsius}` : `${degreesCelsius}`;
 };
 
 export const celsiusRange = (a: number, b: number) => {

@@ -3,6 +3,7 @@ import { FormMode } from "../types";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { UnknownAction } from "@reduxjs/toolkit";
+import { ProgramWithOptionalId } from "../types/api";
 
 interface Named {
   name: string;
@@ -111,9 +112,10 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     const isRename = name !== "new" && name !== editData.name;
     const isNew = name === "new";
     if (isNew || isRename) {
-      // POST to /programs (no id)
-      const { id, ...rest } = { ...normalized } as any;
-      saveData({ ...rest, isNew: true });
+      // POST to /programs (no id) - destructure to remove id field
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _id, ...rest } = { ...normalized } as ProgramWithOptionalId;
+      saveData({ ...rest, isNew: true } as T);
     } else {
       // POST to /programs/{name}
       saveData({ id: name, ...normalized, isNew: false });

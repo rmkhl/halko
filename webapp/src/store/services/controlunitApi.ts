@@ -1,10 +1,8 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchSingleQuery, list } from "./queryBuilders";
-import { Program } from "../../types/api";
+import { Program, Step } from "../../types/api";
 import { API_ENDPOINTS } from "../../config/api";
-
-const currentEndpoint = "";
 const runningProgramTag = "runningProgram";
 const defaultsTag = "defaults";
 
@@ -54,7 +52,7 @@ export const controlunitApi = createApi({
           name: p.name,
           steps: p.steps.map((s) => {
             // Only include fields present in the step, do not use defaults
-            const step: any = {
+            const step: Partial<Step> = {
               name: s.name,
               type: s.type,
               temperature_target: s.temperature_target,
