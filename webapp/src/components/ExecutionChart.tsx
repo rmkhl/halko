@@ -100,7 +100,6 @@ const parseCSV = (csv: string): DataPoint[] => {
 
     // Skip lines that don't have enough values
     if (values.length < 8) {
-      console.warn("Skipping invalid CSV line:", line);
       continue;
     }
 
@@ -110,7 +109,6 @@ const parseCSV = (csv: string): DataPoint[] => {
 
     // Skip lines with invalid numeric values
     if (isNaN(time) || isNaN(material) || isNaN(oven)) {
-      console.warn("Skipping line with NaN values:", line, { time, material, oven });
       continue;
     }
 

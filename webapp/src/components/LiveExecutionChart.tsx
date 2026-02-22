@@ -52,7 +52,6 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
             if (!isNaN(timestamp)) {
               lastTimestampRef.current = timestamp;
             }
-            console.log("Fetched accumulated log data:", lines.length, "lines, last timestamp:", timestamp);
           }
           return true; // Program is running
         }
@@ -67,19 +66,16 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
     const connectWebSocket = () => {
       // Don't connect if component is unmounted
       if (!isMountedRef.current) {
-        console.log("Skipping WebSocket connection - component unmounted");
         return;
       }
 
       // Prevent duplicate connections - if one exists and is still connecting/open, don't create another
       if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
-        console.log("WebSocket already exists and is active, skipping duplicate connection");
         return;
       }
 
       // Close existing one if it's closing/closed
       if (wsRef.current) {
-        console.log("Closing existing WebSocket before creating new one");
         isManualCloseRef.current = true;
         wsRef.current.close();
         wsRef.current = null;
@@ -92,7 +88,6 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         reconnectTimeoutRef.current = null;
       }
 
-      console.log("Creating new WebSocket connection");
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -129,7 +124,6 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         const timestamp = parseInt(message.split(",")[0], 10);
         if (!isNaN(timestamp) && timestamp <= lastTimestampRef.current) {
           // Skip duplicate data
-          console.log("Skipping duplicate timestamp:", timestamp);
           return;
         }
 
@@ -137,8 +131,6 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         if (!isNaN(timestamp)) {
           lastTimestampRef.current = timestamp;
         }
-
-        console.log("Received new WebSocket data:", message);
 
         // Append new CSV line to existing data
         setCsvData((prevData) => {
@@ -160,12 +152,7 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         setIsConnected(false);
         // Only reconnect if it wasn't a manual close and component is still mounted
         if (!isManualCloseRef.current && isMountedRef.current && !noProgramRunning) {
-          console.log("WebSocket closed unexpectedly, scheduling reconnect in 5 seconds");
           reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-        } else if (isManualCloseRef.current) {
-          console.log("WebSocket closed manually, not reconnecting");
-        } else {
-          console.log("WebSocket closed, not reconnecting (component unmounted or no program running)");
         }
       };
     };
@@ -183,7 +170,6 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
 
     // Cleanup on unmount
     return () => {
-      console.log("Cleaning up WebSocket on unmount");
       isMountedRef.current = false;
 
       // Clear reconnect timeout
