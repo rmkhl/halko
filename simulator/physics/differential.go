@@ -10,11 +10,11 @@ import (
 // DifferentialSimulation implements temperature-differential physics where heat transfer
 // rates are proportional to temperature differences (Newton's Law of Cooling)
 type DifferentialSimulation struct {
-	heaterPower            float32 // Energy per tick when heater is on
-	heatLossCoefficient    float32 // Proportional heat loss to environment
+	heaterPower             float32 // Energy per tick when heater is on
+	heatLossCoefficient     float32 // Proportional heat loss to environment
 	heatTransferCoefficient float32 // Heat transfer rate between oven and material
-	ovenThermalMass        float32 // Heat capacity of oven (energy needed to raise 1°C)
-	materialThermalMass    float32 // Heat capacity of material
+	ovenThermalMass         float32 // Heat capacity of oven (energy needed to raise 1°C)
+	materialThermalMass     float32 // Heat capacity of material
 }
 
 func (d *DifferentialSimulation) Name() string {
