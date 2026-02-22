@@ -45,7 +45,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 			log.Warning("CSV header write error: %v", err)
 		}
 		csvWriter.Flush()
-		if err := conn.WriteMessage(websocket.TextMessage, buf.Bytes()); err != nil {
+		if err := conn.WriteMessage(websocket.TextMessage, bytes.TrimSpace(buf.Bytes())); err != nil {
 			log.Warning("WebSocket write error: %v", err)
 		}
 
@@ -74,7 +74,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 				log.Warning("CSV line write error: %v", err)
 			}
 			csvw.Flush()
-			if err := conn.WriteMessage(websocket.TextMessage, line.Bytes()); err != nil {
+			if err := conn.WriteMessage(websocket.TextMessage, bytes.TrimSpace(line.Bytes())); err != nil {
 				log.Info("WebSocket client disconnected from live run log: %v", err)
 				break // Stop on write failure (client disconnected)
 			}
