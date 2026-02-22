@@ -27,7 +27,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 			log.Warning("WebSocket upgrade failed: %v", err)
 			return
 		}
-		log.Info("WebSocket client connected for live run log")
+		log.Debug("WebSocket client connected for live run log")
 		defer conn.Close()
 
 		status := engine.CurrentStatus()
@@ -47,38 +47,71 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 		csvWriter.Flush()
 		if err := conn.WriteMessage(websocket.TextMessage, bytes.TrimSpace(buf.Bytes())); err != nil {
 			log.Warning("WebSocket write error: %v", err)
+			return
 		}
 
-		start := status.StartedAt
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		// Set up ping/pong to detect dead connections
+		if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+			log.Warning("Failed to set read deadline: %v", err)
+		}
+		conn.SetPongHandler(func(string) error {
+			return conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		})
+
+		// Start a goroutine to read (and ignore) messages, but detect closure
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for {
+				if _, _, err := conn.ReadMessage(); err != nil {
+					return
+				}
+			}
+		}()
+
 		for {
-			// Check if program is still running
-			status := engine.CurrentStatus()
-			if status == nil {
-				break
+			select {
+			case <-done:
+				// Connection closed
+				log.Debug("WebSocket client disconnected from live run log")
+				return
+			case <-ticker.C:
+				// Check if program is still running
+				status := engine.CurrentStatus()
+				if status == nil {
+					return
+				}
+				// Only skip true initialization (Waiting), stream Pre-Heat, Initializing, and all program steps
+				if status.CurrentStep == "" || status.CurrentStep == "Waiting" || status.CurrentStep == "Completed" {
+					continue
+				}
+				// Compose CSV line
+				var line bytes.Buffer
+				csvw := csv.NewWriter(&line)
+				elapsed := int(time.Now().Unix() - status.StartedAt)
+				steptime := int(time.Now().Unix() - status.CurrentStepStartedAt)
+				if err := csvw.Write([]string{
+					strconv.Itoa(elapsed),
+					status.CurrentStep,
+					strconv.Itoa(steptime),
+					fmt.Sprintf("%.1f", status.Temperatures.Material),
+					fmt.Sprintf("%.1f", status.Temperatures.Oven),
+					strconv.Itoa(int(status.PowerStatus.Heater)),
+					strconv.Itoa(int(status.PowerStatus.Fan)),
+					strconv.Itoa(int(status.PowerStatus.Humidifier)),
+				}); err != nil {
+					log.Warning("CSV line write error: %v", err)
+					continue
+				}
+				csvw.Flush()
+				if err := conn.WriteMessage(websocket.TextMessage, bytes.TrimSpace(line.Bytes())); err != nil {
+					log.Debug("WebSocket client disconnected from live run log: %v", err)
+					return
+				}
 			}
-			// Compose CSV line
-			var line bytes.Buffer
-			csvw := csv.NewWriter(&line)
-			elapsed := int(time.Now().Unix() - start)
-			steptime := int(time.Now().Unix() - status.CurrentStepStartedAt)
-			if err := csvw.Write([]string{
-				strconv.Itoa(elapsed),
-				status.CurrentStep,
-				strconv.Itoa(steptime),
-			fmt.Sprintf("%.1f", status.Temperatures.Material),
-			fmt.Sprintf("%.1f", status.Temperatures.Oven),
-				strconv.Itoa(int(status.PowerStatus.Heater)),
-				strconv.Itoa(int(status.PowerStatus.Fan)),
-				strconv.Itoa(int(status.PowerStatus.Humidifier)),
-			}); err != nil {
-				log.Warning("CSV line write error: %v", err)
-			}
-			csvw.Flush()
-			if err := conn.WriteMessage(websocket.TextMessage, bytes.TrimSpace(line.Bytes())); err != nil {
-				log.Info("WebSocket client disconnected from live run log: %v", err)
-				break // Stop on write failure (client disconnected)
-			}
-			time.Sleep(1 * time.Second)
 		}
 	}
 }

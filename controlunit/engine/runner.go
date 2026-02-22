@@ -96,7 +96,10 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	if err != nil {
 		return nil, err
 	}
-	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, 60)
+
+	// Capture start time once to ensure ExecutionLogWriter and FSM use the same timestamp
+	startTime := time.Now().Unix()
+	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, 60, startTime)
 	return &runner, nil
 }
 
@@ -105,7 +108,8 @@ func (runner *programRunner) Run() {
 	defer runner.wg.Done()
 
 	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
-	runner.fsmController.Start(runner.currentProgram)
+	// Use the same start time that was captured for ExecutionLogWriter
+	runner.fsmController.Start(runner.currentProgram, runner.logWriter.GetStartTime())
 	for runner.active && !runner.fsmController.Completed() {
 		defer ticker.Stop()
 		now := time.Now().Unix()
@@ -183,6 +187,6 @@ func (runner *programRunner) Start() {
 	go runner.psuSensorReader.Run(runner.wg)
 	go runner.temperatureSensorReader.Run(runner.wg)
 
-	runner.fsmController.Start(runner.currentProgram)
+	runner.fsmController.Start(runner.currentProgram, runner.logWriter.GetStartTime())
 	go runner.Run()
 }

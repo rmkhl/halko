@@ -121,6 +121,10 @@ func (storage *ExecutorFileStorage) GetLogPath(name string) string {
 	return filepath.Join(storage.logPath, name+".csv")
 }
 
+func (storage *ExecutorFileStorage) GetRunningLogPath(name string) string {
+	return filepath.Join(storage.runningPath, name+".csv")
+}
+
 func (storage *ExecutorFileStorage) ListExecutedPrograms() ([]string, error) {
 	searchPath := filepath.Join(storage.executedProgramsPath, "*.json")
 	return storage.ListPrograms(searchPath)
