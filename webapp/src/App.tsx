@@ -43,14 +43,14 @@ export const App: React.FC = () => {
         element: <Running />,
       },
       {
-        name: t("tabs.history"),
-        path: "history",
-        element: <History />,
-      },
-      {
         name: t("tabs.programs"),
         path: "programs",
         element: <Programs />,
+      },
+      {
+        name: t("tabs.history"),
+        path: "history",
+        element: <History />,
       },
     ],
     [t]

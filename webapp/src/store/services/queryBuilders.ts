@@ -38,6 +38,11 @@ export const fetchSingleQuery = <T>(
     query: () => ({
       url: endpoint,
       responseHandler: (response) => {
+        // Handle 204 No Content - return null
+        if (response.status === 204) {
+          return null;
+        }
+
         if (!response.ok) {
           return response.text();
         }

@@ -12,7 +12,7 @@ import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "..
 export const RunningProgram: React.FC = () => {
   const { t } = useTranslation();
   const { data: runningProgramData } = useGetRunningProgramQuery(undefined, {
-    pollingInterval: 30000,
+    pollingInterval: 5000,
     skipPollingIfUnfocused: true,
   });
   const { data: sensorData } = useGetTemperaturesQuery(undefined, {

@@ -72,8 +72,7 @@ export const controlunitApi = createApi({
         url: "/engine/running",
         method: "DELETE",
       }),
-      invalidatesTags: (_, error) =>
-        error ? [] : [{ type: runningProgramTag, id: list }],
+      invalidatesTags: [runningProgramTag, "history"],
     }),
     getExecutionHistory: builder.query<RunHistory[], void>({
       query: () => "/engine/history",

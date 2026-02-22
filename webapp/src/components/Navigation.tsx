@@ -35,7 +35,7 @@ export const Navigation: React.FC<Props> = (props) => {
         <RouteTabs routes={routes} idx={idx} />
       </Stack>
 
-      <Stack flex={1} width="100%" sx={{ minHeight: 0, overflow: "hidden" }}>
+      <Stack flex={1} width="100%" sx={{ minHeight: 0, overflowY: "auto" }}>
         <Outlet />
       </Stack>
     </Stack>
