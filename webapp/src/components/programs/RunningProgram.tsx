@@ -55,6 +55,11 @@ export const RunningProgram: React.FC = () => {
               ? runningProgram.data.program.name
               : t("programs.noRunning")}
           </Typography>
+          {runningProgram && runningProgram.data?.started_at && (
+            <Typography variant="subtitle2" color="text.secondary">
+              Started: {new Date(runningProgram.data.started_at * 1000).toLocaleString()}
+            </Typography>
+          )}
           {runningProgram && runningProgram.data?.current_step ? (
             <>
               <Typography variant="subtitle2" color="text.secondary">
@@ -77,6 +82,11 @@ export const RunningProgram: React.FC = () => {
                 }
                 return null;
               })()}
+              {runningProgram.data.current_step_started_at && (
+                <Typography variant="subtitle2" color="text.secondary">
+                  Step started: {new Date(runningProgram.data.current_step_started_at * 1000).toLocaleString()}
+                </Typography>
+              )}
             </>
           ) : null}
         </Stack>

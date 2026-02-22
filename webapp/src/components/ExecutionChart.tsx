@@ -89,17 +89,37 @@ interface DataPoint {
 }
 
 const parseCSV = (csv: string): DataPoint[] => {
-  const lines = csv.trim().split("\n");
+  const lines = csv.trim().split("\n").filter(line => line.trim().length > 0);
   const data: DataPoint[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(",");
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const values = line.split(",");
+
+    // Skip lines that don't have enough values
+    if (values.length < 8) {
+      console.warn("Skipping invalid CSV line:", line);
+      continue;
+    }
+
+    const time = parseFloat(values[0]);
+    const material = parseFloat(values[3]);
+    const oven = parseFloat(values[4]);
+
+    // Skip lines with invalid numeric values
+    if (isNaN(time) || isNaN(material) || isNaN(oven)) {
+      console.warn("Skipping line with NaN values:", line, { time, material, oven });
+      continue;
+    }
+
     data.push({
-      time: parseFloat(values[0]),
+      time,
       step: values[1],
       steptime: parseFloat(values[2]),
-      material: parseFloat(values[3]),
-      oven: parseFloat(values[4]),
+      material,
+      oven,
       heater: parseFloat(values[5]),
       fan: parseFloat(values[6]),
       humidifier: parseFloat(values[7]),
@@ -211,6 +231,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({ csvData, title =
   const options: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     interaction: {
       mode: "index" as const,
       intersect: false,
@@ -242,31 +263,32 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({ csvData, title =
         ticks: {
           maxTicksLimit: 15,
         },
+        bounds: "data",
       },
       "y-temperature": {
         type: "linear" as const,
         display: true,
-        position: "left" as const,
+        position: "right" as const,
         title: {
           display: true,
           text: "Temperature (°C)",
         },
-        min: 0,
-        max: 50,
+        beginAtZero: false,
+        grace: "5%",
+        grid: {
+          drawOnChartArea: false,
+        },
       },
       "y-power": {
         type: "linear" as const,
         display: true,
-        position: "right" as const,
+        position: "left" as const,
         title: {
           display: true,
           text: "Power (%)",
         },
         min: 0,
         max: 100,
-        grid: {
-          drawOnChartArea: false,
-        },
       },
     },
   };
