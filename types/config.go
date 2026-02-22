@@ -191,44 +191,62 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 	return config, nil
 }
 
-func findDefaultConfigPath() string {
-	// Check environment variable first
-	if configPath := os.Getenv("HALKO_CONFIG"); configPath != "" {
-		if _, err := os.Stat(configPath); err == nil {
-			return configPath
+// FindConfigFile searches for a configuration file in standard locations
+// filename: name of config file to search for (e.g., "halko.cfg", "simulator.conf")
+// envVar: environment variable name to check (e.g., "HALKO_CONFIG", "SIMULATOR_CONFIG")
+// Returns empty string if not found
+func FindConfigFile(filename string, envVar string) string {
+	// 1. Check environment variable first
+	if envVar != "" {
+		if configPath := os.Getenv(envVar); configPath != "" {
+			if _, err := os.Stat(configPath); err == nil {
+				return configPath
+			}
 		}
 	}
 
-	// Define search paths in priority order
-	searchPaths := []string{
-		"halko.cfg", // Current directory
+	// 2. Current directory
+	if _, err := os.Stat(filename); err == nil {
+		return filename
 	}
 
+	// 3. Home directory variations
 	if homeDir, err := os.UserHomeDir(); err == nil {
-		searchPaths = append(searchPaths,
-			filepath.Join(homeDir, ".halko.cfg"),           // ~/.halko.cfg
-			filepath.Join(homeDir, ".config", "halko.cfg"), // ~/.config/halko.cfg
-		)
+		paths := []string{
+			filepath.Join(homeDir, "."+filename),
+			filepath.Join(homeDir, ".config", filename),
+		}
+		for _, path := range paths {
+			if _, err := os.Stat(path); err == nil {
+				return path
+			}
+		}
 	}
 
-	searchPaths = append(searchPaths,
-		"/etc/halko/halko.cfg",     // System config directory
-		"/etc/opt/halko/halko.cfg", // Optional system config directory
-	)
+	// 4. System directories
+	systemPaths := []string{
+		filepath.Join("/etc/halko", filename),
+		filepath.Join("/etc/opt/halko", filename),
+	}
+	for _, path := range systemPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
 
+	// 5. Executable directory
 	if exePath, err := os.Executable(); err == nil {
-		exeDir := filepath.Dir(exePath)
-		executablePath := filepath.Join(exeDir, "halko.cfg")
-		searchPaths = append(searchPaths, executablePath)
-	}
-
-	for _, path := range searchPaths {
+		path := filepath.Join(filepath.Dir(exePath), filename)
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
 
 	return ""
+}
+
+func findDefaultConfigPath() string {
+	return FindConfigFile("halko.cfg", "HALKO_CONFIG")
 }
 
 func readHalkoConfig(path string) (*HalkoConfig, error) {
