@@ -43,6 +43,8 @@ func NewSimulationEngine(engineName string, config map[string]interface{}) (Simu
 	switch engineName {
 	case "simple":
 		engine = &SimpleSimulation{}
+	case "differential":
+		engine = &DifferentialSimulation{}
 	default:
 		return nil, fmt.Errorf("unknown simulation engine: %s", engineName)
 	}
