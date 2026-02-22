@@ -12,11 +12,13 @@ import (
 )
 
 type SimulatorConfig struct {
-	TickDuration        string  `json:"tick_duration"`
-	StatusInterval      int     `json:"status_interval"`
-	InitialOvenTemp     float64 `json:"initial_oven_temp"`
-	InitialMaterialTemp float64 `json:"initial_material_temp"`
-	EnvironmentTemp     float64 `json:"environment_temp"`
+	TickDuration        string                 `json:"tick_duration"`
+	StatusInterval      int                    `json:"status_interval"`
+	InitialOvenTemp     float64                `json:"initial_oven_temp"`
+	InitialMaterialTemp float64                `json:"initial_material_temp"`
+	EnvironmentTemp     float64                `json:"environment_temp"`
+	SimulationEngine    string                 `json:"simulation_engine"`
+	EngineConfig        map[string]interface{} `json:"engine_config"`
 }
 
 func LoadSimulatorConfig(configPath string) (*SimulatorConfig, error) {
@@ -47,6 +49,16 @@ func LoadSimulatorConfig(configPath string) (*SimulatorConfig, error) {
 	}
 	if _, err := time.ParseDuration(config.TickDuration); err != nil {
 		return nil, fmt.Errorf("invalid tick_duration '%s': %w", config.TickDuration, err)
+	}
+
+	// Validate simulation engine is specified
+	if config.SimulationEngine == "" {
+		return nil, errors.New("simulation_engine is required in simulator config")
+	}
+
+	// Validate engine config is present
+	if config.EngineConfig == nil {
+		return nil, fmt.Errorf("engine_config is required for simulation engine '%s'", config.SimulationEngine)
 	}
 
 	log.Info("Simulator configuration loaded successfully from: %s", configPath)

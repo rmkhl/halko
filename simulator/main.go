@@ -12,6 +12,7 @@ import (
 
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/simulator/physics"
 	"github.com/rmkhl/halko/simulator/router"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
@@ -49,6 +50,13 @@ func main() {
 		log.Info("Status logging disabled")
 	}
 
+	// Create physics simulation engine
+	physicsEngine, err := physics.NewSimulationEngine(simConfig.SimulationEngine, simConfig.EngineConfig)
+	if err != nil {
+		log.Fatal("Failed to create simulation engine: %v", err)
+	}
+	log.Info("Using simulation engine: %s", physicsEngine.Name())
+
 	// Load main halko configuration
 	config, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
@@ -80,6 +88,16 @@ func main() {
 	heater.TurnOn(false) // Start the heater power controller in off state
 	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
 		simConfig.InitialOvenTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
+
+	// Initialize physics state
+	physicsState := &physics.SimulationState{
+		OvenTemp:        float32(simConfig.InitialOvenTemp),
+		MaterialTemp:    float32(simConfig.InitialMaterialTemp),
+		EnvironmentTemp: float32(simConfig.EnvironmentTemp),
+		HeaterIsOn:      false,
+		FanIsOn:         false,
+		HumidifierIsOn:  false,
+	}
 
 	// Build element lookup map
 	elementsByName := map[string]interface{}{
@@ -139,9 +157,23 @@ func main() {
 			case <-ticker.C:
 				tickCount++
 				log.Trace("Simulation tick #%d: updating elements", tickCount)
+
+				// Advance power state machines
 				fan.Tick()
 				humidifier.Tick()
 				heater.Tick()
+
+				// Update physics state from power states
+				_, physicsState.HeaterIsOn = heater.Info()
+				_, physicsState.FanIsOn = fan.Info()
+				_, physicsState.HumidifierIsOn = humidifier.Info()
+
+				// Run physics simulation
+				physicsEngine.Tick(physicsState)
+
+				// Apply physics results back to elements
+				heater.SetTemperature(physicsState.OvenTemp)
+				wood.SetTemperature(physicsState.MaterialTemp)
 
 				// Log status summary at configured interval
 				if simConfig.StatusInterval > 0 && tickCount%simConfig.StatusInterval == 0 {
