@@ -34,8 +34,8 @@ export const getApiEndpoints = (): ApiEndpoints => {
     // Production mode: use nginx proxy paths
     // nginx routes /api/v1/{service}/* to the backend service base URL
     return {
-      storage: `${API_PREFIX}/storage/storage`,
-      controlunit: `${API_PREFIX}/controlunit/engine/running`,
+      storage: `${API_PREFIX}/storage`,
+      controlunit: `${API_PREFIX}/controlunit`,
       sensors: `${API_PREFIX}/sensorunit`,
     };
   }
