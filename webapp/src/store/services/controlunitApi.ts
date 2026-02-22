@@ -1,6 +1,6 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { fetchSingleQuery, list } from "./queryBuilders";
+import { fetchSingleQuery } from "./queryBuilders";
 import { Program, Step } from "../../types/api";
 import { API_ENDPOINTS } from "../../config/api";
 const runningProgramTag = "runningProgram";
@@ -72,8 +72,7 @@ export const controlunitApi = createApi({
         url: "/engine/running",
         method: "DELETE",
       }),
-      invalidatesTags: (_, error) =>
-        error ? [] : [{ type: runningProgramTag, id: list }],
+      invalidatesTags: [runningProgramTag, "history"],
     }),
     getExecutionHistory: builder.query<RunHistory[], void>({
       query: () => "/engine/history",
