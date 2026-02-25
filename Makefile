@@ -154,6 +154,13 @@ install: clean all
 	@if [ ! -f /etc/opt/halko.cfg ]; then \
 		sudo install -m 644 templates/halko.cfg /etc/opt/halko.cfg; \
 		 echo "Installed default config to /etc/opt/halko.cfg"; \
+		 echo ""; \
+		 echo "⚠️  IMPORTANT: Edit /etc/opt/halko.cfg before starting services:"; \
+		 echo "   - Set network_interface to match your system (run 'ip addr show')"; \
+		 echo "   - Set serial_device to your Arduino path (e.g., /dev/ttyUSB0)"; \
+		 echo "   - Set shelly_address to your Shelly device IP"; \
+		 echo "   See templates/README.md for details"; \
+		 echo ""; \
 	else \
 		 echo "/etc/opt/halko.cfg already exists, not overwriting."; \
 	fi
@@ -175,6 +182,24 @@ systemd-units: install
 		fi; \
 	done
 	@echo "Systemd unit files installed and services enabled."
+
+.PHONY: install-webapp
+install-webapp: build-webapp
+	@echo "Installing webapp to /var/www/halko..."
+	@sudo install -d /var/www/halko
+	@sudo cp -r webapp/dist/* /var/www/halko/
+	@echo "Installing nginx configuration..."
+	@sudo install -m 644 webapp/nginx-host.conf /etc/nginx/sites-available/halko
+	@echo ""
+	@echo "✓ Webapp installed to /var/www/halko"
+	@echo "✓ Nginx config installed to /etc/nginx/sites-available/halko"
+	@echo ""
+	@echo "To enable and start:"
+	@echo "  sudo ln -s /etc/nginx/sites-available/halko /etc/nginx/sites-enabled/"
+	@echo "  sudo nginx -t"
+	@echo "  sudo systemctl reload nginx"
+	@echo ""
+	@echo "Access the webapp at http://localhost/ or http://your-server-ip/"
 
 .PHONY: fmt-changed
 fmt-changed:
