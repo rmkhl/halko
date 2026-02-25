@@ -7,6 +7,7 @@ services:
     volumes:
       - ./fsdb:/fsdb
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
+      - ./simulator.conf:/etc/halko/simulator.conf:ro
     ports:
       - "8088:8088"  # Shelly emulation interface
       - "8093:8093"  # SensorUnit emulation interface

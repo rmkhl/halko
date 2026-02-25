@@ -14,6 +14,6 @@ COPY bin/simulator /app/simulator
 # Make the binary executable
 RUN chmod +x /app/simulator
 
-# Run the simulator with config file option
+# Run the simulator with config file options
 ENTRYPOINT ["/app/simulator"]
-CMD ["-c", "/etc/halko/halko.cfg"]
+CMD ["-c", "/etc/halko/halko.cfg", "-s", "/etc/halko/simulator.conf"]
