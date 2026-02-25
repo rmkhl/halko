@@ -120,8 +120,31 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Proxy for controlunit service (includes storage endpoints)
+    # Proxy for controlunit service (engine endpoints)
     location /api/v1/controlunit/ {
+        proxy_pass http://%s:%s/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # CORS headers
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+        add_header Access-Control-Allow-Headers "Origin, Content-Type";
+
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+    }
+
+    # Proxy for storage service (stored programs - served by controlunit)
+    location /api/v1/storage/ {
         proxy_pass http://%s:%s/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -183,5 +206,5 @@ server {
         root /usr/share/nginx/html;
     }
 }
-`, listenPort, controlunitHost, controlunitPort, sensorHost, sensorPort, powerHost, powerPort)
+`, listenPort, controlunitHost, controlunitPort, controlunitHost, controlunitPort, sensorHost, sensorPort, powerHost, powerPort)
 }

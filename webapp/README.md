@@ -147,36 +147,46 @@ Access the webapp at http://localhost:8080
 The `make images` target automatically:
 - Builds all Go binaries
 - Builds the webapp production bundle
-- Generates `nginx.conf` using `halkoctl` and `halko-docker.cfg`
+- Generates `nginx-docker.conf` using `halkoctl` and `halko-docker.cfg`
 - Builds all Docker images including the webapp
 
 ### Nginx Configuration
 
-The nginx configuration is **automatically generated** during Docker builds using `halkoctl`. The configuration:
+The nginx configuration is **automatically generated** using `halkoctl`. The configuration:
 - Serves the React SPA
 - Handles client-side routing (React Router)
-- Proxies API requests to backend services (using Docker service names)
+- Proxies API requests to backend services
+- Supports WebSocket connections for live updates
 - Enables gzip compression
 - Sets cache headers for static assets
 
-**Manual configuration generation:**
+**Configuration generation:**
 
-For standard installation (services on localhost):
+For production installation (bare-metal, services on localhost):
 ```bash
-make webapp-nginx-config
+make build-webapp
 ```
-Generates `webapp/nginx-standard.conf` using `halko.cfg` which proxies to localhost ports.
+Generates `webapp/nginx-host.conf` using `halko.cfg` which proxies to localhost ports.
 
-For Docker deployment (services by name):
+For Docker deployment (services by container name):
 ```bash
-make webapp-nginx-docker-config
+make images
 ```
-Generates `webapp/nginx.conf` using `halko-docker.cfg` which proxies to Docker service names.
+Generates `webapp/nginx-docker.conf` using `halko-docker.cfg` which proxies to Docker service names.
 
-API proxy endpoints (Docker mode):
-- `/api/v1/controlunit/` → `http://controlunit:8090`
+**API proxy endpoints:**
+
+Docker mode:
+- `/api/v1/controlunit/` → `http://controlunit:8090` (engine endpoints + WebSocket)
+- `/api/v1/storage/` → `http://controlunit:8090` (stored programs)
 - `/api/v1/powerunit/` → `http://powerunit:8092`
 - `/api/v1/sensorunit/` → `http://simulator:8093`
+
+Production mode (localhost):
+- `/api/v1/controlunit/` → `http://localhost:8090` (engine endpoints + WebSocket)
+- `/api/v1/storage/` → `http://localhost:8090` (stored programs)
+- `/api/v1/powerunit/` → `http://localhost:8092`
+- `/api/v1/sensorunit/` → `http://localhost:8093`
 
 ## Project Structure
 

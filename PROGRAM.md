@@ -280,15 +280,47 @@ These defaults are defined in the main configuration file under `controlunit.def
 1. **Load program**: Parse JSON and validate structure
 2. **Apply defaults**: Fill in missing component settings
 3. **Validate program**: Check all rules and constraints
-4. **Execute steps sequentially**:
+4. **Start execution**: FSM initializes and waits for initial sensor readings
+5. **Pre-heat phase** (automatic):
+  - If material temperature > oven temperature:
+    - Heater set to 100% power
+    - Fan set to 50% power
+    - Continues until oven reaches material temperature
+  - If oven temperature ≥ material temperature:
+    - Pre-heat phase is skipped
+    - Proceeds directly to first program step
+  - **Purpose**: Prevents thermal shock by ensuring oven doesn't start colder than wood
+6. **Execute steps sequentially**:
   - Initialize power controllers for current step
   - Monitor temperatures continuously
   - Update power outputs based on control algorithms
   - Check step completion conditions
   - Progress to next step when conditions met
-5. **Complete**: Program ends when the final step (typically cooling) completes
+7. **Complete**: Program ends when the final step (typically cooling) completes
+
+### FSM State Machine
+
+The controlunit uses a finite state machine (FSM) with the following states:
+
+1. **start** - Initial state, sets timestamps and initializes
+2. **waiting** - Waits for temperature and PSU status updates before proceeding
+3. **preheat** - Automatic pre-heat if material warmer than oven (see above)
+4. **next_program_step** - Increments step counter, determines next state from step type
+5. **heat_up** - Execute heating step logic
+6. **acclimate** - Execute acclimation step logic
+7. **cool_down** - Execute cooling step logic
+8. **idle** - Program completed successfully
+9. **failed** - Error state
+
+The FSM operates on a tick-based system with the update frequency controlled by
+`controlunit.tick_length` in the configuration file (default 6 seconds).
+
+### Execution Logging
 
 The controlunit maintains detailed logs of temperature readings, power outputs, and
 step transitions throughout the execution process. The program completes when the
 last step finishes executing, either by reaching its target temperature, runtime
 expiring, or both conditions being met (whichever comes first).
+
+Execution logs are stored in CSV format at `{base_path}/running/` during execution
+and moved to `{base_path}/history/logs/` upon completion.
