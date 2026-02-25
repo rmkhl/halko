@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import { RunningProgram } from "./programs/RunningProgram";
-import { ExecutionChart } from "./ExecutionChart";
+import { LiveExecutionChart } from "./LiveExecutionChart";
 
 export const Running: React.FC = () => {
   return (
@@ -12,10 +12,11 @@ export const Running: React.FC = () => {
         alignItems: "center",
         width: "100%",
         padding: 4,
+        minHeight: "100%",
       }}
     >
       <RunningProgram />
-      <ExecutionChart title="Sample Execution Data" />
+      <LiveExecutionChart title="Live Program Execution" />
     </Box>
   );
 };

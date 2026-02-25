@@ -48,6 +48,13 @@ func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
 	return engine.runner.programStatus
 }
 
+func (engine *ControlEngine) CurrentProgramName() string {
+	if engine.runner == nil {
+		return ""
+	}
+	return engine.runner.programName
+}
+
 func (engine *ControlEngine) GetDefaults() *types.Defaults {
 	return engine.config.Defaults
 }
@@ -83,4 +90,8 @@ func (engine *ControlEngine) StopEngine() error {
 		return nil
 	}
 	return ErrNoProgramRunning
+}
+
+func (engine *ControlEngine) Wait() {
+	engine.wg.Wait()
 }

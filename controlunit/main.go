@@ -110,6 +110,10 @@ func main() {
 	if err := engine.StopEngine(); err != nil {
 		log.Printf("Error stopping engine: %s", err.Error())
 	}
+
+	// Wait for engine to fully stop
+	engine.Wait()
+
 	if err := heartbeatManager.Stop(); err != nil {
 		log.Printf("Error stopping heartbeat manager: %v", err)
 	}

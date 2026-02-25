@@ -12,6 +12,7 @@ import (
 
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/simulator/physics"
 	"github.com/rmkhl/halko/simulator/router"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
@@ -20,32 +21,43 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
-	// Define simulator-specific flags
-	tickDurationStr := flag.String("tick", "6s", "Simulation tick duration (e.g., 1s, 500ms, 100ms)")
-	statusInterval := flag.Int("status-interval", 10, "Log simulation status every N ticks (0 to disable)")
-	initialOvenTemp := flag.Float64("oven-temp", 20, "Initial oven temperature in °C")
-	initialMaterialTemp := flag.Float64("material-temp", 20, "Initial material temperature in °C")
-	environmentTemp := flag.Float64("env-temp", 20, "Environment temperature in °C (ambient baseline)")
+	// Simulator-specific configuration flag
+	simConfigPath := flag.String("sim-config", "", "Path to simulator configuration file (simulator.conf)")
+	flag.StringVar(simConfigPath, "s", "", "Path to simulator configuration file (shorthand)")
 
-	// Parse global options and load configuration like other services
+	// Parse global options and load both configurations
 	opts, err := types.ParseGlobalOptions()
 	if err != nil {
 		log.Fatal("Failed to parse global options: %v", err)
 	}
 	opts.ApplyLogLevel()
 
-	// Parse tick duration
-	tickDuration, err := time.ParseDuration(*tickDurationStr)
+	// Load simulator-specific configuration (REQUIRED)
+	simConfig, err := LoadSimulatorConfig(*simConfigPath)
 	if err != nil {
-		log.Fatal("Invalid tick duration '%s': %v", *tickDurationStr, err)
+		log.Fatal("Failed to load simulator configuration: %v", err)
+	}
+
+	// Parse and validate tick duration
+	tickDuration, err := time.ParseDuration(simConfig.TickDuration)
+	if err != nil {
+		log.Fatal("Invalid tick duration '%s': %v", simConfig.TickDuration, err)
 	}
 	log.Info("Simulation tick duration: %v", tickDuration)
-	if *statusInterval > 0 {
-		log.Info("Status logging every %d ticks", *statusInterval)
+	if simConfig.StatusInterval > 0 {
+		log.Info("Status logging every %d ticks", simConfig.StatusInterval)
 	} else {
 		log.Info("Status logging disabled")
 	}
 
+	// Create physics simulation engine
+	physicsEngine, err := physics.NewSimulationEngine(simConfig.SimulationEngine, simConfig.EngineConfig)
+	if err != nil {
+		log.Fatal("Failed to create simulation engine: %v", err)
+	}
+	log.Info("Using simulation engine: %s", physicsEngine.Name())
+
+	// Load main halko configuration
 	config, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {
 		log.Fatal("Failed to load configuration: %v", err)
@@ -71,11 +83,21 @@ func main() {
 	fan.TurnOn(false) // Start the power controller in off state
 	humidifier := elements.NewPower("Humidifier")
 	humidifier.TurnOn(false) // Start the power controller in off state
-	wood := elements.NewWood(float32(*initialMaterialTemp), float32(*environmentTemp))
-	heater := elements.NewHeater("oven", float32(*initialOvenTemp), float32(*environmentTemp), wood)
+	wood := elements.NewWood(float32(simConfig.InitialMaterialTemp), float32(simConfig.EnvironmentTemp))
+	heater := elements.NewHeater("oven", float32(simConfig.InitialOvenTemp), float32(simConfig.EnvironmentTemp), wood)
 	heater.TurnOn(false) // Start the heater power controller in off state
 	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
-		*initialOvenTemp, *initialMaterialTemp, *environmentTemp)
+		simConfig.InitialOvenTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
+
+	// Initialize physics state
+	physicsState := &physics.SimulationState{
+		OvenTemp:        float32(simConfig.InitialOvenTemp),
+		MaterialTemp:    float32(simConfig.InitialMaterialTemp),
+		EnvironmentTemp: float32(simConfig.EnvironmentTemp),
+		HeaterIsOn:      false,
+		FanIsOn:         false,
+		HumidifierIsOn:  false,
+	}
 
 	// Build element lookup map
 	elementsByName := map[string]interface{}{
@@ -135,12 +157,26 @@ func main() {
 			case <-ticker.C:
 				tickCount++
 				log.Trace("Simulation tick #%d: updating elements", tickCount)
+
+				// Advance power state machines
 				fan.Tick()
 				humidifier.Tick()
 				heater.Tick()
 
+				// Update physics state from power states
+				_, physicsState.HeaterIsOn = heater.Info()
+				_, physicsState.FanIsOn = fan.Info()
+				_, physicsState.HumidifierIsOn = humidifier.Info()
+
+				// Run physics simulation
+				physicsEngine.Tick(physicsState)
+
+				// Apply physics results back to elements
+				heater.SetTemperature(physicsState.OvenTemp)
+				wood.SetTemperature(physicsState.MaterialTemp)
+
 				// Log status summary at configured interval
-				if *statusInterval > 0 && tickCount%*statusInterval == 0 {
+				if simConfig.StatusInterval > 0 && tickCount%simConfig.StatusInterval == 0 {
 					_, heaterPower := heater.Info()
 					_, fanPower := fan.Info()
 					_, humidifierPower := humidifier.Info()

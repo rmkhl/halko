@@ -25,7 +25,7 @@ type (
 	}
 )
 
-func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolution int64) *ExecutionLogWriter {
+func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolution int64, startedAt int64) *ExecutionLogWriter {
 	log.Info("Creating execution log writer for program '%s'", name)
 	filePath := filepath.Join(fileStorage.runningPath, name+".csv")
 	logFile, err := os.Create(filePath)
@@ -41,7 +41,7 @@ func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolu
 		resolution: resolution,
 		lastUpdate: 0,
 		lastStep:   "",
-		startedAt:  time.Now().Unix(),
+		startedAt:  startedAt,
 	}
 	_ = writer.csvWriter.Write([]string{
 		"time",
@@ -65,6 +65,12 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 	if writer.csvWriter == nil {
 		return
 	}
+
+	// Only skip logging during true initialization (Waiting state)
+	if status.CurrentStep == "" || status.CurrentStep == "Waiting" || status.CurrentStep == "Completed" {
+		return
+	}
+
 	now := time.Now().Unix()
 
 	// Log if: step changed OR resolution time has elapsed
@@ -81,8 +87,8 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		strconv.FormatInt(now-writer.startedAt, 10),
 		status.CurrentStep,
 		strconv.FormatInt(now-status.CurrentStepStartedAt, 10),
-		fmt.Sprintf("%f", status.Temperatures.Material),
-		fmt.Sprintf("%f", status.Temperatures.Oven),
+		fmt.Sprintf("%.1f", status.Temperatures.Material),
+		fmt.Sprintf("%.1f", status.Temperatures.Oven),
 		strconv.Itoa(int(status.PowerStatus.Heater)),
 		strconv.Itoa(int(status.PowerStatus.Fan)),
 		strconv.Itoa(int(status.PowerStatus.Humidifier)),
@@ -90,6 +96,13 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 	writer.csvWriter.Flush()
 	writer.lastUpdate = now
 	writer.lastStep = status.CurrentStep
+}
+
+func (writer *ExecutionLogWriter) GetStartTime() int64 {
+	if writer == nil {
+		return 0
+	}
+	return writer.startedAt
 }
 
 func (writer *ExecutionLogWriter) Close() {

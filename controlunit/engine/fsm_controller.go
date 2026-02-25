@@ -115,7 +115,6 @@ func (h *startStateHandler) executeState() fsmState {
 }
 
 func (h *startStateHandler) enterState() {
-	h.fsm.started = time.Now().Unix()
 	h.fsm.stopped = 0
 	log.Info("FSM: Entered start state - program started at %s", time.Unix(h.fsm.started, 0).Format(time.RFC3339))
 }
@@ -140,6 +139,7 @@ func (h *waitingStateHandler) executeState() fsmState {
 
 func (h *waitingStateHandler) enterState() {
 	h.fsm.step = -1
+	h.fsm.stepStarted = time.Now().Unix()
 	log.Info("FSM: Entered waiting state - waiting for initial sensor data")
 }
 
@@ -163,6 +163,7 @@ func (h *preHeatStateHandler) executeState() fsmState {
 
 func (h *preHeatStateHandler) enterState() {
 	// For preheat we turn on the fan
+	h.fsm.stepStarted = time.Now().Unix()
 	log.Info("FSM: Entered preheat state - setting fan to 50%%")
 	h.fsm.psuController.setPower(psuFan, 50)
 }
@@ -411,11 +412,12 @@ func (p *programFSMController) shutdown() {
 	}
 }
 
-func (p *programFSMController) Start(program *types.Program) {
+func (p *programFSMController) Start(program *types.Program, startTime int64) {
 	p.program = program
 	p.state = fsmStateStart
 	p.numberOfSteps = len(program.ProgramSteps)
-	log.Info("FSM: Starting program '%s' with %d steps", program.ProgramName, p.numberOfSteps)
+	p.started = startTime
+	log.Info("FSM: Starting program '%s' with %d steps at %s", program.ProgramName, p.numberOfSteps, time.Unix(startTime, 0).Format(time.RFC3339))
 	p.stateHandlers[p.state].enterState()
 }
 
@@ -431,12 +433,20 @@ func (p *programFSMController) UpdateStatus(status *types.ExecutionStatus) {
 	status.StartedAt = p.started
 	status.CurrentStepStartedAt = p.stepStarted
 
-	// Set current step name with bounds checking
+	// Set current step name based on state
 	switch {
 	case p.step >= 0 && p.step < p.numberOfSteps:
 		status.CurrentStep = p.program.ProgramSteps[p.step].Name
 	case p.step < 0:
-		status.CurrentStep = "Initializing"
+		// Differentiate between waiting and preheat states
+		switch p.state {
+		case fsmStateWaiting:
+			status.CurrentStep = "Waiting"
+		case fsmStatePreHeat:
+			status.CurrentStep = "Pre-Heat"
+		default:
+			status.CurrentStep = "Initializing"
+		}
 	default:
 		status.CurrentStep = "Completed"
 	}

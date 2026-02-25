@@ -24,6 +24,7 @@ func showHelp() {
 	fmt.Println("Available Commands:")
 	fmt.Println("  send                  Send program to controlunit")
 	fmt.Println("  status                Get service status")
+	fmt.Println("  stream                Debug: stream live WebSocket data")
 	fmt.Println("  running               Show currently running program")
 	fmt.Println("  history               Show program execution history")
 	fmt.Println("  validate              Validate a program file")

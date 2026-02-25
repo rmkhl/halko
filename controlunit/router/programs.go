@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rmkhl/halko/controlunit/engine"
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
@@ -80,6 +81,27 @@ func getRunLog(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 		programName := r.PathValue("name")
 		logPath := storage.GetLogPath(programName)
 
+		content, err := os.ReadFile(logPath)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "Log file not found")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/csv")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(content)
+	}
+}
+
+func getRunningLog(storage *storagefs.ExecutorFileStorage, engine *engine.ControlEngine) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		programName := engine.CurrentProgramName()
+		if programName == "" {
+			writeError(w, http.StatusNoContent, "No program running")
+			return
+		}
+
+		logPath := storage.GetRunningLogPath(programName)
 		content, err := os.ReadFile(logPath)
 		if err != nil {
 			writeError(w, http.StatusNotFound, "Log file not found")

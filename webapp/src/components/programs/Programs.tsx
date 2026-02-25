@@ -32,12 +32,7 @@ import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import { Program as ApiProgram } from "../../types/api";
-
-interface StoredProgramInfo {
-  name: string;
-  last_modified: string;
-}
+import { Program as ApiProgram, APIResponse, StoredProgramInfo, RTKQueryError } from "../../types/api";
 
 type SortBy = "name" | "modified";
 type SortOrder = "asc" | "desc";
@@ -54,9 +49,9 @@ export const Programs: React.FC = () => {
     try {
       await startProgram(selectedProgramData).unwrap();
       navigate("/status");
-    } catch (e: any) {
-      // Optionally show error
-      alert("Failed to start program: " + (e?.data?.error || e?.message || e));
+    } catch (e: unknown) {
+      const error = e as RTKQueryError;
+      alert("Failed to start program: " + (error?.data?.error || error?.message || String(e)));
     }
   };
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
@@ -75,12 +70,13 @@ export const Programs: React.FC = () => {
 
   const programInfos = (() => {
     if (!data) return [];
-    const responseData = data as any;
-    if (responseData.data && Array.isArray(responseData.data)) {
-      return responseData.data as StoredProgramInfo[];
+    // Check if it's wrapped in APIResponse
+    if (typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
+      return (data as APIResponse<StoredProgramInfo[]>).data;
     }
-    if (Array.isArray(responseData)) {
-      return responseData as StoredProgramInfo[];
+    // Direct array response
+    if (Array.isArray(data)) {
+      return data as StoredProgramInfo[];
     }
     return [];
   })();
@@ -107,9 +103,9 @@ export const Programs: React.FC = () => {
 
   const selectedProgramData = (() => {
     if (!programData) return null;
-    const responseData = programData as any;
-    if (responseData.data) {
-      return responseData.data as ApiProgram;
+    // Check if wrapped in APIResponse
+    if (typeof programData === 'object' && 'data' in programData) {
+      return (programData as APIResponse<ApiProgram>).data;
     }
     return programData as ApiProgram;
   })();

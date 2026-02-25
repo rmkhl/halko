@@ -6,6 +6,7 @@ import {
   EntityType,
   reducerPath,
 } from "./types";
+import { EntityWithMeta } from "../../types/api";
 
 export const list = "LIST";
 
@@ -37,6 +38,11 @@ export const fetchSingleQuery = <T>(
     query: () => ({
       url: endpoint,
       responseHandler: (response) => {
+        // Handle 204 No Content - return null
+        if (response.status === 204) {
+          return null;
+        }
+
         if (!response.ok) {
           return response.text();
         }
@@ -53,10 +59,11 @@ export const saveMutation = <T extends Entity>(
   tag: EntityType
 ): MutationDefinition<T, ApiBaseQueryFunc, EntityType, string, reducerPath> =>
   builder.mutation<string, T>({
-    query: (record: any) => {
+    query: (record: EntityWithMeta<T>) => {
       // Use explicit isNew flag if present
       const isNew = record.isNew === true;
-      // Remove isNew from payload
+      // Remove isNew from payload (eslint: _isNew is intentionally unused)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { isNew: _isNew, ...payload } = record;
       return {
         url: isNew ? endpoint : `${endpoint}/${encodeURIComponent(record.name)}`,
