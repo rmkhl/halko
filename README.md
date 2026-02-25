@@ -48,6 +48,9 @@ make install
 # Install and enable systemd service units
 make systemd-units
 
+# Build and install webapp to /var/www/halko with nginx config
+make install-webapp
+
 # Reformat changed Go files
 make fmt-changed
 
@@ -74,6 +77,7 @@ execution, as well as storage management for drying programs and execution logs.
 
 The ControlUnit uses a file-based storage system with separate directories for active
 and completed program executions:
+
 - `{base_path}/running/` - Files for currently executing programs
 - `{base_path}/history/` - Completed program executions and their logs
 
@@ -112,6 +116,10 @@ temperature sensors and Shelly power controls. This is useful for development
 and testing without requiring actual hardware. It mimics the REST APIs of the
 SensorUnit and parts of the PowerUnit (Shelly devices).
 
+The simulator uses physics-based simulation engines (simple, differential, thermodynamic)
+configured via `simulator.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
+configuration options and physics engine descriptions.
+
 #### `/webapp`
 
 A React-based frontend application that serves as the user interface for the
@@ -126,17 +134,13 @@ for detailed development and deployment instructions.
 
 Contains built executables for all components.
 
-#### `/schemas`
-
-JSON schemas for validation of program and phase data.
-
 #### `/templates`
 
-Contains systemd service templates and configuration samples.
+Contains systemd service templates and configuration samples. See [templates/README.md](templates/README.md) for configuration guidance.
 
 #### `/tests`
 
-Integration tests for the system components.
+Integration tests for the system components. Tests validate configuration loading, program validation with defaults, and Shelly API compatibility.
 
 #### `/types`
 
@@ -193,30 +197,27 @@ example configuration:
   "api_endpoints": {
     "controlunit": {
       "url": "http://localhost:8090",
-      "status": "/status",
+      "engine": "/engine",
       "programs": "/programs",
-      "running": "/running"
+      "status": "/status"
     },
     "sensorunit": {
       "url": "http://localhost:8093",
-      "status": "/status",
       "temperatures": "/temperatures",
-      "display": "/display"
+      "display": "/display",
+      "status": "/status"
     },
     "powerunit": {
       "url": "http://localhost:8092",
       "status": "/status",
       "power": "/power"
-    },
-    "storage": {
-      "url": "http://localhost:8090",
-      "status": "/storage/status",
-      "programs": "/storage/programs",
-      "execution_log": "/storage/execution_log"
     }
   }
 }
 ```
+
+**Note**: Storage endpoints are served by the controlunit service at `/programs` (stored program templates)
+and `/engine` (execution management). There is no separate storage service.
 
 ### ControlUnit Configuration Options
 
@@ -253,9 +254,25 @@ interface.
 
 ## Deployment
 
-The system components are designed to run as systemd services. After building,
-use `make install` to install the binaries and `make systemd-units` to set up
-the systemd services.
+### Production Installation (Bare-Metal)
+
+The system is designed for bare-metal production deployment with systemd services.
+
+#### 1. Install Backend Services
+
+```bash
+# Install binaries to /opt/halko and config to /etc/opt/halko.cfg
+make install
+
+# Install and enable systemd services for controlunit, powerunit, sensorunit
+make systemd-units
+```
+
+**Important**: Before starting services, edit `/etc/opt/halko.cfg` to configure:
+
+- `network_interface`: Your system's network interface name (see [Network Interface Configuration](#network-interface-configuration))
+- `serial_device`: Your Arduino device path (typically `/dev/ttyUSB0`)
+- `shelly_address`: Your Shelly device IP address or hostname
 
 Each component can be controlled independently:
 
@@ -268,12 +285,78 @@ sudo systemctl stop halko@controlunit
 
 # Check status
 sudo systemctl status halko@powerunit
+
+# View logs
+sudo journalctl -u halko@controlunit -f
+```
+
+#### 2. Install WebApp
+
+```bash
+# Build and install webapp to /var/www/halko
+make install-webapp
+
+# Enable nginx site
+sudo ln -s /etc/nginx/sites-available/halko /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Access the webapp at `http://your-server-ip/`
+
+The webapp proxies API requests to localhost backend services (ports 8090, 8092, 8093).
+
+#### Network Interface Configuration
+
+The `network_interface` setting in `/etc/opt/halko.cfg` must match your system's actual interface name for the heartbeat service to work correctly.
+
+To find your interface name:
+
+```bash
+ip addr show
+```
+
+Common interface names:
+
+- `eth0` - Traditional Ethernet naming
+- `enp0s3`, `ens33`, `enp1s0` - Predictable PCI Ethernet names
+- `wlan0` - WiFi interfaces
+- `lo` - Loopback (do not use for heartbeat)
+
+Update the configuration before starting services:
+
+```bash
+sudo nano /etc/opt/halko.cfg
+# Change "network_interface": "eth0" to your interface name
 ```
 
 ### Docker Deployment
 
 The system can also be deployed using Docker Compose. The containers are
 configured to run as the host user to ensure proper file ownership.
+
+#### Prerequisites
+
+```bash
+# Build all binaries and Docker images
+make images
+```
+
+This target automatically:
+
+- Rebuilds all Go binaries
+- Builds webapp for production with nginx
+- Generates `webapp/nginx-docker.conf` with WebSocket support
+- Creates Docker images for all services
+
+#### Configuration Files
+
+Docker deployment uses specific configuration files:
+
+- `halko-docker.cfg` - Service endpoints using Docker service names
+- `simulator.conf` - Simulator physics engine configuration (see [SIMULATOR.md](SIMULATOR.md))
+
+The simulator requires both configuration files mounted in the container.
 
 #### File Ownership Configuration
 
@@ -302,12 +385,29 @@ docker-compose down
 Files created by the containers in the `fsdb/` directory will be owned by the
 specified UID:GID on the host system.
 
+#### Service Architecture
+
+Docker deployment includes:
+
+- **controlunit:8090** - Engine and storage endpoints
+- **powerunit:8092** - Shelly device interface (proxies to simulator)
+- **simulator:8088/8093** - Emulated hardware (Shelly + sensors)
+- **webapp:8080** - React UI with nginx reverse proxy
+
+The webapp nginx configuration includes:
+
+- WebSocket upgrade support for live log streaming (`/api/v1/controlunit/engine/running/logws`)
+- API proxying to backend services at `/api/v1/*`
+- CORS headers for all endpoints
+
+Access the webapp at <http://localhost:8080>
+
 ## Development
 
 For development, you can run the simulator instead of connecting to real hardware:
 
 ```bash
-./bin/simulator -l 8088
+./bin/simulator -c halko.cfg -s simulator.conf
 ```
 
 The webapp can be run in development mode from the `/webapp` directory:

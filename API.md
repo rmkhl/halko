@@ -222,8 +222,16 @@ Operates a specific power channel.
 
 ## 3. ControlUnit API
 
-Base Path: `/engine` and `/storage`
+Base Path: `/engine` (execution management), `/programs` (stored program templates)
 Default Port: `8090`
+
+The ControlUnit serves both execution management and program storage endpoints:
+
+- `/engine/*` - Program execution, history, and live monitoring
+- `/programs/*` - Stored program template management (CRUD operations)
+- `/status` - Service health status
+
+**Note:** There is no separate "storage" service - all storage functionality is integrated into the ControlUnit.
 
 ### Status Endpoints
 
@@ -253,11 +261,13 @@ Gets the health status of the ControlUnit service. Follows the standard status e
 - `current_step`: Current step number in the program (only present if program is running)
 - `started_at`: ISO 8601 timestamp of program start (only present if program is running)
 
-### Program Execution History Endpoints
+### Program Execution Endpoints
 
-#### GET `/programs`
+These endpoints manage running programs and execution history.
 
-Lists all available programs (definitions loaded by controlunit).
+#### GET `/engine/history`
+
+Lists all completed program executions.
 
 **Response Format:**
 
@@ -265,139 +275,68 @@ Lists all available programs (definitions loaded by controlunit).
 {
   "data": [
     {
-      "name": "Standard Drying",
-      "description": "Standard drying program for pine",
-      "phases": []
+      "name": "Standard Drying@2024-01-15T10:30:00Z",
+      "started_at": "2024-01-15T10:30:00Z",
+      "completed_at": "2024-01-15T18:45:00Z"
     },
     {
-      "name": "Quick Drying",
-      "description": "Quick drying program for thinner woods",
-      "phases": []
+      "name": "Quick Drying@2024-01-14T08:00:00Z",
+      "started_at": "2024-01-14T08:00:00Z",
+      "completed_at": "2024-01-14T14:30:00Z"
     }
   ]
 }
 ```
 
-#### GET `/programs/:name`
+#### GET `/engine/history/{name}`
 
-Gets a specific program definition by name.
+Gets details of a specific completed program execution.
 
 **Path Parameters:**
 
-- `name`: The name of the program
+- `name`: The full name of the execution (includes timestamp, e.g., "Program@2024-01-15T10:30:00Z")
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "name": "Standard Drying",
-    "description": "Standard drying program for pine",
-    "phases": [
-      {
-        "name": "Initial Heating",
-        "duration": 3600,
-        "targetTemperature": 45,
-        "minTemperature": 40,
-        "maxTemperature": 50,
-        "fanPower": 100,
-        "humidifierPower": 0
-      }
-    ]
+    "program": { /* full program definition */ },
+    "started_at": 1734007854,
+    "completed_at": 1734037854,
+    "status": "completed"
   }
 }
 ```
 
-#### DELETE `/programs/:name`
+#### GET `/engine/history/{name}/log`
 
-Deletes/unloads a specific program definition.
+Gets the execution log CSV for a completed program.
 
 **Path Parameters:**
 
-- `name`: The name of the program to delete
+- `name`: The full name of the execution
 
-**Response:**
+**Response:** Returns CSV data directly (not JSON-wrapped)
 
-- Status 204 No Content on success
-
-### Engine Control Endpoints
-
-#### GET `/engine/running/logws` (WebSocket)
-
-Streams live program execution log data as CSV over a WebSocket connection while a program is running.
-
-**Protocol:**
-
-- Connect using a WebSocket client to `/engine/running/logws`.
-- On connection, the server sends the CSV header line (as in a fresh run log file).
-- While a program is running, the server sends a new CSV line every second with the latest status.
-- If the client disconnects, the stream stops. The server does not expect any messages from the client.
-- If no program is running, the server sends a text message: `No program running` and closes the connection.
-
-**CSV Format:**
-
-```
-time,step,steptime,material,oven,heater,fan,humidifier
-0,Initial Heating,0,42.5,45.2,75,50,0
+```csv
+timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+1734007890,Initial Heating,45.2,42.5,75,50,0
 ...
 ```
 
-- `time`: Seconds since program start
-- `step`: Name of the current step
-- `steptime`: Seconds since current step started
-- `material`: Current material (wood) temperature in °C
-- `oven`: Current oven temperature in °C
-- `heater`: Heater power level (0-100%)
-- `fan`: Fan power level (0-100%)
-- `humidifier`: Humidifier power level (0-100%)
+#### DELETE `/engine/history/{name}`
 
-**Example Usage:**
+Deletes a completed program execution and its logs.
 
-```
-GET ws://<host>:8090/engine/running/logws
-```
+**Path Parameters:**
 
-**Notes:**
-- This endpoint is intended for real-time monitoring and visualization.
-- For completed or historical logs, use the `/engine/history/{name}/log` HTTP endpoint.
+- `name`: The full name of the execution to delete
 
-#### GET `/engine/defaults`
+**Response:**
 
-Gets the configured default values for program steps. These defaults are applied to program steps that don't specify heater, fan, or humidifier settings.
-
-**Response Format:**
-
-```json
-{
-  "data": {
-    "pid_settings": {
-      "acclimate": {
-        "kp": 2.0,
-        "ki": 1.0,
-        "kd": 0.5
-      }
-    },
-    "max_delta_heating": 10.0,
-    "min_delta_heating": 5.0
-  }
-}
-```
-
-**Response Fields:**
-
-- `pid_settings.acclimate`: Default PID control parameters used for acclimate steps when heater settings are not specified
-  - `kp`: Proportional gain coefficient
-  - `ki`: Integral gain coefficient
-  - `kd`: Derivative gain coefficient
-- `max_delta_heating`: Maximum temperature delta (oven - wood) in degrees for heating steps using delta control
-- `min_delta_heating`: Minimum temperature delta (oven - wood) in degrees for heating steps using delta control
-
-**Default Application Rules:**
-
-When a program step doesn't specify heater control settings, these defaults are applied based on step type:
-- **Heating steps**: Use delta control with `min_delta_heating` and `max_delta_heating`
-- **Acclimate steps**: Use PID control with `pid_settings.acclimate` parameters
-- **Cooling steps**: Use simple control with 0% power
+- Status 200 OK on success
+- Status 404 Not Found if execution doesn't exist
 
 #### GET `/engine/running`
 
@@ -501,62 +440,118 @@ Cancels the currently running program.
 
 - Status 204 No Content on success
 
-### Program Storage Endpoints
+#### GET `/engine/running/log`
 
-The ControlUnit also provides program storage management at `/storage/*` endpoints.
+Fetches the accumulated execution log as CSV data for the currently running program.
 
-#### GET `/storage/status`
+**Response Format:**
 
-Gets the health status of the storage subsystem. Follows the standard status endpoint format (see Common Response Patterns).
+When a program is running, returns CSV data:
 
-**Storage Directory Structure:**
+```csv
+timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+1734007890,Initial Heating,45.2,42.5,75,50,0
+1734007896,Initial Heating,46.1,42.8,75,50,0
+...
+```
 
-The ControlUnit maintains a file-based storage system with the following structure:
-- `{base_path}/programs/` - Stored program templates
-- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log)
-- `{base_path}/history/` - Completed program executions (JSON)
-- `{base_path}/history/logs/` - Completed execution logs (CSV)
-- `{base_path}/history/status/` - Completed program status files (TXT)
+When no program is running, returns HTTP 204 No Content with error message:
 
-When a program starts executing, files are created in `running/`. Upon completion (whether successful, failed, or canceled), these files are automatically moved to the appropriate `history/` subdirectories. On startup, the ControlUnit performs cleanup of any orphaned files in `running/` from previous crashes.
+```json
+{
+  "error": "No program running"
+}
+```
+
+**Usage:** This endpoint is used by the webapp to fetch historical log data before connecting to the WebSocket for real-time updates.
+
+#### WebSocket `/engine/running/logws`
+
+WebSocket endpoint for real-time execution log streaming.
+
+**Connection:** Upgrade HTTP connection to WebSocket at `ws://host:port/engine/running/logws`
+
+**Message Format:**
+
+The server sends CSV lines as text messages:
+
+```
+timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+```
+
+**Behavior:**
+
+- Sends CSV header line on connection
+- Sends new log entries as they're generated (every tick)
+- Closes connection when program completes or is cancelled
+- Returns 204 error if no program is running
+
+**Example using JavaScript:**
+
+```javascript
+const ws = new WebSocket('ws://localhost:8090/engine/running/logws');
+
+ws.onmessage = (event) => {
+  console.log('Log entry:', event.data);
+};
+
+ws.onclose = () => {
+  console.log('Program execution ended');
+};
+```
+
+**Note:** nginx proxy configurations must include WebSocket upgrade headers:
+
+```nginx
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
+```
+
+#### GET `/engine/defaults`
+
+Gets the default program settings configured in the ControlUnit.
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "status": "healthy",
-    "service": "storage",
-    "details": {
-      "accessible": true
-    }
+    "pid_settings": {
+      "acclimate": {
+        "kp": 2.0,
+        "ki": 1.0,
+        "kd": 0.5
+      }
+    },
+    "max_delta_heating": 10.0,
+    "min_delta_heating": 5.0
   }
 }
 ```
 
-If storage is not accessible:
+**Usage:** These defaults are automatically applied to programs that don't specify complete power control settings for all steps.
 
-```json
-{
-  "data": {
-    "status": "degraded",
-    "service": "storage",
-    "details": {
-      "accessible": false,
-      "error": "storage directory not accessible: /path/to/storage"
-    }
-  }
-}
-```
+### File-Based Storage
 
-**Details:**
+The ControlUnit maintains a file-based storage system with the following structure:
 
-- `accessible`: Boolean indicating if the storage directory is accessible
-- `error`: Error message if storage is not accessible (only present when accessible is false)
+- `{base_path}/programs/` - Stored program templates (managed via `/programs` endpoints)
+- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log)
+- `{base_path}/history/` - Completed program executions (JSON)
+- `{base_path}/history/logs/` - Completed execution logs (CSV)
+- `{base_path}/history/status/` - Completed program status files (TXT)
 
-#### GET `/storage/programs`
+**Automatic File Management:**
 
-Lists all stored programs with their last modification times.
+When a program starts executing, files are created in `running/`. Upon completion (whether successful, failed, or canceled), these files are automatically moved to the appropriate `history/` subdirectories. On startup, the ControlUnit performs cleanup of any orphaned files in `running/` from previous crashes.
+
+### Stored Program Template Endpoints
+
+These endpoints manage stored program templates (not executions). Templates are stored in `{base_path}/programs/` and can be used to start new executions.
+
+#### GET `/programs`
+
+Lists all stored program templates with their last modification times.
 
 **Response Format:**
 
@@ -581,47 +576,45 @@ Lists all stored programs with their last modification times.
 
 **Fields:**
 
-- `name`: The name of the stored program
+- `name`: The name of the stored program template
 - `last_modified`: ISO 8601 formatted timestamp of the last modification time
 
-#### GET `/storage/programs/{name}`
+#### GET `/programs/{name}`
 
-Gets a specific stored program by name.
+Gets a specific stored program template by name.
 
 **Path Parameters:**
 
-- `name`: The name of the program
+- `name`: The name of the program template
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "programName": "Standard Drying",
-    "description": "Standard drying program for pine",
-    "phases": [
+    "name": "Standard Drying",
+    "steps": [
       {
         "name": "Initial Heating",
-        "duration": 3600,
-        "targetTemperature": 45,
-        "steps": []
+        "type": "heating",
+        "temperature_target": 50,
+        "heater": { /* power control */ }
       }
     ]
   }
 }
 ```
 
-#### POST `/storage/programs`
+#### POST `/programs`
 
-Creates a new stored program.
+Creates a new stored program template.
 
 **Request Body:**
 
 ```json
 {
-  "programName": "New Program",
-  "description": "Description of the program",
-  "phases": []
+  "name": "New Program",
+  "steps": [ /* program steps */ ]
 }
 ```
 
@@ -630,21 +623,20 @@ Creates a new stored program.
 - Status 201 Created on success
 - Status 409 Conflict if program already exists
 
-#### POST `/storage/programs/{name}`
+#### POST `/programs/{name}`
 
-Updates an existing stored program.
+Updates an existing stored program template.
 
 **Path Parameters:**
 
-- `name`: The name of the program to update
+- `name`: The name of the program template to update
 
 **Request Body:**
 
 ```json
 {
-  "programName": "Updated Program",
-  "description": "Updated description",
-  "phases": []
+  "name": "Updated Program",
+  "steps": [ /* updated program steps */ ]
 }
 ```
 
@@ -653,13 +645,13 @@ Updates an existing stored program.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-#### DELETE `/storage/programs/{name}`
+#### DELETE `/programs/{name}`
 
-Deletes a stored program.
+Deletes a stored program template.
 
 **Path Parameters:**
 
-- `name`: The name of the program to delete
+- `name`: The name of the program template to delete
 
 **Response:**
 
