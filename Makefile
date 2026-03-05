@@ -1,11 +1,30 @@
 MODULES = controlunit powerunit simulator sensorunit halkoctl
 BINDIR = bin
 
+# Build flags - use OPTIMIZED=yes for memory-constrained environments (Raspberry Pi)
+# Standard flags (default): Full debugging symbols, faster execution
+GOFLAGS_STANDARD =
+
+# Optimized flags: Smaller binaries (~30% reduction), lower memory footprint
+# -ldflags="-s -w": Strip debug info and symbol table
+# -trimpath: Remove absolute file paths (reproducibility)
+GOFLAGS_OPTIMIZED = -ldflags="-s -w" -trimpath
+
+# Select flags based on OPTIMIZED variable
+ifeq ($(OPTIMIZED),yes)
+GOFLAGS = $(GOFLAGS_OPTIMIZED)
+BUILD_TYPE = optimized (stripped, -s -w, -trimpath)
+else
+GOFLAGS = $(GOFLAGS_STANDARD)
+BUILD_TYPE = standard (with debug symbols)
+endif
+
 .PHONY: all
 all: clean $(MODULES:%=$(BINDIR)/%)
+	@echo "✓ Build completed: $(BUILD_TYPE)"
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
-	@go build -o $@ ./$*/
+	@go build $(GOFLAGS) -o $@ ./$*/
 
 $(BINDIR):
 	@mkdir -p $(BINDIR)
@@ -99,7 +118,7 @@ prepare:
 
 .PHONY: build
 build: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All Go binaries have been rebuilt."
+	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
 
 .PHONY: lint
 lint:
@@ -278,16 +297,12 @@ images: clean $(MODULES:%=$(BINDIR)/%)
 
 .PHONY: clean-webapp
 clean-webapp:
-	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
-	@echo "✓ Cleaned webapp artifacts"
+	@echo "Cleaning webapp build artifacts..."
+	@rm -rf webapp/dist webapp/node_modules webapp/.parcel-cache
+	@echo "✓ Webapp cleaned"
 
 .PHONY: run-webapp
-run-webapp: clean-webapp
-	@echo "Installing webapp dependencies..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install
+run-webapp: $(BINDIR)/halkoctl
 	@echo "Starting webapp development server..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -340,43 +355,66 @@ run-thermodynamic:
 	@echo "Starting Halko with thermodynamic simulator engine..."
 	@SIMULATOR_ENGINE=thermodynamic docker-compose up
 
+.PHONY: monitor-memory
+monitor-memory:
+	@echo "Starting memory monitor for Halko processes..."
+	@./monitor-memory.py $(MONITOR_ARGS)
+
 .PHONY: help
 help:
 	@echo "Available targets:"
+	@echo "  help                       Show this help message (default)."
+	@echo "  prepare                    Check for required tools, install Node.js if needed, setup workspace."
 	@echo ""
-	@echo "Main Targets:"
-	@echo "  help                       Show this help message. (default)"
+	@echo "Build Targets:"
 	@echo "  all                        Build all Go executables to bin/ directory."
-	@echo "  prepare                    Check for required tools (Go, Node.js), install Node.js if needed, and setup workspace."
 	@echo "  build                      Clean and rebuild all Go executables."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
-	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
 	@echo ""
-	@echo "Docker Targets:"
+	@echo "Production Installation (Raspberry Pi / Host):"
+	@echo "  install                    Install all binaries (except simulator) to /opt/halko."
+	@echo "  systemd-units              Create, install, and enable systemd service units."
+	@echo "  install-webapp             Install webapp to /var/www/halko with nginx config."
+	@echo ""
+	@echo "  Note: For memory-constrained systems, use: OPTIMIZED=yes make build"
+	@echo "        This reduces binary size by ~30% (see Build Options below)."
+	@echo ""
+	@echo "Development & Testing:"
+	@echo "  run-webapp                 Start webapp development server with hot reload."
+	@echo "  build-webapp               Build webapp for production to webapp/dist/."
+	@echo "  test                       Run all tests (config, program validation, Shelly API)."
+	@echo "  test-config                Run configuration loading tests."
+	@echo "  test-program-validation    Run program JSON validation tests."
+	@echo "  test-shelly-api            Run Shelly device API compatibility tests."
+	@echo "  validate                   Validate a program file (requires PROGRAM=path/to/file.json)."
+	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
+	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  lint                       Run golangci-lint on all modules."
+	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
+	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
+	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
+	@echo "  go-tidy                    Run go mod tidy on all modules."
+	@echo "  update-modules             Update all go.mod dependencies and tidy them."
+	@echo ""
+	@echo "Docker Development (Not for Raspberry Pi):"
+	@echo "  images                     Rebuild everything and recreate all Docker images."
 	@echo "  run-simple                 Start Docker Compose with simple simulator engine."
 	@echo "  run-differential           Start Docker Compose with differential simulator engine."
 	@echo "  run-thermodynamic          Start Docker Compose with thermodynamic simulator engine."
-	@echo ""
-	@echo "Go Backend Targets:"
-	@echo "  lint                       Run golangci-lint on all modules."
-	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
-	@echo "  go-tidy                    Run go mod tidy on all modules with go.mod files."
-	@echo "  update-modules             Update all go.mod dependencies and tidy them."
-	@echo "  install                    Install all binaries except simulator to /opt/halko."
-	@echo "  systemd-units              Create, install, and enable systemd unit files."
-	@echo "  fmt-changed                Reformat changed Go files compared to the main branch."
-	@echo ""
-	@echo "Test Targets:"
-	@echo "  test                       Run all tests."
-	@echo "  test-program-validation    Run program validation tests."
-	@echo "  test-shelly-api            Run shelly API tests."
-	@echo "  validate                   Validate a program.json file: make validate PROGRAM=path/to/program.json"
-	@echo ""
-	@echo "WebApp Targets:"
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
-	@echo "  run-webapp                 Start webapp development server with hot reload."
-	@echo "  build-webapp               Build webapp for production (host installation) to webapp/dist/."
-	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
+	@echo ""
+	@echo "Build Options:"
+	@echo "  OPTIMIZED=yes              Build with memory optimization flags (~30% smaller binaries)."
+	@echo "                               Usage: OPTIMIZED=yes make build"
+	@echo "                                      OPTIMIZED=yes make images"
+	@echo "                               Flags: -ldflags='-s -w' -trimpath (strips debug symbols)"
+	@echo "                               Trade-off: Cannot use debugger, ~5-10% slower execution"
+	@echo ""
+	@echo "Program Validation:"
+	@echo "  validate PROGRAM=file.json Validate a specific program file."
+	@echo "                               Example: make validate PROGRAM=example/example-program-delta.json"
 
 .DEFAULT_GOAL := help
