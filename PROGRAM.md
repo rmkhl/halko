@@ -313,7 +313,7 @@ The controlunit uses a finite state machine (FSM) with the following states:
 9. **failed** - Error state
 
 The FSM operates on a tick-based system with the update frequency controlled by
-`controlunit.tick_length` in the configuration file (default 6 seconds).
+`controlunit.tick_length` in the configuration file (e.g., "6s").
 
 ### Execution Logging
 

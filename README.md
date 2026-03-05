@@ -170,7 +170,7 @@ example configuration:
 {
   "controlunit": {
     "base_path": "/var/opt/halko",
-    "tick_length": 6000,
+    "tick_length": "6s",
     "network_interface": "eth0",
     "defaults": {
       "pid_settings": {
@@ -182,8 +182,8 @@ example configuration:
   },
   "power_unit": {
     "shelly_address": "http://localhost:8088",
-    "cycle_length": 60,
-    "max_idle_time": 70,
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
     "power_mapping": {
       "heater": 0,
       "humidifier": 1,
@@ -225,7 +225,7 @@ and `/engine` (execution management). There is no separate storage service.
   - `programs/` - Stored program templates
   - `running/` - Active program executions (auto-created)
   - `history/` - Completed executions with `logs/` and `status/` subdirectories (auto-created)
-- **`tick_length`**: Execution tick duration in milliseconds
+- **`tick_length`**: Execution tick duration (Go duration format: "6s", "100ms", etc.)
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
@@ -257,6 +257,8 @@ interface.
 ### Production Installation (Bare-Metal)
 
 The system is designed for bare-metal production deployment with systemd services.
+
+**For Raspberry Pi deployment:** See [RASPBERRY_PI.md](RASPBERRY_PI.md) for detailed instructions on memory-optimized builds, USB boot setup, and dual network interface configuration.
 
 #### 1. Install Backend Services
 
@@ -417,3 +419,23 @@ cd webapp
 npm install
 npm start
 ```
+
+### Memory Monitoring
+
+Monitor process memory usage to detect potential memory leaks during development or testing:
+
+```bash
+# Console output only (default)
+./monitor-memory.py
+
+# Save detailed CSV log
+./monitor-memory.py -o memory-test.csv
+
+# Monitor specific processes for 1 hour
+./monitor-memory.py -p controlunit simulator -i 5 -t 3600
+
+# Via Makefile
+make monitor-memory MONITOR_ARGS="-o test.csv -t 7200"
+```
+
+Run `./monitor-memory.py --help` for all options. Works with both Docker containers and native processes.

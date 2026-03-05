@@ -35,10 +35,17 @@ func main() {
 	shellyController := shelly.New(configuration.PowerUnit.ShellyAddress)
 	log.Debug("Created Shelly controller for address: %s", configuration.PowerUnit.ShellyAddress)
 
-	cycleLength := configuration.PowerUnit.CycleLength
-	maxIdleTime := configuration.PowerUnit.MaxIdleTime
+	// Parse duration strings
+	cycleLength, err := time.ParseDuration(configuration.PowerUnit.CycleLength)
+	if err != nil {
+		log.Fatal("Invalid cycle_length in configuration: %v", err)
+	}
+	maxIdleTime, err := time.ParseDuration(configuration.PowerUnit.MaxIdleTime)
+	if err != nil {
+		log.Fatal("Invalid max_idle_time in configuration: %v", err)
+	}
 	powerMapping := configuration.PowerUnit.PowerMapping
-	log.Debug("Power unit configuration: cycleLength=%ds, maxIdleTime=%ds, powerMapping=%v",
+	log.Debug("Power unit configuration: cycleLength=%v, maxIdleTime=%v, powerMapping=%v",
 		cycleLength, maxIdleTime, powerMapping)
 
 	idMapping := [shelly.NumberOfDevices]string{}

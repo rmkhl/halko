@@ -106,7 +106,10 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 }
 
 func (runner *programRunner) Run() {
-	tickLength := time.Duration(runner.halkoConfig.ControlUnitConfig.TickLength) * time.Millisecond
+	tickLength, err := time.ParseDuration(runner.halkoConfig.ControlUnitConfig.TickLength)
+	if err != nil {
+		log.Fatal("Invalid tick_length in configuration: %v", err)
+	}
 	log.Info("Program runner using tick length: %v", tickLength)
 	ticker := time.NewTicker(tickLength)
 	defer runner.wg.Done()

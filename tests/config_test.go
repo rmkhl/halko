@@ -60,10 +60,9 @@ func TestConfigStructure(t *testing.T) {
 // Test configuration data - represents a complete valid Halko configuration
 // This configuration matches the new endpoint structure
 var testConfigData = `{
-  "executor": {
-    "port": 8090,
+  "controlunit": {
     "base_path": "/tmp/test/halko",
-    "tick_length": 6000,
+    "tick_length": "6s",
     "network_interface": "enp4s0",
     "defaults": {
       "pid_settings": {
@@ -78,34 +77,28 @@ var testConfigData = `{
     }
   },
   "power_unit": {
-    "port": 8092,
     "shelly_address": "http://localhost:8088",
-    "cycle_length": 60,
-    "max_idle_time": 70,
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
     "power_mapping": {
       "heater": 0,
       "humidifier": 1,
       "fan": 2
     }
   },
-  "storage": {
-    "port": 8091,
-    "base_path": "/tmp/test/halko"
-  },
   "sensorunit": {
-    "port": 8093,
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
   },
   "api_endpoints": {
-    "executor": {
+    "controlunit": {
       "url": "http://localhost:8090",
       "status": "/status",
       "programs": "/programs",
-      "running": "/running"
+      "engine": "/engine"
     },
     "sensorunit": {
-      "url": "http://localhost:8088",
+      "url": "http://localhost:8093",
       "status": "/status",
       "temperatures": "/temperatures",
       "display": "/display"
@@ -114,12 +107,6 @@ var testConfigData = `{
       "url": "http://localhost:8092",
       "status": "/status",
       "power": "/power"
-    },
-    "storage": {
-      "url": "http://localhost:8091",
-      "status": "/status",
-      "programs": "/programs",
-      "execution_log": "/execution_log"
     }
   }
 }`

@@ -30,12 +30,10 @@ type (
 	}
 )
 
-func New(maxIdleTimeS int, cycleLengthS int, shellyCtrl *shelly.Shelly) *Controller {
+func New(maxIdleTime time.Duration, cycleLength time.Duration, shellyCtrl *shelly.Shelly) *Controller {
 	log.Trace("Creating new power controller")
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cycleLength := time.Duration(cycleLengthS) * time.Second
-	maxIdleTime := time.Duration(maxIdleTimeS) * time.Second
 	tickDuration := cycleLength / 100
 
 	log.Debug("Power controller config: cycle=%v, maxIdle=%v, tick=%v",
