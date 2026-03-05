@@ -234,13 +234,19 @@ class MemoryMonitor:
                     self.csv_writer.writerow(row)
                     self.csv_file.flush()
 
+                # Update leak detection history every iteration
+                leak_results = {}
+                for process, stats in stats_data.items():
+                    leak_info = self.check_for_leaks(process, stats['usage_mb'])
+                    leak_results[process] = leak_info
+
                 # Print summary every 10 iterations
                 if iteration % 10 == 0:
                     print(f"[{self.format_duration(elapsed)}] Memory usage:")
                     if not stats_data:
                         print("  (no processes found)")
                     for process, stats in stats_data.items():
-                        leak_info = self.check_for_leaks(process, stats['usage_mb'])
+                        leak_info = leak_results.get(process)
                         leak_indicator = ""
 
                         if leak_info:
