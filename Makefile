@@ -268,6 +268,13 @@ images: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "Building new Docker images..."
 	@BUILDKIT_PROGRESS=plain docker-compose build
 	@echo "Docker images have been rebuilt."
+	@echo ""
+	@echo "To run with different simulator engines:"
+	@echo "  SIMULATOR_ENGINE=simple docker-compose up          # Basic rate-based model"
+	@echo "  SIMULATOR_ENGINE=differential docker-compose up   # Differential equation engine"
+	@echo "  SIMULATOR_ENGINE=thermodynamic docker-compose up  # Advanced thermodynamic model"
+	@echo ""
+	@echo "Or use convenience targets: make run-simple / run-differential / run-thermodynamic"
 
 .PHONY: clean-webapp
 clean-webapp:
@@ -320,6 +327,19 @@ lint-webapp:
 	fi; \
 	cd webapp && npm run lint
 
+.PHONY: run-simple run-differential run-thermodynamic
+run-simple:
+	@echo "Starting Halko with simple simulator engine..."
+	@SIMULATOR_ENGINE=simple docker-compose up
+
+run-differential:
+	@echo "Starting Halko with differential simulator engine..."
+	@SIMULATOR_ENGINE=differential docker-compose up
+
+run-thermodynamic:
+	@echo "Starting Halko with thermodynamic simulator engine..."
+	@SIMULATOR_ENGINE=thermodynamic docker-compose up
+
 .PHONY: help
 help:
 	@echo "Available targets:"
@@ -332,6 +352,11 @@ help:
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
 	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
+	@echo ""
+	@echo "Docker Targets:"
+	@echo "  run-simple                 Start Docker Compose with simple simulator engine."
+	@echo "  run-differential           Start Docker Compose with differential simulator engine."
+	@echo "  run-thermodynamic          Start Docker Compose with thermodynamic simulator engine."
 	@echo ""
 	@echo "Go Backend Targets:"
 	@echo "  lint                       Run golangci-lint on all modules."

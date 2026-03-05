@@ -4,14 +4,19 @@ services:
       context: .
       dockerfile: simulator/Dockerfile
     user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - SIMULATOR_ENGINE=${SIMULATOR_ENGINE:-simple}
     volumes:
       - ./fsdb:/fsdb
       - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
-      - ./simulator.conf:/etc/halko/simulator.conf:ro
+      - ./simulator.conf:/etc/halko/simulator-simple.conf:ro
+      - ./simulator-differential.conf:/etc/halko/simulator-differential.conf:ro
+      - ./simulator-thermodynamic.conf:/etc/halko/simulator-thermodynamic.conf:ro
     ports:
       - "8088:8088"  # Shelly emulation interface
       - "8093:8093"  # SensorUnit emulation interface
     restart: unless-stopped
+    command: ["-c", "/etc/halko/halko.cfg", "-s", "/etc/halko/simulator-${SIMULATOR_ENGINE:-simple}.conf"]
 
   controlunit:
     build:
