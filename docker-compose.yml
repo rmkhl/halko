@@ -54,3 +54,5 @@ services:
       - controlunit
       - powerunit
     restart: unless-stopped
+    logging:
+      driver: none
