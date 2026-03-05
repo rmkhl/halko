@@ -50,6 +50,22 @@ func main() {
 		log.Info("Status logging disabled")
 	}
 
+	// Inject time_step into physics config (derived from tick_duration)
+	timeStepSeconds := tickDuration.Seconds()
+	if physicsSection, ok := simConfig.EngineConfig["physics"].(map[string]interface{}); ok {
+		physicsSection["time_step"] = timeStepSeconds
+		log.Info("Physics time_step automatically set to %.1f seconds (from tick_duration)", timeStepSeconds)
+	} else {
+		// Create physics section if it doesn't exist
+		if simConfig.EngineConfig["physics"] == nil {
+			simConfig.EngineConfig["physics"] = make(map[string]interface{})
+		}
+		if physicsSection, ok := simConfig.EngineConfig["physics"].(map[string]interface{}); ok {
+			physicsSection["time_step"] = timeStepSeconds
+			log.Info("Physics time_step automatically set to %.1f seconds (from tick_duration)", timeStepSeconds)
+		}
+	}
+
 	// Create physics simulation engine
 	physicsEngine, err := physics.NewSimulationEngine(simConfig.SimulationEngine, simConfig.EngineConfig)
 	if err != nil {

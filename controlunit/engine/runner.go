@@ -43,7 +43,8 @@ type (
 		psuStatus         fsmPSUStatus
 		temperatureStatus fsmTemperatures
 
-		defaults *types.Defaults
+		defaults    *types.Defaults
+		halkoConfig *types.HalkoConfig
 	}
 )
 
@@ -60,6 +61,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 		defaults:                   halkoConfig.ControlUnitConfig.Defaults,
 		heartbeatManager:           heartbeatMgr,
 		programStorage:             programStorage,
+		halkoConfig:                halkoConfig,
 	}
 
 	if halkoConfig.APIEndpoints == nil {
@@ -104,7 +106,9 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 }
 
 func (runner *programRunner) Run() {
-	ticker := time.NewTicker(6000 * time.Millisecond)
+	tickLength := time.Duration(runner.halkoConfig.ControlUnitConfig.TickLength) * time.Millisecond
+	log.Info("Program runner using tick length: %v", tickLength)
+	ticker := time.NewTicker(tickLength)
 	defer runner.wg.Done()
 
 	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
