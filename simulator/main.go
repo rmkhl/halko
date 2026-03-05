@@ -154,9 +154,21 @@ func main() {
 	router.SetupShellyRoutes(shellyMux, shellyControls)
 	shellyHandler := router.CORSMiddleware(shellyMux)
 
+	// Create simulation resetter for display endpoint
+	resetter := &router.SimulationResetter{
+		Heater:              heater,
+		Wood:                wood,
+		Fan:                 fan,
+		Humidifier:          humidifier,
+		PhysicsState:        physicsState,
+		InitialOvenTemp:     float32(simConfig.InitialOvenTemp),
+		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
+		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
+	}
+
 	// Create SensorUnit emulation server
 	sensorMux := http.NewServeMux()
-	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit)
+	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit, resetter)
 	sensorHandler := router.CORSMiddleware(sensorMux)
 
 	shellySrv := &http.Server{
