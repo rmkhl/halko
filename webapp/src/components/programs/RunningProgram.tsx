@@ -11,7 +11,7 @@ import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "..
 
 export const RunningProgram: React.FC = () => {
   const { t } = useTranslation();
-  const { data: runningProgramData } = useGetRunningProgramQuery(undefined, {
+  const { data: runningProgramData, refetch: refetchRunningProgram } = useGetRunningProgramQuery(undefined, {
     pollingInterval: 5000,
     skipPollingIfUnfocused: true,
   });
@@ -19,7 +19,17 @@ export const RunningProgram: React.FC = () => {
     pollingInterval: 5000,
     skipPollingIfUnfocused: true,
   });
-  const [stopProgram] = useStopRunningProgramMutation();
+  const [stopProgram, { isLoading: isStopping }] = useStopRunningProgramMutation();
+
+  const handleStop = async () => {
+    try {
+      await stopProgram("").unwrap();
+      // Force immediate refetch after stop to clear stale data
+      refetchRunningProgram();
+    } catch (error) {
+      console.error("Failed to stop program:", error);
+    }
+  };
 
   const runningProgram = useMemo(() => {
     return runningProgramData
@@ -91,7 +101,9 @@ export const RunningProgram: React.FC = () => {
           ) : null}
         </Stack>
         {runningProgram && (
-          <Button onClick={() => stopProgram("")}>Stop</Button>
+          <Button onClick={handleStop} disabled={isStopping}>
+            {isStopping ? "Stopping..." : "Stop"}
+          </Button>
         )}
       </Stack>
     </Stack>
