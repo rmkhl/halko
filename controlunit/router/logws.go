@@ -82,6 +82,11 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 				// Check if program is still running
 				status := engine.CurrentStatus()
 				if status == nil {
+					// Program stopped - notify client before closing
+					if err := conn.WriteMessage(websocket.TextMessage, []byte("No program running")); err != nil {
+						log.Debug("Failed to send stop notification: %v", err)
+					}
+					log.Debug("Program stopped, closing WebSocket connection")
 					return
 				}
 				// Only skip true initialization (Waiting), stream Pre-Heat, Initializing, and all program steps

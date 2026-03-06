@@ -7,6 +7,7 @@ import (
 	"github.com/rmkhl/halko/controlunit/heartbeat"
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
@@ -87,10 +88,13 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 
 	// Monitor runner completion to clean up
 	go func() {
+		log.Debug("Engine: Waiting for runner cleanup to complete")
 		runner.wg.Wait()
+		log.Info("Engine: Runner cleanup complete, clearing engine state")
 		engine.mu.Lock()
 		engine.runner = nil
 		engine.mu.Unlock()
+		log.Info("Engine: No program currently running")
 		engine.wg.Done()
 	}()
 

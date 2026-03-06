@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -30,6 +31,24 @@ func listAllRuns(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 				StartedAt:   startTimeFromName(programName),
 			})
 		}
+
+		// Sort by completion date (latest first)
+		sort.Slice(savedPrograms, func(i, j int) bool {
+			// Programs with CompletedAt come before those without
+			if savedPrograms[i].CompletedAt == 0 && savedPrograms[j].CompletedAt != 0 {
+				return false
+			}
+			if savedPrograms[i].CompletedAt != 0 && savedPrograms[j].CompletedAt == 0 {
+				return true
+			}
+			// Both have CompletedAt: sort descending (latest first)
+			if savedPrograms[i].CompletedAt != 0 && savedPrograms[j].CompletedAt != 0 {
+				return savedPrograms[i].CompletedAt > savedPrograms[j].CompletedAt
+			}
+			// Neither has CompletedAt: sort by StartedAt descending
+			return savedPrograms[i].StartedAt > savedPrograms[j].StartedAt
+		})
+
 		writeJSON(w, http.StatusOK, types.APIResponse[[]types.RunHistory]{Data: savedPrograms})
 	}
 }

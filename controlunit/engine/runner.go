@@ -112,13 +112,12 @@ func (runner *programRunner) Run() {
 	}
 	log.Info("Program runner using tick length: %v", tickLength)
 	ticker := time.NewTicker(tickLength)
+	defer ticker.Stop()
 	defer runner.wg.Done()
 
 	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
-	// Use the same start time that was captured for ExecutionLogWriter
-	runner.fsmController.Start(runner.currentProgram, runner.logWriter.GetStartTime())
+	// Note: fsmController.Start() was already called in Start() method
 	for runner.active && !runner.fsmController.Completed() {
-		defer ticker.Stop()
 		now := time.Now().Unix()
 		select {
 		case <-ticker.C:
@@ -167,8 +166,39 @@ func (runner *programRunner) Run() {
 		log.Error("Failed to move program files to history: %v", err)
 	}
 
-	runner.psuSensorCommands <- controllerDone
-	runner.temperatureSensorCommands <- controllerDone
+	log.Debug("Runner: Signaling sensor readers to stop")
+
+	// Drain any pending responses first to prevent deadlock
+	// Sensor readers might be blocked trying to send responses
+	for {
+		select {
+		case <-runner.psuSensorResponses:
+			log.Trace("Runner: Drained pending PSU response")
+		case <-runner.temperatureSensorResponses:
+			log.Trace("Runner: Drained pending temperature response")
+		default:
+			// No more pending responses, proceed to send done signals
+			goto sendDone
+		}
+	}
+
+sendDone:
+	// Now safe to send done signals with timeout
+	select {
+	case runner.psuSensorCommands <- controllerDone:
+		log.Trace("Runner: Sent done signal to PSU sensor reader")
+	case <-time.After(1 * time.Second):
+		log.Warning("Runner: Timeout sending done signal to PSU sensor reader")
+	}
+
+	select {
+	case runner.temperatureSensorCommands <- controllerDone:
+		log.Trace("Runner: Sent done signal to temperature sensor reader")
+	case <-time.After(1 * time.Second):
+		log.Warning("Runner: Timeout sending done signal to temperature sensor reader")
+	}
+
+	log.Debug("Runner: Run() method completing")
 }
 
 // updateDisplay sets the display message via heartbeat manager
@@ -184,8 +214,8 @@ func (runner *programRunner) updateDisplay(stepName string) {
 
 func (runner *programRunner) Stop() {
 	runner.active = false
-
-	runner.wg.Wait()
+	// Don't wait here - let the runner complete asynchronously
+	// The monitoring goroutine in engine.go will clean up engine.runner after completion
 }
 
 func (runner *programRunner) Start() {

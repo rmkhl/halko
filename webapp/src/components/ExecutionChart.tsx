@@ -28,6 +28,8 @@ interface ExecutionChartProps {
   csvData?: string;
   title?: string;
   isLoading?: boolean;
+  isLive?: boolean;
+  temperatureRange?: { min: number; max: number };
 }
 
 // Static CSV data from ,run.csv (used as fallback)
@@ -127,7 +129,13 @@ const parseCSV = (csv: string): DataPoint[] => {
   return data;
 };
 
-export const ExecutionChart: React.FC<ExecutionChartProps> = ({ csvData, title = "Program Execution Data", isLoading = false }) => {
+export const ExecutionChart: React.FC<ExecutionChartProps> = ({
+  csvData,
+  title = "Program Execution Data",
+  isLoading = false,
+  isLive = false,
+  temperatureRange
+}) => {
   const dataPoints = parseCSV(csvData || defaultCsvData);
 
   if (isLoading) {
@@ -272,7 +280,12 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({ csvData, title =
           text: "Temperature (°C)",
         },
         beginAtZero: false,
-        grace: "5%",
+        ...(isLive && temperatureRange ? {
+          min: temperatureRange.min,
+          max: temperatureRange.max,
+        } : {
+          grace: "5%",
+        }),
         grid: {
           drawOnChartArea: false,
         },
