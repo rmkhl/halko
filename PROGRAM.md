@@ -49,9 +49,8 @@ A kiln drying program is defined as a JSON file with the following structure:
 
 - **Purpose**: Reduce kiln temperature in controlled manner
 - **Behavior**:
-  - Can have both target temperature and runtime specified
-  - Progresses when either target temperature is reached OR runtime expires
-    (whichever comes first)
+  - Optional runtime - can specify duration, target, or both
+  - Progresses when material temperature reaches target OR runtime expires (whichever comes first)
   - Heater must use simple power control (typically 0% power)
   - Typically the final step in a program
 - **Validation**: Runtime is optional, heater must use simple power
@@ -130,6 +129,12 @@ The `runtime` field uses Go's duration string format:
 1. **First step** must be a heating step
 2. **Last step** must be a cooling step
 3. **Minimum 2 steps** required
+
+### Runtime Requirements
+
+- **Heating steps**: Cannot have runtime (progresses on temperature)
+- **Acclimate steps**: Must have runtime (fixed duration)
+- **Cooling steps**: Runtime is optional (progresses on temperature, timeout, or both)
 
 ### Temperature Progression
 

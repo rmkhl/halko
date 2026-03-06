@@ -399,4 +399,4 @@ The tmux session includes separate windows for:
 - **webapp** - Development server with hot reload
 - **shell** - Command line for halkoctl and testing
 
-This workflow is faster and uses less resources than Docker-based development.
+This workflow provides fast iteration with real-time log viewing and easy service restarts.

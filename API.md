@@ -276,8 +276,8 @@ Lists all completed program executions, sorted by completion date (latest first)
   "data": [
     {
       "name": "Standard Drying@2024-01-15T10:30:00Z",
-      "started_at": "2024-01-15T10:30:00Z",
-      "completed_at": "2024-01-15T18:45:00Z"
+    "started_at": "2024-01-15T10:30:00Z",
+    "completed_at": "2024-01-15T18:45:00Z"
     },
     {
       "name": "Quick Drying@2024-01-14T08:00:00Z",

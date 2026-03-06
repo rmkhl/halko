@@ -68,7 +68,7 @@ The webapp uses a centralized API configuration (`src/config/api.ts`) that deter
 
 **Development Mode** (default):
 
-- Uses direct localhost URLs: `http://localhost:8090`, `http://localhost:8091`, `http://localhost:8088`
+- Uses direct localhost URLs: `http://localhost:8090`, `http://localhost:8093`, `http://localhost:8088`
 - Backend services must be running locally
 - No environment variables needed
 
