@@ -127,7 +127,11 @@ build: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
 
 .PHONY: lint
-lint:
+lint: lint-golang lint-markdown lint-webapp
+	@echo "✓ All linting completed"
+
+.PHONY: lint-golang
+lint-golang:
 	@for mod in $(MODULES) types tests; do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Linting $$mod..."; \
@@ -259,20 +263,6 @@ test-shelly-api:
 	@echo "Running shelly API tests..."
 	@cd tests && go test -v -run TestShellyAPI
 
-.PHONY: validate
-validate:
-	@if [ -z "$(PROGRAM)" ]; then \
-		echo "Usage: make validate PROGRAM=path/to/program.json"; \
-		echo "Example: make validate PROGRAM=example/example-program-delta.json"; \
-		exit 1; \
-	fi
-	@if [ ! -f $(BINDIR)/halkoctl ]; then \
-		echo "Building halkoctl..."; \
-		$(MAKE) $(BINDIR)/halkoctl; \
-	fi
-	@echo "Validating program: $(PROGRAM)"
-	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
-
 .PHONY: clean-webapp
 clean-webapp:
 	@echo "Cleaning webapp build artifacts..."
@@ -342,6 +332,7 @@ help:
 	@echo "  all                        Build all Go executables to bin/ directory."
 	@echo "  build                      Clean and rebuild all Go executables."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
+	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
 	@echo ""
 	@echo "Production Installation (Raspberry Pi / Host):"
@@ -350,7 +341,7 @@ help:
 	@echo "  install-webapp             Install webapp to /var/www/halko with nginx config."
 	@echo ""
 	@echo "  Note: For memory-constrained systems, use: OPTIMIZED=yes make build"
-	@echo "        This reduces binary size by ~30% (see Build Options below)."
+	@echo "        This reduces binary size by ~30%."
 	@echo ""
 	@echo "Development & Testing:"
 	@echo "  run-webapp                 Start webapp development server with hot reload."
@@ -359,18 +350,17 @@ help:
 	@echo "  test-config                Run configuration loading tests."
 	@echo "  test-program-validation    Run program JSON validation tests."
 	@echo "  test-shelly-api            Run Shelly device API compatibility tests."
-	@echo "  validate                   Validate a program file (requires PROGRAM=path/to/file.json)."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  lint                       Run golangci-lint on all modules."
+	@echo "  lint                       Run all linters (golang, markdown, webapp)."
+	@echo "  lint-golang                Run golangci-lint on all Go modules."
 	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
 	@echo "  go-tidy                    Run go mod tidy on all modules."
 	@echo "  update-modules             Update all go.mod dependencies and tidy them."
-	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo ""
 	@echo "Tmux Debug Environment:"
 	@echo "  tmux-debug-run             Start services in tmux session for native debugging."
@@ -380,16 +370,5 @@ help:
 	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"
 	@echo "  tmux-debug-stop            Stop and terminate the tmux debug session."
-	@echo ""
-	@echo "Build Options:"
-	@echo "  OPTIMIZED=yes              Build with memory optimization flags (~30% smaller binaries)."
-	@echo "                               Usage: OPTIMIZED=yes make build"
-	@echo "                                      OPTIMIZED=yes make images"
-	@echo "                               Flags: -ldflags='-s -w' -trimpath (strips debug symbols)"
-	@echo "                               Trade-off: Cannot use debugger, ~5-10% slower execution"
-	@echo ""
-	@echo "Program Validation:"
-	@echo "  validate PROGRAM=file.json Validate a specific program file."
-	@echo "                               Example: make validate PROGRAM=example/example-program-delta.json"
 
 .DEFAULT_GOAL := help
