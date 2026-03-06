@@ -59,6 +59,12 @@ prepare:
 	else \
 		echo "✓ mdl is installed"; \
 	fi
+	@if ! command -v tmux > /dev/null; then \
+		echo "Warning: 'tmux' is not available. The 'make tmux-debug-run' target will not work."; \
+		echo "Install with: sudo apt install tmux (Debian/Ubuntu) or brew install tmux (macOS)"; \
+	else \
+		echo "✓ tmux is installed"; \
+	fi
 	@echo "Creating or updating go.work file with all modules..."
 	@if [ ! -f go.work ]; then \
 		echo "Initializing new go.work file..."; \
@@ -267,34 +273,6 @@ validate:
 	@echo "Validating program: $(PROGRAM)"
 	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
 
-.PHONY: images
-images: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All Go binaries have been rebuilt."
-	@echo "Building webapp for Docker..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install && npm run build
-	@echo "✓ Webapp built to webapp/dist/"
-	@echo "Ensuring fsdb directory exists..."
-	@mkdir -p fsdb
-	@echo "Generating nginx configuration for webapp Docker container..."
-	@$(BINDIR)/halkoctl -c halko-docker.cfg nginx -port 80 -output webapp/nginx-docker.conf
-	@echo "Removing existing Docker images..."
-	@docker-compose down --remove-orphans || true
-	@docker-compose rm -f || true
-	@docker images --filter "reference=halko_*" -q | xargs -r docker rmi -f || true
-	@echo "Building new Docker images..."
-	@BUILDKIT_PROGRESS=plain docker-compose build
-	@echo "Docker images have been rebuilt."
-	@echo ""
-	@echo "To run with different simulator engines:"
-	@echo "  SIMULATOR_ENGINE=simple docker-compose up          # Basic rate-based model"
-	@echo "  SIMULATOR_ENGINE=differential docker-compose up   # Differential equation engine"
-	@echo "  SIMULATOR_ENGINE=thermodynamic docker-compose up  # Advanced thermodynamic model"
-	@echo ""
-	@echo "Or use convenience targets: make run-simple / run-differential / run-thermodynamic"
-
 .PHONY: clean-webapp
 clean-webapp:
 	@echo "Cleaning webapp build artifacts..."
@@ -341,19 +319,6 @@ lint-webapp:
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
 	fi; \
 	cd webapp && npm run lint
-
-.PHONY: run-simple run-differential run-thermodynamic
-run-simple:
-	@echo "Starting Halko with simple simulator engine..."
-	@SIMULATOR_ENGINE=simple docker-compose up
-
-run-differential:
-	@echo "Starting Halko with differential simulator engine..."
-	@SIMULATOR_ENGINE=differential docker-compose up
-
-run-thermodynamic:
-	@echo "Starting Halko with thermodynamic simulator engine..."
-	@SIMULATOR_ENGINE=thermodynamic docker-compose up
 
 .PHONY: tmux-debug-run tmux-debug-stop
 tmux-debug-run:
@@ -405,12 +370,6 @@ help:
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
 	@echo "  go-tidy                    Run go mod tidy on all modules."
 	@echo "  update-modules             Update all go.mod dependencies and tidy them."
-	@echo ""
-	@echo "Docker Development (Not for Raspberry Pi):"
-	@echo "  images                     Rebuild everything and recreate all Docker images."
-	@echo "  run-simple                 Start Docker Compose with simple simulator engine."
-	@echo "  run-differential           Start Docker Compose with differential simulator engine."
-	@echo "  run-thermodynamic          Start Docker Compose with thermodynamic simulator engine."
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo ""
 	@echo "Tmux Debug Environment:"

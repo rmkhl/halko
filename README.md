@@ -60,7 +60,6 @@ make webapp-install      # Install webapp dependencies
 make webapp-dev          # Start development server
 make webapp-build        # Build for production
 make webapp-clean        # Clean webapp artifacts
-make webapp-docker-build # Build webapp Docker image
 ```
 
 ## Project Structure
@@ -332,78 +331,6 @@ sudo nano /etc/opt/halko.cfg
 # Change "network_interface": "eth0" to your interface name
 ```
 
-### Docker Deployment
-
-The system can also be deployed using Docker Compose. The containers are
-configured to run as the host user to ensure proper file ownership.
-
-#### Prerequisites
-
-```bash
-# Build all binaries and Docker images
-make images
-```
-
-This target automatically:
-
-- Rebuilds all Go binaries
-- Builds webapp for production with nginx
-- Generates `webapp/nginx-docker.conf` with WebSocket support
-- Creates Docker images for all services
-
-#### Configuration Files
-
-Docker deployment uses specific configuration files:
-
-- `halko-docker.cfg` - Service endpoints using Docker service names
-- `simulator.conf` - Simulator physics engine configuration (see [SIMULATOR.md](SIMULATOR.md))
-
-The simulator requires both configuration files mounted in the container.
-
-#### File Ownership Configuration
-
-By default, containers run as UID:GID 1000:1000. To use your current user's
-UID/GID for proper file ownership on the host:
-
-```bash
-# Set environment variables before starting containers
-export UID=$(id -u)
-export GID=$(id -g)
-```
-
-#### Starting the Services
-
-```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-```
-
-Files created by the containers in the `fsdb/` directory will be owned by the
-specified UID:GID on the host system.
-
-#### Service Architecture
-
-Docker deployment includes:
-
-- **controlunit:8090** - Engine and storage endpoints
-- **powerunit:8092** - Shelly device interface (proxies to simulator)
-- **simulator:8088/8093** - Emulated hardware (Shelly + sensors)
-- **webapp:8080** - React UI with nginx reverse proxy
-
-The webapp nginx configuration includes:
-
-- WebSocket upgrade support for live log streaming (`/api/v1/controlunit/engine/running/logws`)
-- API proxying to backend services at `/api/v1/*`
-- CORS headers for all endpoints
-
-Access the webapp at <http://localhost:8080>
-
 ## Development
 
 For development, you can run the simulator instead of connecting to real hardware:
@@ -438,4 +365,37 @@ Monitor process memory usage to detect potential memory leaks during development
 make monitor-memory MONITOR_ARGS="-o test.csv -t 7200"
 ```
 
-Run `./scripts/monitor-memory.py --help` for all options. Works with both Docker containers and native processes.
+Run `./scripts/monitor-memory.py --help` for all options.
+
+### Tmux-Based Development Workflow
+
+For rapid development and debugging, use the tmux environment to run all services locally:
+
+```bash
+# Start all services in tmux (simulator, powerunit, controlunit, webapp)
+make tmux-debug-run
+
+# With custom log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
+LOGLEVEL=4 make tmux-debug-run
+
+# With specific simulator engine
+SIMULATOR=thermodynamic make tmux-debug-run
+
+# Combined options
+LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run
+
+# Attach to running session
+tmux attach -t halko-debug
+
+# Stop all services
+make tmux-debug-stop
+```
+
+The tmux session includes separate windows for:
+- **simulator** - Hardware emulation
+- **powerunit** - Power control service
+- **controlunit** - Main control logic
+- **webapp** - Development server with hot reload
+- **shell** - Command line for halkoctl and testing
+
+This workflow is faster and uses less resources than Docker-based development.

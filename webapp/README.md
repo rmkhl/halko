@@ -68,7 +68,7 @@ The webapp uses a centralized API configuration (`src/config/api.ts`) that deter
 - Backend services must be running locally
 - No environment variables needed
 
-**Production Mode** (Docker/nginx proxy):
+**Production Mode** (nginx proxy):
 - Uses relative paths: `/api/v1/controlunit`, `/api/v1/sensorunit`
 - Requires nginx to proxy requests to backend services
 - Set environment variable: `VITE_API_PREFIX=/api/v1`
@@ -84,15 +84,7 @@ Or use the provided `.env.production` file during build:
 npm run build  # Automatically uses .env.production
 ```
 
-### Development Mode
-
-The development server provided by Parcel includes:
-- Hot module replacement (HMR)
-- Source maps for debugging
-- Fast incremental builds
-- Automatic browser refresh on changes
-
-## Production Build
+## Production Deployment
 
 ### Build for Production
 
@@ -106,6 +98,8 @@ This creates an optimized production build in `webapp/dist/` with:
 - Asset optimization
 - Hash-based cache busting
 
+The build automatically uses `.env.production` configuration.
+
 ### Build Output
 
 The `dist/` directory structure:
@@ -117,38 +111,18 @@ dist/
 └── assets/            # Static assets (if any)
 ```
 
-## Docker Deployment
+### Development Mode
 
-### Build Docker Image
+The development server provided by Parcel includes:
+- Hot module replacement (HMR)
+- Source maps for debugging
+- Fast incremental builds
+- Automatic browser refresh on changes
 
+Start with:
 ```bash
-make webapp-docker-build
+make webapp-dev
 ```
-
-This creates a multi-stage Docker image that:
-1. Generates nginx.conf using `halkoctl` with `halko-docker.cfg`
-2. Builds the React app using Node.js
-3. Serves the static files using nginx Alpine
-
-### Docker Compose
-
-The webapp is integrated into the main `docker-compose.yml`. Building all images:
-
-```bash
-# Build all services including webapp (recommended)
-make images
-
-# Or start with docker-compose (will build if needed)
-docker-compose up -d
-```
-
-Access the webapp at http://localhost:8080
-
-The `make images` target automatically:
-- Builds all Go binaries
-- Builds the webapp production bundle
-- Generates `nginx-docker.conf` using `halkoctl` and `halko-docker.cfg`
-- Builds all Docker images including the webapp
 
 ### Nginx Configuration
 
@@ -168,21 +142,7 @@ make build-webapp
 ```
 Generates `webapp/nginx-host.conf` using `halko.cfg` which proxies to localhost ports.
 
-For Docker deployment (services by container name):
-```bash
-make images
-```
-Generates `webapp/nginx-docker.conf` using `halko-docker.cfg` which proxies to Docker service names.
-
 **API proxy endpoints:**
-
-Docker mode:
-- `/api/v1/controlunit/` → `http://controlunit:8090` (engine endpoints + WebSocket)
-- `/api/v1/storage/` → `http://controlunit:8090` (stored programs)
-- `/api/v1/powerunit/` → `http://powerunit:8092`
-- `/api/v1/sensorunit/` → `http://simulator:8093`
-
-Production mode (localhost):
 - `/api/v1/controlunit/` → `http://localhost:8090` (engine endpoints + WebSocket)
 - `/api/v1/storage/` → `http://localhost:8090` (stored programs)
 - `/api/v1/powerunit/` → `http://localhost:8092`
@@ -213,8 +173,7 @@ webapp/
 ├── index.html                # HTML template
 ├── package.json              # Dependencies and scripts
 ├── tsconfig.json            # TypeScript configuration
-├── Dockerfile               # Multi-stage Docker build
-└── nginx.conf               # Nginx server configuration
+└── nginx-host.conf           # Generated nginx config for production
 ```
 
 ## Make Targets
@@ -227,9 +186,7 @@ webapp/
 | `webapp-dev` | Start development server with hot reload |
 | `webapp-build` | Build for production |
 | `webapp-clean` | Remove build artifacts and dependencies |
-| `webapp-docker-build` | Build Docker image |
 | `webapp-nginx-config` | Generate nginx config for standard installation (uses `halko.cfg`) |
-| `webapp-nginx-docker-config` | Generate nginx config for Docker deployment (uses `halko-docker.cfg`) |
 
 ## API Integration
 
@@ -242,7 +199,6 @@ The webapp communicates with backend services through RTK Query services in `src
 
 API base URLs should be configured based on deployment environment:
 - **Development**: Direct service URLs (e.g., `http://localhost:8090`)
-- **Docker**: Service names as hostnames (e.g., `http://executor:8090`)
 - **Production with nginx**: Proxied through `/api/*` endpoints
 
 ## Cleaning Up
@@ -269,11 +225,6 @@ This removes:
 - Check for TypeScript errors: `cd webapp && npx tsc --noEmit`
 - Ensure all dependencies are installed: `make webapp-install`
 - Check the build output for specific error messages
-
-### Docker image issues
-- Ensure the production build works locally first: `make webapp-build`
-- Check Docker logs: `docker-compose logs webapp`
-- Verify nginx configuration syntax: `docker exec halko_webapp nginx -t`
 
 ### API requests fail
 - In development, ensure backend services are running

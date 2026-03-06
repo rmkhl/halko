@@ -106,7 +106,7 @@ Memory usage during normal operation (systemd deployment):
 | nginx (webapp) | 5-10 MB | 10-15 MB |
 | **Total** | **~90 MB** | **~150 MB** |
 
-**Note**: Native deployment uses significantly less memory than Docker containers. Total usage stays well under 200 MB, leaving plenty of headroom on 1GB RAM systems.
+**Note**: Total usage stays well under 200 MB, leaving plenty of headroom on 1GB RAM systems.
 
 ## Raspberry Pi OS Setup
 

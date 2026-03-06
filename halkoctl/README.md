@@ -278,7 +278,6 @@ halkoctl nginx [options]
 ```bash
 halkoctl nginx -port 8080
 halkoctl nginx -port 80 -output /etc/nginx/sites-available/halko
-halkoctl -c halko-docker.cfg nginx -port 80 -output webapp/nginx-docker.conf
 ```
 
 The generated configuration includes:

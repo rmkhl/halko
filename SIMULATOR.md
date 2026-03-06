@@ -26,13 +26,6 @@ The simulator requires two configuration files:
 
 # Auto-discovery (looks for simulator.conf in standard locations)
 ./bin/simulator -c halko.cfg
-
-# In Docker with default engine (simple)
-docker-compose up simulator
-
-# In Docker with specific engine
-SIMULATOR_ENGINE=differential docker-compose up simulator
-SIMULATOR_ENGINE=thermodynamic docker-compose up simulator
 ```
 
 ### Configuration File Search Order
@@ -296,70 +289,6 @@ Emulates temperature sensor endpoints:
 }
 ```
 
-## Docker Integration
-
-The simulator supports runtime selection of physics engines in Docker Compose environments using the `SIMULATOR_ENGINE` environment variable:
-
-```bash
-# Method 1: Environment variable (no rebuild needed)
-SIMULATOR_ENGINE=simple docker-compose up
-SIMULATOR_ENGINE=differential docker-compose up
-SIMULATOR_ENGINE=thermodynamic docker-compose up
-
-# Method 2: Using convenience make targets
-make run-simple          # Basic rate-based model
-make run-differential    # Differential equation engine
-make run-thermodynamic   # Advanced thermodynamic model
-```
-
-### Available Configuration Files
-
-All three simulator configuration files are mounted into the container:
-
-- `/etc/halko/simulator-simple.conf` - Basic rate-based model
-- `/etc/halko/simulator-differential.conf` - Differential equation engine
-- `/etc/halko/simulator-thermodynamic.conf` - Advanced thermodynamic model
-
-The `SIMULATOR_ENGINE` variable selects which configuration to use at runtime.
-
-### Default Configuration
-
-If no `SIMULATOR_ENGINE` is specified, the docker-compose.yml defaults to `simple`:
-
-### Docker Compose Configuration
-
-```yaml
-simulator:
-  environment:
-    - SIMULATOR_ENGINE=${SIMULATOR_ENGINE:-simple}
-  volumes:
-    - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
-    - ./simulator.conf:/etc/halko/simulator-simple.conf:ro
-    - ./simulator-differential.conf:/etc/halko/simulator-differential.conf:ro
-    - ./simulator-thermodynamic.conf:/etc/halko/simulator-thermodynamic.conf:ro
-  ports:
-    - "8088:8088"  # Shelly emulation
-    - "8093:8093"  # SensorUnit emulation
-  command: ["-c", "/etc/halko/halko.cfg", "-s", "/etc/halko/simulator-${SIMULATOR_ENGINE:-simple}.conf"]
-```
-
-### Switching Engines Without Rebuild
-
-Change engines instantly without rebuilding images:
-
-```bash
-# Start with simple engine
-docker-compose up -d
-
-# Switch to differential (restart only)
-docker-compose down
-SIMULATOR_ENGINE=differential docker-compose up -d
-
-# Switch to thermodynamic
-docker-compose down
-SIMULATOR_ENGINE=thermodynamic docker-compose up -d
-```
-
 ## Status Logging
 
 When `status_interval > 0`, the simulator logs internal state periodically:
@@ -393,4 +322,4 @@ These limitations make the simulator suitable for temperature control developmen
 
 - [API.md](API.md) - Complete API endpoint documentation
 - [PROGRAM.md](PROGRAM.md) - Program structure and validation rules
-- [README.md](README.md#docker-deployment) - Docker deployment guide
+- [README.md](README.md) - System overview and deployment guide

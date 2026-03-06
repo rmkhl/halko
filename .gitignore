@@ -20,7 +20,7 @@
 # Go workspace files
 go.work*
 
-# Filesystem database docker volume.
+# Filesystem database shared storage.
 fsdb
 
 .DS_Store
