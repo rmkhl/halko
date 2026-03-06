@@ -85,11 +85,11 @@ func stopRunningProgram() {
 		fmt.Fprintf(os.Stderr, "Error connecting to controlunit: %v\n", err)
 		os.Exit(exitError)
 	}
-	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading response: %v\n", err)
+		resp.Body.Close()
 		os.Exit(exitError)
 	}
 
@@ -103,6 +103,7 @@ func stopRunningProgram() {
 
 	// Handle 404 Not Found as "no program running"
 	if resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
 		fmt.Println("No program currently running")
 		return
 	}
@@ -115,8 +116,10 @@ func stopRunningProgram() {
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: HTTP %d - %s\n", resp.StatusCode, string(respBody))
 		}
+		resp.Body.Close()
 		os.Exit(exitError)
 	}
 
+	resp.Body.Close()
 	fmt.Println("✓ Program stopped successfully")
 }
