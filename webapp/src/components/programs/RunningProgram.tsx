@@ -9,6 +9,21 @@ import { useGetTemperaturesQuery } from "../../store/services/sensorsApi";
 import { celsius } from "../../util";
 import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../../types/api";
 
+// Format duration in seconds to human-readable string
+const formatDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+};
+
 export const RunningProgram: React.FC = () => {
   const { t } = useTranslation();
   const { data: runningProgramData, refetch: refetchRunningProgram } = useGetRunningProgramQuery(undefined, {
@@ -67,7 +82,7 @@ export const RunningProgram: React.FC = () => {
           </Typography>
           {runningProgram && runningProgram.data?.started_at && (
             <Typography variant="subtitle2" color="text.secondary">
-              Started: {new Date(runningProgram.data.started_at * 1000).toLocaleString()}
+              Started: {new Date(runningProgram.data.started_at * 1000).toLocaleString()} ({formatDuration(Math.floor(Date.now() / 1000 - runningProgram.data.started_at))})
             </Typography>
           )}
           {runningProgram && runningProgram.data?.current_step ? (
@@ -94,7 +109,7 @@ export const RunningProgram: React.FC = () => {
               })()}
               {runningProgram.data.current_step_started_at && (
                 <Typography variant="subtitle2" color="text.secondary">
-                  Step started: {new Date(runningProgram.data.current_step_started_at * 1000).toLocaleString()}
+                  Step started: {new Date(runningProgram.data.current_step_started_at * 1000).toLocaleString()} ({formatDuration(Math.floor(Date.now() / 1000 - runningProgram.data.current_step_started_at))})
                 </Typography>
               )}
             </>

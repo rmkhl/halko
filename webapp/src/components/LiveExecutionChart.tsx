@@ -33,35 +33,58 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
     skipPollingIfUnfocused: true,
   });
 
-  // Calculate temperature range based on program targets and initial material temp
+  // Calculate temperature range based on program targets and historical/current temps
   const temperatureRange = useMemo(() => {
-    // Get current material temperature for min value
-    const temperatures = sensorData ? (sensorData as APIResponse<Omit<TemperatureStatus, "delta">>) : undefined;
-    const currentMaterialTemp = temperatures?.data?.material;
-
-    // Store initial material temperature when first available
-    if (currentMaterialTemp !== undefined && initialMaterialTempRef.current === null) {
-      initialMaterialTempRef.current = currentMaterialTemp;
-    }
-
     // Get program data to find highest target temperature
     const runningProgram = runningProgramData ? (runningProgramData as RunningProgramResponse) : undefined;
     const steps = runningProgram?.data?.program?.steps;
 
-    if (initialMaterialTempRef.current !== null && steps && Array.isArray(steps)) {
-      // Find the highest target temperature across all steps
+    let minTemp: number | null = null;
+
+    // If we have historical CSV data, use the first data point for min temp
+    if (csvData) {
+      const lines = csvData.trim().split("\n");
+      if (lines.length > 1) {
+        const firstDataLine = lines[1]; // Skip header
+        const values = firstDataLine.split(",");
+        if (values.length >= 5) {
+          const firstMaterial = parseFloat(values[3]);
+          const firstOven = parseFloat(values[4]);
+          if (!isNaN(firstMaterial) && !isNaN(firstOven)) {
+            // Min is the lowest of: 0, first material temp, first oven temp
+            minTemp = Math.floor(Math.min(0, firstMaterial, firstOven));
+          }
+        }
+      }
+    }
+
+    // Fallback to current sensor data if no historical data
+    if (minTemp === null) {
+      const temperatures = sensorData ? (sensorData as APIResponse<Omit<TemperatureStatus, "delta">>) : undefined;
+      const currentMaterialTemp = temperatures?.data?.material;
+
+      // Store initial material temperature when first available
+      if (currentMaterialTemp !== undefined && initialMaterialTempRef.current === null) {
+        initialMaterialTempRef.current = currentMaterialTemp;
+      }
+
+      if (initialMaterialTempRef.current !== null) {
+        minTemp = Math.floor(initialMaterialTempRef.current);
+      }
+    }
+
+    // Calculate max from program steps
+    if (minTemp !== null && steps && Array.isArray(steps)) {
       const maxTarget = Math.max(...steps.map((step: Step) => step.temperature_target || 0));
 
       if (maxTarget > 0) {
-        // Use initial material temp as min, highest target + 10°C buffer as max
-        const minTemp = Math.floor(initialMaterialTempRef.current);
-        const maxTemp = Math.ceil(maxTarget + 10);
+        const maxTemp = Math.ceil(maxTarget + 15);
         return { min: minTemp, max: maxTemp };
       }
     }
 
     return undefined;
-  }, [sensorData, runningProgramData]);
+  }, [sensorData, runningProgramData, csvData]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -196,7 +219,18 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         setIsConnected(false);
         // Only reconnect if it wasn't a manual close and component is still mounted
         if (!isManualCloseRef.current && isMountedRef.current && !noProgramRunning) {
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            // Re-fetch accumulated data on reconnect to catch up on any missed data points
+            fetchAccumulatedData()
+              .then((hasRunningProgram) => {
+                if (hasRunningProgram) {
+                  connectWebSocket();
+                }
+              })
+              .catch(() => {
+                // Error already logged, don't try to connect WebSocket
+              });
+          }, 5000);
         }
       };
     };
