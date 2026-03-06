@@ -32,6 +32,7 @@ Common interface names:
 **Raspberry Pi Production Setup:**
 
 For Raspberry Pi deployments with dual network interfaces (see [RASPBERRY_PI.md](../RASPBERRY_PI.md)):
+
 - Set `network_interface: "wlan0"` (WiFi for display IP and remote access)
 - Configure Ethernet (`eth0`) with static IP `192.168.10.1/24` for direct Shelly connection
 - This allows the sensor unit to display the WiFi IP for remote access while keeping Shelly on a dedicated network
@@ -61,11 +62,13 @@ Common paths:
 For production, change this to your actual Shelly smart switch IP address:
 
 **Standard network setup:**
+
 ```json
 "shelly_address": "http://192.168.1.50"
 ```
 
 **Raspberry Pi production setup** (direct Ethernet connection):
+
 ```json
 "shelly_address": "http://192.168.10.2"
 ```
@@ -81,6 +84,7 @@ Storage location for programs and execution logs. This directory is created by `
 ### Example Production Configurations
 
 **Standard Linux server:**
+
 ```json
 {
   "controlunit": {
@@ -104,6 +108,7 @@ Storage location for programs and execution logs. This directory is created by `
 ```
 
 **Raspberry Pi 3B (dual interface setup):**
+
 ```json
 {
   "controlunit": {

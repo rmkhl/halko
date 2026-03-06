@@ -475,7 +475,7 @@ WebSocket endpoint for real-time execution log streaming.
 
 The server sends CSV lines as text messages:
 
-```
+```csv
 timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
 ```
 

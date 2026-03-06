@@ -36,8 +36,8 @@ clean:
 
 .PHONY: distclean
 distclean: clean clean-webapp
-	@rm -rf .nodejs
-	@echo "✓ Removed local Node.js installation"
+	@rm -rf .nodejs node_modules
+	@echo "✓ Removed local Node.js installation and node modules"
 
 .PHONY: prepare
 prepare:
@@ -54,11 +54,7 @@ prepare:
 	else \
 		echo "✓ golangci-lint is installed"; \
 	fi
-	@if ! command -v mdl > /dev/null; then \
-		echo "Warning: 'mdl' is not available. Markdown linting will not work."; \
-	else \
-		echo "✓ mdl is installed"; \
-	fi
+
 	@if ! command -v tmux > /dev/null; then \
 		echo "Warning: 'tmux' is not available. The 'make tmux-debug-run' target will not work."; \
 		echo "Install with: sudo apt install tmux (Debian/Ubuntu) or brew install tmux (macOS)"; \
@@ -115,6 +111,12 @@ prepare:
 			echo "✓ Node.js $$(node -v) is installed"; \
 		fi; \
 	fi
+	@echo "Installing root dependencies (markdownlint-cli2)..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	npm install
+	@echo "✓ Root dependencies installed"
 	@echo "Installing webapp dependencies (including ESLint)..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -141,11 +143,14 @@ lint-golang:
 
 .PHONY: lint-markdown
 lint-markdown:
-	@if command -v mdl > /dev/null; then \
-		echo "Linting markdown files..."; \
-		find . -name "*.md" -not -path "./.github/*" -not -path "./webapp/*" -not -path "./.nodejs/*" -not -path "./fsdb/*" -not -path "./node_modules/*" | xargs mdl --ignore-front-matter || true; \
+	@echo "Linting markdown files..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	if [ -f node_modules/.bin/markdownlint-cli2 ]; then \
+		npm run lint:markdown || true; \
 	else \
-		echo "Warning: mdl is not installed. Skipping markdown linting."; \
+		echo "Warning: markdownlint-cli2 is not installed. Run 'make prepare' first."; \
 	fi
 
 .PHONY: go-tidy
@@ -356,7 +361,7 @@ help:
 	@echo "Code Quality:"
 	@echo "  lint                       Run all linters (golang, markdown, webapp)."
 	@echo "  lint-golang                Run golangci-lint on all Go modules."
-	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
+	@echo "  lint-markdown              Run markdownlint-cli2 on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
 	@echo "  go-tidy                    Run go mod tidy on all modules."

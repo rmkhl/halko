@@ -38,6 +38,10 @@ tmp
 # Local Node.js installation
 .nodejs
 
+# Root build tool dependencies
+node_modules
+package-lock.json
+
 .github
 
 # Local test programs

@@ -28,6 +28,7 @@ make webapp-install-node
 ```
 
 This will:
+
 1. Download Node.js 18.20.5 standalone binaries
 2. Extract them to `.nodejs/` directory in the project root
 3. No system-wide or user-wide installation required
@@ -44,6 +45,7 @@ node --version
 ### Quick Start
 
 1. Install dependencies:
+
    ```bash
    make webapp-install
    # or directly:
@@ -51,35 +53,40 @@ node --version
    ```
 
 2. Start the development server:
+
    ```bash
    make webapp-dev
    # or directly:
    cd webapp && npm start
    ```
 
-   The app will be available at http://localhost:1234 (default Parcel port) with hot module reloading enabled.
+   The app will be available at `http://localhost:1234` (default Parcel port) with hot module reloading enabled.
 
 ### API Configuration
 
 The webapp uses a centralized API configuration (`src/config/api.ts`) that determines endpoint URLs based on the environment.
 
 **Development Mode** (default):
+
 - Uses direct localhost URLs: `http://localhost:8090`, `http://localhost:8091`, `http://localhost:8088`
 - Backend services must be running locally
 - No environment variables needed
 
 **Production Mode** (nginx proxy):
+
 - Uses relative paths: `/api/v1/controlunit`, `/api/v1/sensorunit`
 - Requires nginx to proxy requests to backend services
 - Set environment variable: `VITE_API_PREFIX=/api/v1`
 
 To configure for production, create a `.env` file:
+
 ```bash
 cp .env.example .env
 # Edit .env and uncomment VITE_API_PREFIX=/api/v1
 ```
 
 Or use the provided `.env.production` file during build:
+
 ```bash
 npm run build  # Automatically uses .env.production
 ```
@@ -93,6 +100,7 @@ make webapp-build
 ```
 
 This creates an optimized production build in `webapp/dist/` with:
+
 - Minified JavaScript and CSS
 - Tree-shaking to remove unused code
 - Asset optimization
@@ -103,7 +111,8 @@ The build automatically uses `.env.production` configuration.
 ### Build Output
 
 The `dist/` directory structure:
-```
+
+```text
 dist/
 ├── index.html          # Entry point
 ├── *.js               # Bundled JavaScript
@@ -114,12 +123,14 @@ dist/
 ### Development Mode
 
 The development server provided by Parcel includes:
+
 - Hot module replacement (HMR)
 - Source maps for debugging
 - Fast incremental builds
 - Automatic browser refresh on changes
 
 Start with:
+
 ```bash
 make webapp-dev
 ```
@@ -127,6 +138,7 @@ make webapp-dev
 ### Nginx Configuration
 
 The nginx configuration is **automatically generated** using `halkoctl`. The configuration:
+
 - Serves the React SPA
 - Handles client-side routing (React Router)
 - Proxies API requests to backend services
@@ -137,12 +149,15 @@ The nginx configuration is **automatically generated** using `halkoctl`. The con
 **Configuration generation:**
 
 For production installation (bare-metal, services on localhost):
+
 ```bash
 make build-webapp
 ```
+
 Generates `webapp/nginx-host.conf` using `halko.cfg` which proxies to localhost ports.
 
 **API proxy endpoints:**
+
 - `/api/v1/controlunit/` → `http://localhost:8090` (engine endpoints + WebSocket)
 - `/api/v1/storage/` → `http://localhost:8090` (stored programs)
 - `/api/v1/powerunit/` → `http://localhost:8092`
@@ -150,7 +165,7 @@ Generates `webapp/nginx-host.conf` using `halko.cfg` which proxies to localhost 
 
 ## Project Structure
 
-```
+```text
 webapp/
 ├── src/
 │   ├── App.tsx                 # Main app component
@@ -198,6 +213,7 @@ The webapp communicates with backend services through RTK Query services in `src
 - `queryBuilders.ts`: Common query utilities
 
 API base URLs should be configured based on deployment environment:
+
 - **Development**: Direct service URLs (e.g., `http://localhost:8090`)
 - **Production with nginx**: Proxied through `/api/*` endpoints
 
@@ -210,6 +226,7 @@ make webapp-clean
 ```
 
 This removes:
+
 - `dist/` - Production build output
 - `node_modules/` - Installed dependencies
 - `.parcel-cache/` - Parcel cache files
@@ -217,16 +234,19 @@ This removes:
 ## Troubleshooting
 
 ### Development server won't start
+
 - Ensure Node.js 18+ is installed: `node --version`
 - Delete `node_modules` and `.parcel-cache`, then reinstall: `make webapp-clean && make webapp-install`
 - Check if port 1234 is already in use
 
 ### Build fails
+
 - Check for TypeScript errors: `cd webapp && npx tsc --noEmit`
 - Ensure all dependencies are installed: `make webapp-install`
 - Check the build output for specific error messages
 
 ### API requests fail
+
 - In development, ensure backend services are running
 - Check CORS configuration on backend services
 - Verify API endpoint URLs in the service configuration

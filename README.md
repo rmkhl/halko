@@ -392,6 +392,7 @@ make tmux-debug-stop
 ```
 
 The tmux session includes separate windows for:
+
 - **simulator** - Hardware emulation
 - **powerunit** - Power control service
 - **controlunit** - Main control logic

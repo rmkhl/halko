@@ -255,11 +255,14 @@ wood within specified bounds:
 The PID controller calculates power adjustments based on temperature error:
 
 1. **Error calculation**: `error = target_temp - actual_temp`
+
 2. **PID terms**:
-  - Proportional: `kp * error`
-  - Integral: `ki * accumulated_error`
-  - Derivative: `kd * error_rate_of_change`
+   - Proportional: `kp * error`
+   - Integral: `ki * accumulated_error`
+   - Derivative: `kd * error_rate_of_change`
+
 3. **Power adjustment**: `current_power + (proportional + integral + derivative)`
+
 4. **Clamping**: Final power limited to 0-100% range
 
 ## Default Settings
@@ -282,20 +285,20 @@ These defaults are defined in the main configuration file under `controlunit.def
 3. **Validate program**: Check all rules and constraints
 4. **Start execution**: FSM initializes and waits for initial sensor readings
 5. **Pre-heat phase** (automatic):
-  - If material temperature > oven temperature:
-    - Heater set to 100% power
-    - Fan set to 50% power
-    - Continues until oven reaches material temperature
-  - If oven temperature ≥ material temperature:
-    - Pre-heat phase is skipped
-    - Proceeds directly to first program step
-  - **Purpose**: Prevents thermal shock by ensuring oven doesn't start colder than wood
+   - If material temperature > oven temperature:
+     - Heater set to 100% power
+     - Fan set to 50% power
+     - Continues until oven reaches material temperature
+   - If oven temperature ≥ material temperature:
+   - Pre-heat phase is skipped
+   - Proceeds directly to first program step
+   **Purpose**: Prevents thermal shock by ensuring oven doesn't start colder than wood
 6. **Execute steps sequentially**:
-  - Initialize power controllers for current step
-  - Monitor temperatures continuously
-  - Update power outputs based on control algorithms
-  - Check step completion conditions
-  - Progress to next step when conditions met
+   - Initialize power controllers for current step
+   - Monitor temperatures continuously
+   - Update power outputs based on control algorithms
+   - Check step completion conditions
+   - Progress to next step when conditions met
 7. **Complete**: Program ends when the final step (typically cooling) completes
 
 ### FSM State Machine

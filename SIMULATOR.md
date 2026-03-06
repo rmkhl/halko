@@ -293,7 +293,7 @@ Emulates temperature sensor endpoints:
 
 When `status_interval > 0`, the simulator logs internal state periodically:
 
-```
+```text
 [INFO] Tick 10: Oven=45.2°C Material=42.5°C Heater=75% Fan=50%
 ```
 
