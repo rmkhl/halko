@@ -316,7 +316,7 @@ lint-webapp:
 	cd webapp && npm run lint
 
 .PHONY: tmux-debug-run tmux-debug-stop
-tmux-debug-run:
+tmux-debug-run: all
 	@LOGLEVEL=$(LOGLEVEL) SIMULATOR=$(SIMULATOR) ./scripts/tmux-debug-start.sh
 
 tmux-debug-stop:
