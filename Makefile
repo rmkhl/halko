@@ -355,10 +355,17 @@ run-thermodynamic:
 	@echo "Starting Halko with thermodynamic simulator engine..."
 	@SIMULATOR_ENGINE=thermodynamic docker-compose up
 
+.PHONY: tmux-debug-run tmux-debug-stop
+tmux-debug-run:
+	@LOGLEVEL=$(LOGLEVEL) SIMULATOR=$(SIMULATOR) ./scripts/tmux-debug-start.sh
+
+tmux-debug-stop:
+	@./scripts/tmux-debug-stop.sh
+
 .PHONY: monitor-memory
 monitor-memory:
 	@echo "Starting memory monitor for Halko processes..."
-	@./monitor-memory.py $(MONITOR_ARGS)
+	@./scripts/monitor-memory.py $(MONITOR_ARGS)
 
 .PHONY: help
 help:
@@ -405,6 +412,15 @@ help:
 	@echo "  run-differential           Start Docker Compose with differential simulator engine."
 	@echo "  run-thermodynamic          Start Docker Compose with thermodynamic simulator engine."
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
+	@echo ""
+	@echo "Tmux Debug Environment:"
+	@echo "  tmux-debug-run             Start services in tmux session for native debugging."
+	@echo "                               Starts: simulator, powerunit, controlunit, webapp"
+	@echo "                               Default loglevel: 3 (DEBUG)"
+	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-run"
+	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
+	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"
+	@echo "  tmux-debug-stop            Stop and terminate the tmux debug session."
 	@echo ""
 	@echo "Build Options:"
 	@echo "  OPTIMIZED=yes              Build with memory optimization flags (~30% smaller binaries)."

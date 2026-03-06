@@ -267,7 +267,7 @@ These endpoints manage running programs and execution history.
 
 #### GET `/engine/history`
 
-Lists all completed program executions.
+Lists all completed program executions, sorted by completion date (latest first).
 
 **Response Format:**
 

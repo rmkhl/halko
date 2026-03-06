@@ -55,13 +55,13 @@ For long-running tests on resource-constrained hardware, use `monitor-memory.py`
 
 ```bash
 # Basic monitoring (console output only)
-./monitor-memory.py
+./scripts/monitor-memory.py
 
 # Save detailed log for analysis
-./monitor-memory.py -o memory-test.csv -t 7200  # 2 hours
+./scripts/monitor-memory.py -o memory-test.csv -t 7200  # 2 hours
 ```
 
-See `./monitor-memory.py --help` for all options.
+See `./scripts/monitor-memory.py --help` for all options.
 
 ## Raspberry Pi Hardware Recommendations
 
@@ -358,7 +358,7 @@ If you encounter OOM kills:
 2. **Monitor service memory usage**:
    ```bash
    # Real-time monitoring
-   ./monitor-memory.py -p controlunit powerunit sensorunit
+   ./scripts/monitor-memory.py -p controlunit powerunit sensorunit
 
    # Or check individual service
    ps aux | grep controlunit
@@ -407,7 +407,7 @@ If services are sluggish:
 3. **Monitor resource usage**:
    ```bash
    htop
-   ./monitor-memory.py
+   ./scripts/monitor-memory.py
    ```
 
 ### Network Connectivity Issues

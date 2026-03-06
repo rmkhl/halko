@@ -426,16 +426,16 @@ Monitor process memory usage to detect potential memory leaks during development
 
 ```bash
 # Console output only (default)
-./monitor-memory.py
+./scripts/monitor-memory.py
 
 # Save detailed CSV log
-./monitor-memory.py -o memory-test.csv
+./scripts/monitor-memory.py -o memory-test.csv
 
 # Monitor specific processes for 1 hour
-./monitor-memory.py -p controlunit simulator -i 5 -t 3600
+./scripts/monitor-memory.py -p controlunit simulator -i 5 -t 3600
 
 # Via Makefile
 make monitor-memory MONITOR_ARGS="-o test.csv -t 7200"
 ```
 
-Run `./monitor-memory.py --help` for all options. Works with both Docker containers and native processes.
+Run `./scripts/monitor-memory.py --help` for all options. Works with both Docker containers and native processes.
