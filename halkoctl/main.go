@@ -56,6 +56,9 @@ func main() {
 			case "running":
 				showRunningHelp()
 				os.Exit(exitSuccess)
+			case "stop":
+				showStopHelp()
+				os.Exit(exitSuccess)
 			case "history":
 				showHistoryHelp()
 				os.Exit(exitSuccess)
@@ -98,6 +101,8 @@ func main() {
 		handleStreamCommand()
 	case "running":
 		handleRunningCommand()
+	case "stop":
+		handleStopCommand()
 	case "history":
 		handleHistoryCommand()
 	case "validate":

@@ -1,6 +1,9 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { ExecutionChart } from "./ExecutionChart";
 import { getApiEndpoints } from "../config/api";
+import { useGetRunningProgramQuery } from "../store/services/controlunitApi";
+import { useGetTemperaturesQuery } from "../store/services/sensorsApi";
+import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../types/api";
 
 interface LiveExecutionChartProps {
   title?: string;
@@ -18,6 +21,70 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef<boolean>(false);
   const isManualCloseRef = useRef<boolean>(false);
+  const initialMaterialTempRef = useRef<number | null>(null);
+
+  // Fetch running program and current temperatures
+  const { data: runningProgramData } = useGetRunningProgramQuery(undefined, {
+    pollingInterval: 5000,
+    skipPollingIfUnfocused: true,
+  });
+  const { data: sensorData } = useGetTemperaturesQuery(undefined, {
+    pollingInterval: 5000,
+    skipPollingIfUnfocused: true,
+  });
+
+  // Calculate temperature range based on program targets and historical/current temps
+  const temperatureRange = useMemo(() => {
+    // Get program data to find highest target temperature
+    const runningProgram = runningProgramData ? (runningProgramData as RunningProgramResponse) : undefined;
+    const steps = runningProgram?.data?.program?.steps;
+
+    let minTemp: number | null = null;
+
+    // If we have historical CSV data, use the first data point for min temp
+    if (csvData) {
+      const lines = csvData.trim().split("\n");
+      if (lines.length > 1) {
+        const firstDataLine = lines[1]; // Skip header
+        const values = firstDataLine.split(",");
+        if (values.length >= 5) {
+          const firstMaterial = parseFloat(values[3]);
+          const firstOven = parseFloat(values[4]);
+          if (!isNaN(firstMaterial) && !isNaN(firstOven)) {
+            // Min is the lowest of: 0, first material temp, first oven temp
+            minTemp = Math.floor(Math.min(0, firstMaterial, firstOven));
+          }
+        }
+      }
+    }
+
+    // Fallback to current sensor data if no historical data
+    if (minTemp === null) {
+      const temperatures = sensorData ? (sensorData as APIResponse<Omit<TemperatureStatus, "delta">>) : undefined;
+      const currentMaterialTemp = temperatures?.data?.material;
+
+      // Store initial material temperature when first available
+      if (currentMaterialTemp !== undefined && initialMaterialTempRef.current === null) {
+        initialMaterialTempRef.current = currentMaterialTemp;
+      }
+
+      if (initialMaterialTempRef.current !== null) {
+        minTemp = Math.floor(initialMaterialTempRef.current);
+      }
+    }
+
+    // Calculate max from program steps
+    if (minTemp !== null && steps && Array.isArray(steps)) {
+      const maxTarget = Math.max(...steps.map((step: Step) => step.temperature_target || 0));
+
+      if (maxTarget > 0) {
+        const maxTemp = Math.ceil(maxTarget + 15);
+        return { min: minTemp, max: maxTemp };
+      }
+    }
+
+    return undefined;
+  }, [sensorData, runningProgramData, csvData]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -152,7 +219,18 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
         setIsConnected(false);
         // Only reconnect if it wasn't a manual close and component is still mounted
         if (!isManualCloseRef.current && isMountedRef.current && !noProgramRunning) {
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            // Re-fetch accumulated data on reconnect to catch up on any missed data points
+            fetchAccumulatedData()
+              .then((hasRunningProgram) => {
+                if (hasRunningProgram) {
+                  connectWebSocket();
+                }
+              })
+              .catch(() => {
+                // Error already logged, don't try to connect WebSocket
+              });
+          }, 5000);
         }
       };
     };
@@ -188,6 +266,13 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
     };
   }, [noProgramRunning]);
 
+  // Reset initial temperature when no program is running
+  useEffect(() => {
+    if (noProgramRunning) {
+      initialMaterialTempRef.current = null;
+    }
+  }, [noProgramRunning]);
+
   if (noProgramRunning) {
     return (
       <div style={{ padding: "20px", textAlign: "center", color: "#666" }}>
@@ -201,6 +286,8 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
       csvData={csvData || undefined}
       title={title}
       isLoading={isLoading || (!csvData && isConnected)}
+      isLive={true}
+      temperatureRange={temperatureRange}
     />
   );
 }

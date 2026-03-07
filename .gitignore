@@ -20,7 +20,7 @@
 # Go workspace files
 go.work*
 
-# Filesystem database docker volume.
+# Filesystem database shared storage.
 fsdb
 
 .DS_Store
@@ -37,6 +37,10 @@ tmp
 
 # Local Node.js installation
 .nodejs
+
+# Root build tool dependencies
+node_modules
+package-lock.json
 
 .github
 

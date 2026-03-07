@@ -6,7 +6,10 @@ toolchain go1.24.4
 
 require github.com/rmkhl/halko/types v0.0.0
 
-require github.com/rmkhl/halko/types/log v0.0.0-20250607062522-bc4262653186
+require (
+	github.com/gorilla/websocket v1.5.3
+	github.com/rmkhl/halko/types/log v0.0.0-20250607062522-bc4262653186
+)
 
 replace github.com/rmkhl/halko/types => ../types
 

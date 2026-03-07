@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
-func listAllStoredPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func listAllStoredPrograms(storage types.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		programs, err := storage.ListStoredProgramsWithInfo()
 		if err != nil {
@@ -19,7 +18,7 @@ func listAllStoredPrograms(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func getStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func getStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		program, err := storage.LoadStoredProgram(programName)
@@ -31,7 +30,7 @@ func getStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func createStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func createStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var program types.Program
 
@@ -56,7 +55,7 @@ func createStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func updateStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func updateStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		var program types.Program
@@ -79,7 +78,7 @@ func updateStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
 	}
 }
 
-func deleteStoredProgram(storage *storagefs.ProgramStorage) http.HandlerFunc {
+func deleteStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 

@@ -60,7 +60,6 @@ make webapp-install      # Install webapp dependencies
 make webapp-dev          # Start development server
 make webapp-build        # Build for production
 make webapp-clean        # Clean webapp artifacts
-make webapp-docker-build # Build webapp Docker image
 ```
 
 ## Project Structure
@@ -170,7 +169,7 @@ example configuration:
 {
   "controlunit": {
     "base_path": "/var/opt/halko",
-    "tick_length": 6000,
+    "tick_length": "6s",
     "network_interface": "eth0",
     "defaults": {
       "pid_settings": {
@@ -182,8 +181,8 @@ example configuration:
   },
   "power_unit": {
     "shelly_address": "http://localhost:8088",
-    "cycle_length": 60,
-    "max_idle_time": 70,
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
     "power_mapping": {
       "heater": 0,
       "humidifier": 1,
@@ -225,7 +224,7 @@ and `/engine` (execution management). There is no separate storage service.
   - `programs/` - Stored program templates
   - `running/` - Active program executions (auto-created)
   - `history/` - Completed executions with `logs/` and `status/` subdirectories (auto-created)
-- **`tick_length`**: Execution tick duration in milliseconds
+- **`tick_length`**: Execution tick duration (Go duration format: "6s", "100ms", etc.)
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
@@ -257,6 +256,8 @@ interface.
 ### Production Installation (Bare-Metal)
 
 The system is designed for bare-metal production deployment with systemd services.
+
+**For Raspberry Pi deployment:** See [RASPBERRY_PI.md](RASPBERRY_PI.md) for detailed instructions on memory-optimized builds, USB boot setup, and dual network interface configuration.
 
 #### 1. Install Backend Services
 
@@ -330,78 +331,6 @@ sudo nano /etc/opt/halko.cfg
 # Change "network_interface": "eth0" to your interface name
 ```
 
-### Docker Deployment
-
-The system can also be deployed using Docker Compose. The containers are
-configured to run as the host user to ensure proper file ownership.
-
-#### Prerequisites
-
-```bash
-# Build all binaries and Docker images
-make images
-```
-
-This target automatically:
-
-- Rebuilds all Go binaries
-- Builds webapp for production with nginx
-- Generates `webapp/nginx-docker.conf` with WebSocket support
-- Creates Docker images for all services
-
-#### Configuration Files
-
-Docker deployment uses specific configuration files:
-
-- `halko-docker.cfg` - Service endpoints using Docker service names
-- `simulator.conf` - Simulator physics engine configuration (see [SIMULATOR.md](SIMULATOR.md))
-
-The simulator requires both configuration files mounted in the container.
-
-#### File Ownership Configuration
-
-By default, containers run as UID:GID 1000:1000. To use your current user's
-UID/GID for proper file ownership on the host:
-
-```bash
-# Set environment variables before starting containers
-export UID=$(id -u)
-export GID=$(id -g)
-```
-
-#### Starting the Services
-
-```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-```
-
-Files created by the containers in the `fsdb/` directory will be owned by the
-specified UID:GID on the host system.
-
-#### Service Architecture
-
-Docker deployment includes:
-
-- **controlunit:8090** - Engine and storage endpoints
-- **powerunit:8092** - Shelly device interface (proxies to simulator)
-- **simulator:8088/8093** - Emulated hardware (Shelly + sensors)
-- **webapp:8080** - React UI with nginx reverse proxy
-
-The webapp nginx configuration includes:
-
-- WebSocket upgrade support for live log streaming (`/api/v1/controlunit/engine/running/logws`)
-- API proxying to backend services at `/api/v1/*`
-- CORS headers for all endpoints
-
-Access the webapp at <http://localhost:8080>
-
 ## Development
 
 For development, you can run the simulator instead of connecting to real hardware:
@@ -417,3 +346,57 @@ cd webapp
 npm install
 npm start
 ```
+
+### Memory Monitoring
+
+Monitor process memory usage to detect potential memory leaks during development or testing:
+
+```bash
+# Console output only (default)
+./scripts/monitor-memory.py
+
+# Save detailed CSV log
+./scripts/monitor-memory.py -o memory-test.csv
+
+# Monitor specific processes for 1 hour
+./scripts/monitor-memory.py -p controlunit simulator -i 5 -t 3600
+
+# Via Makefile
+make monitor-memory MONITOR_ARGS="-o test.csv -t 7200"
+```
+
+Run `./scripts/monitor-memory.py --help` for all options.
+
+### Tmux-Based Development Workflow
+
+For rapid development and debugging, use the tmux environment to run all services locally:
+
+```bash
+# Start all services in tmux (simulator, powerunit, controlunit, webapp)
+make tmux-debug-run
+
+# With custom log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
+LOGLEVEL=4 make tmux-debug-run
+
+# With specific simulator engine
+SIMULATOR=thermodynamic make tmux-debug-run
+
+# Combined options
+LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run
+
+# Attach to running session
+tmux attach -t halko-debug
+
+# Stop all services
+make tmux-debug-stop
+```
+
+The tmux session includes separate windows for:
+
+- **simulator** - Hardware emulation
+- **powerunit** - Power control service
+- **controlunit** - Main control logic
+- **webapp** - Development server with hot reload
+- **shell** - Command line for halkoctl and testing
+
+This workflow provides fast iteration with real-time log viewing and easy service restarts.

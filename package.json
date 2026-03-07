@@ -1,0 +1,16 @@
+{
+  "name": "halko-root",
+  "version": "0.0.1",
+  "description": "Halko build tools and linters",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "lint:markdown": "markdownlint-cli2 '**/*.md' '#node_modules' '#webapp/node_modules' '#.nodejs' '#fsdb' '#.github'"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.17.1"
+  }
+}

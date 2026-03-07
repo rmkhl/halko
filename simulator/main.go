@@ -25,12 +25,32 @@ func main() {
 	simConfigPath := flag.String("sim-config", "", "Path to simulator configuration file (simulator.conf)")
 	flag.StringVar(simConfigPath, "s", "", "Path to simulator configuration file (shorthand)")
 
-	// Parse global options and load both configurations
+	// Parse global options and load configurations
 	opts, err := types.ParseGlobalOptions()
 	if err != nil {
 		log.Fatal("Failed to parse global options: %v", err)
 	}
 	opts.ApplyLogLevel()
+
+	// Load main halko configuration (needed for tick_length)
+	config, err := types.LoadConfig(opts.ConfigPath)
+	if err != nil {
+		log.Fatal("Failed to load configuration: %v", err)
+	}
+
+	// Get tick duration from controlunit config
+	var tickDuration time.Duration
+	switch {
+	case config.ControlUnitConfig != nil && config.ControlUnitConfig.TickLength != "":
+		var err error
+		tickDuration, err = time.ParseDuration(config.ControlUnitConfig.TickLength)
+		if err != nil {
+			log.Fatal("Invalid controlunit.tick_length in configuration: %v", err)
+		}
+	default:
+		log.Fatal("controlunit.tick_length not specified in configuration")
+	}
+	log.Info("Simulation tick duration: %v (from controlunit.tick_length)", tickDuration)
 
 	// Load simulator-specific configuration (REQUIRED)
 	simConfig, err := LoadSimulatorConfig(*simConfigPath)
@@ -38,16 +58,26 @@ func main() {
 		log.Fatal("Failed to load simulator configuration: %v", err)
 	}
 
-	// Parse and validate tick duration
-	tickDuration, err := time.ParseDuration(simConfig.TickDuration)
-	if err != nil {
-		log.Fatal("Invalid tick duration '%s': %v", simConfig.TickDuration, err)
-	}
-	log.Info("Simulation tick duration: %v", tickDuration)
 	if simConfig.StatusInterval > 0 {
 		log.Info("Status logging every %d ticks", simConfig.StatusInterval)
 	} else {
 		log.Info("Status logging disabled")
+	}
+
+	// Inject time_step into physics config (derived from tick_duration)
+	timeStepSeconds := tickDuration.Seconds()
+	if physicsSection, ok := simConfig.EngineConfig["physics"].(map[string]interface{}); ok {
+		physicsSection["time_step"] = timeStepSeconds
+		log.Info("Physics time_step automatically set to %.1f seconds (from controlunit.tick_length)", timeStepSeconds)
+	} else {
+		// Create physics section if it doesn't exist
+		if simConfig.EngineConfig["physics"] == nil {
+			simConfig.EngineConfig["physics"] = make(map[string]interface{})
+		}
+		if physicsSection, ok := simConfig.EngineConfig["physics"].(map[string]interface{}); ok {
+			physicsSection["time_step"] = timeStepSeconds
+			log.Info("Physics time_step automatically set to %.1f seconds (from controlunit.tick_length)", timeStepSeconds)
+		}
 	}
 
 	// Create physics simulation engine
@@ -56,12 +86,6 @@ func main() {
 		log.Fatal("Failed to create simulation engine: %v", err)
 	}
 	log.Info("Using simulation engine: %s", physicsEngine.Name())
-
-	// Load main halko configuration
-	config, err := types.LoadConfig(opts.ConfigPath)
-	if err != nil {
-		log.Fatal("Failed to load configuration: %v", err)
-	}
 
 	// Extract Shelly port from powerunit.shelly_address
 	shellyPort, err := config.APIEndpoints.SensorUnit.GetPort(config.PowerUnit.ShellyAddress)
@@ -130,9 +154,21 @@ func main() {
 	router.SetupShellyRoutes(shellyMux, shellyControls)
 	shellyHandler := router.CORSMiddleware(shellyMux)
 
+	// Create simulation resetter for display endpoint
+	resetter := &router.SimulationResetter{
+		Heater:              heater,
+		Wood:                wood,
+		Fan:                 fan,
+		Humidifier:          humidifier,
+		PhysicsState:        physicsState,
+		InitialOvenTemp:     float32(simConfig.InitialOvenTemp),
+		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
+		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
+	}
+
 	// Create SensorUnit emulation server
 	sensorMux := http.NewServeMux()
-	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit)
+	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit, resetter)
 	sensorHandler := router.CORSMiddleware(sensorMux)
 
 	shellySrv := &http.Server{

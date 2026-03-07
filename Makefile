@@ -1,11 +1,30 @@
-MODULES = controlunit powerunit simulator sensorunit halkoctl
+MODULES = controlunit powerunit simulator sensorunit halkoctl dbusunit
 BINDIR = bin
+
+# Build flags - use OPTIMIZED=yes for memory-constrained environments (Raspberry Pi)
+# Standard flags (default): Full debugging symbols, faster execution
+GOFLAGS_STANDARD =
+
+# Optimized flags: Smaller binaries (~30% reduction), lower memory footprint
+# -ldflags="-s -w": Strip debug info and symbol table
+# -trimpath: Remove absolute file paths (reproducibility)
+GOFLAGS_OPTIMIZED = -ldflags="-s -w" -trimpath
+
+# Select flags based on OPTIMIZED variable
+ifeq ($(OPTIMIZED),yes)
+GOFLAGS = $(GOFLAGS_OPTIMIZED)
+BUILD_TYPE = optimized (stripped, -s -w, -trimpath)
+else
+GOFLAGS = $(GOFLAGS_STANDARD)
+BUILD_TYPE = standard (with debug symbols)
+endif
 
 .PHONY: all
 all: clean $(MODULES:%=$(BINDIR)/%)
+	@echo "✓ Build completed: $(BUILD_TYPE)"
 
 $(BINDIR)/%: %/main.go | $(BINDIR)
-	@go build -o $@ ./$*/
+	@go build $(GOFLAGS) -o $@ ./$*/
 
 $(BINDIR):
 	@mkdir -p $(BINDIR)
@@ -17,8 +36,8 @@ clean:
 
 .PHONY: distclean
 distclean: clean clean-webapp
-	@rm -rf .nodejs
-	@echo "✓ Removed local Node.js installation"
+	@rm -rf .nodejs node_modules
+	@echo "✓ Removed local Node.js installation and node modules"
 
 .PHONY: prepare
 prepare:
@@ -35,10 +54,12 @@ prepare:
 	else \
 		echo "✓ golangci-lint is installed"; \
 	fi
-	@if ! command -v mdl > /dev/null; then \
-		echo "Warning: 'mdl' is not available. Markdown linting will not work."; \
+
+	@if ! command -v tmux > /dev/null; then \
+		echo "Warning: 'tmux' is not available. The 'make tmux-debug-run' target will not work."; \
+		echo "Install with: sudo apt install tmux (Debian/Ubuntu) or brew install tmux (macOS)"; \
 	else \
-		echo "✓ mdl is installed"; \
+		echo "✓ tmux is installed"; \
 	fi
 	@echo "Creating or updating go.work file with all modules..."
 	@if [ ! -f go.work ]; then \
@@ -90,6 +111,12 @@ prepare:
 			echo "✓ Node.js $$(node -v) is installed"; \
 		fi; \
 	fi
+	@echo "Installing root dependencies (markdownlint-cli2)..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	npm install
+	@echo "✓ Root dependencies installed"
 	@echo "Installing webapp dependencies (including ESLint)..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -99,10 +126,14 @@ prepare:
 
 .PHONY: build
 build: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All Go binaries have been rebuilt."
+	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
 
 .PHONY: lint
-lint:
+lint: lint-golang lint-markdown lint-webapp
+	@echo "✓ All linting completed"
+
+.PHONY: lint-golang
+lint-golang:
 	@for mod in $(MODULES) types tests; do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Linting $$mod..."; \
@@ -112,11 +143,14 @@ lint:
 
 .PHONY: lint-markdown
 lint-markdown:
-	@if command -v mdl > /dev/null; then \
-		echo "Linting markdown files..."; \
-		find . -name "*.md" -not -path "./.github/*" -not -path "./webapp/*" -not -path "./.nodejs/*" -not -path "./fsdb/*" -not -path "./node_modules/*" | xargs mdl --ignore-front-matter || true; \
+	@echo "Linting markdown files..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	if [ -f node_modules/.bin/markdownlint-cli2 ]; then \
+		npm run lint:markdown || true; \
 	else \
-		echo "Warning: mdl is not installed. Skipping markdown linting."; \
+		echo "Warning: markdownlint-cli2 is not installed. Run 'make prepare' first."; \
 	fi
 
 .PHONY: go-tidy
@@ -170,14 +204,25 @@ systemd-units: install
 	@echo "Creating and installing systemd unit files for all binaries except simulator..."
 	for bin in $(MODULES); do \
 		if [ "$$bin" != "simulator" ]; then \
-			sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
-			sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
-			sudo systemctl daemon-reload; \
-			sudo systemctl enable halko@$$bin.service; \
-			if systemctl is-active --quiet halko@$$bin.service; then \
-				sudo systemctl restart halko@$$bin.service; \
+			if [ "$$bin" = "dbusunit" ]; then \
+				sudo cp templates/halko-dbusunit.service /etc/systemd/system/halko-dbusunit.service; \
+				sudo systemctl daemon-reload; \
+				sudo systemctl enable halko-dbusunit.service; \
+				if systemctl is-active --quiet halko-dbusunit.service; then \
+					sudo systemctl restart halko-dbusunit.service; \
+				else \
+					sudo systemctl start halko-dbusunit.service; \
+				fi; \
 			else \
-				sudo systemctl start halko@$$bin.service; \
+				sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
+				sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
+				sudo systemctl daemon-reload; \
+				sudo systemctl enable halko@$$bin.service; \
+				if systemctl is-active --quiet halko@$$bin.service; then \
+					sudo systemctl restart halko@$$bin.service; \
+				else \
+					sudo systemctl start halko@$$bin.service; \
+				fi; \
 			fi; \
 		fi; \
 	done
@@ -234,53 +279,14 @@ test-shelly-api:
 	@echo "Running shelly API tests..."
 	@cd tests && go test -v -run TestShellyAPI
 
-.PHONY: validate
-validate:
-	@if [ -z "$(PROGRAM)" ]; then \
-		echo "Usage: make validate PROGRAM=path/to/program.json"; \
-		echo "Example: make validate PROGRAM=example/example-program-delta.json"; \
-		exit 1; \
-	fi
-	@if [ ! -f $(BINDIR)/halkoctl ]; then \
-		echo "Building halkoctl..."; \
-		$(MAKE) $(BINDIR)/halkoctl; \
-	fi
-	@echo "Validating program: $(PROGRAM)"
-	@$(BINDIR)/halkoctl validate -program $(PROGRAM) -verbose
-
-.PHONY: images
-images: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All Go binaries have been rebuilt."
-	@echo "Building webapp for Docker..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install && npm run build
-	@echo "✓ Webapp built to webapp/dist/"
-	@echo "Ensuring fsdb directory exists..."
-	@mkdir -p fsdb
-	@echo "Generating nginx configuration for webapp Docker container..."
-	@$(BINDIR)/halkoctl -c halko-docker.cfg nginx -port 80 -output webapp/nginx-docker.conf
-	@echo "Removing existing Docker images..."
-	@docker-compose down --remove-orphans || true
-	@docker-compose rm -f || true
-	@docker images --filter "reference=halko_*" -q | xargs -r docker rmi -f || true
-	@echo "Building new Docker images..."
-	@BUILDKIT_PROGRESS=plain docker-compose build
-	@echo "Docker images have been rebuilt."
-
 .PHONY: clean-webapp
 clean-webapp:
-	@rm -rf webapp/dist webapp/.parcel-cache webapp/node_modules
-	@echo "✓ Cleaned webapp artifacts"
+	@echo "Cleaning webapp build artifacts..."
+	@rm -rf webapp/dist webapp/node_modules webapp/.parcel-cache
+	@echo "✓ Webapp cleaned"
 
 .PHONY: run-webapp
-run-webapp: clean-webapp
-	@echo "Installing webapp dependencies..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install
+run-webapp: $(BINDIR)/halkoctl
 	@echo "Starting webapp development server..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
@@ -320,38 +326,65 @@ lint-webapp:
 	fi; \
 	cd webapp && npm run lint
 
+.PHONY: tmux-debug-run tmux-debug-stop
+tmux-debug-run: all
+	@LOGLEVEL=$(LOGLEVEL) SIMULATOR=$(SIMULATOR) ./scripts/tmux-debug-start.sh
+
+tmux-debug-stop:
+	@./scripts/tmux-debug-stop.sh
+
+.PHONY: monitor-memory
+monitor-memory:
+	@echo "Starting memory monitor for Halko processes..."
+	@./scripts/monitor-memory.py $(MONITOR_ARGS)
+
 .PHONY: help
 help:
 	@echo "Available targets:"
+	@echo "  help                       Show this help message (default)."
+	@echo "  prepare                    Check for required tools, install Node.js if needed, setup workspace."
 	@echo ""
-	@echo "Main Targets:"
-	@echo "  help                       Show this help message. (default)"
+	@echo "Build Targets:"
 	@echo "  all                        Build all Go executables to bin/ directory."
-	@echo "  prepare                    Check for required tools (Go, Node.js), install Node.js if needed, and setup workspace."
 	@echo "  build                      Clean and rebuild all Go executables."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
-	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
-	@echo "  images                     Rebuild everything and recreate all Docker images (including webapp)."
-	@echo ""
-	@echo "Go Backend Targets:"
-	@echo "  lint                       Run golangci-lint on all modules."
-	@echo "  lint-markdown              Run mdl (markdown linter) on all markdown files."
-	@echo "  go-tidy                    Run go mod tidy on all modules with go.mod files."
-	@echo "  update-modules             Update all go.mod dependencies and tidy them."
-	@echo "  install                    Install all binaries except simulator to /opt/halko."
-	@echo "  systemd-units              Create, install, and enable systemd unit files."
-	@echo "  fmt-changed                Reformat changed Go files compared to the main branch."
-	@echo ""
-	@echo "Test Targets:"
-	@echo "  test                       Run all tests."
-	@echo "  test-program-validation    Run program validation tests."
-	@echo "  test-shelly-api            Run shelly API tests."
-	@echo "  validate                   Validate a program.json file: make validate PROGRAM=path/to/program.json"
-	@echo ""
-	@echo "WebApp Targets:"
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
+	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
+	@echo ""
+	@echo "Production Installation (Raspberry Pi / Host):"
+	@echo "  install                    Install all binaries (except simulator) to /opt/halko."
+	@echo "  systemd-units              Create, install, and enable systemd service units."
+	@echo "  install-webapp             Install webapp to /var/www/halko with nginx config."
+	@echo ""
+	@echo "  Note: For memory-constrained systems, use: OPTIMIZED=yes make build"
+	@echo "        This reduces binary size by ~30%."
+	@echo ""
+	@echo "Development & Testing:"
 	@echo "  run-webapp                 Start webapp development server with hot reload."
-	@echo "  build-webapp               Build webapp for production (host installation) to webapp/dist/."
+	@echo "  build-webapp               Build webapp for production to webapp/dist/."
+	@echo "  test                       Run all tests (config, program validation, Shelly API)."
+	@echo "  test-config                Run configuration loading tests."
+	@echo "  test-program-validation    Run program JSON validation tests."
+	@echo "  test-shelly-api            Run Shelly device API compatibility tests."
+	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
+	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  lint                       Run all linters (golang, markdown, webapp)."
+	@echo "  lint-golang                Run golangci-lint on all Go modules."
+	@echo "  lint-markdown              Run markdownlint-cli2 on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
+	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
+	@echo "  go-tidy                    Run go mod tidy on all modules."
+	@echo "  update-modules             Update all go.mod dependencies and tidy them."
+	@echo ""
+	@echo "Tmux Debug Environment:"
+	@echo "  tmux-debug-run             Start services in tmux session for native debugging."
+	@echo "                               Starts: simulator, powerunit, controlunit, webapp"
+	@echo "                               Default loglevel: 3 (DEBUG)"
+	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-run"
+	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
+	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"
+	@echo "  tmux-debug-stop            Stop and terminate the tmux debug session."
 
 .DEFAULT_GOAL := help

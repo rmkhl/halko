@@ -146,3 +146,39 @@ type (
 		WasOn bool `json:"was_on"`
 	}
 )
+
+// System status API types
+type (
+	// SystemServicesStatus contains health status of all services
+	SystemServicesStatus struct {
+		ControlUnit ServiceStatusResponse `json:"controlunit"`
+		PowerUnit   ServiceStatusResponse `json:"powerunit"`
+		SensorUnit  ServiceStatusResponse `json:"sensorunit"`
+	}
+
+	// SystemInfo contains general system information
+	SystemInfo struct {
+		MemoryUsedMB  int64 `json:"memory_used_mb"`
+		MemoryTotalMB int64 `json:"memory_total_mb"`
+		SwapUsedMB    int64 `json:"swap_used_mb"`
+		SwapTotalMB   int64 `json:"swap_total_mb"`
+		DiskSpaceMB   int64 `json:"disk_space_mb"`
+		UptimeSeconds int64 `json:"uptime_seconds"`
+	}
+
+	// SystemStatusResponse aggregates all system information
+	SystemStatusResponse struct {
+		Services SystemServicesStatus `json:"services"`
+		System   SystemInfo           `json:"system"`
+	}
+
+	// ShellyStatus contains Shelly device status
+	ShellyStatus struct {
+		Reachable bool `json:"reachable"`
+	}
+
+	// HardwareStatusResponse contains hardware status information
+	HardwareStatusResponse struct {
+		Shelly ShellyStatus `json:"shelly"`
+	}
+)

@@ -34,11 +34,15 @@ export const controlunitApi = createApi({
   }),
   tagTypes: [runningProgramTag, defaultsTag, "history"],
   endpoints: (builder) => ({
-    getRunningProgram: fetchSingleQuery(
-      builder,
-      "/engine/running",
-      runningProgramTag
-    ),
+    getRunningProgram: {
+      ...fetchSingleQuery(
+        builder,
+        "/engine/running",
+        runningProgramTag
+      ),
+      // Always refetch on mount to ensure fresh data after navigation
+      refetchOnMountOrArgChange: true,
+    },
     getDefaults: builder.query<EngineDefaults, void>({
       query: () => "/engine/defaults",
       providesTags: [defaultsTag],

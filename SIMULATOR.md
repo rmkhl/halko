@@ -26,9 +26,6 @@ The simulator requires two configuration files:
 
 # Auto-discovery (looks for simulator.conf in standard locations)
 ./bin/simulator -c halko.cfg
-
-# In Docker (automatic configuration)
-docker-compose up simulator
 ```
 
 ### Configuration File Search Order
@@ -45,7 +42,6 @@ The simulator searches for `simulator.conf` in:
 
 ```json
 {
-  "tick_duration": "6s",
   "status_interval": 10,
   "initial_oven_temp": 20.0,
   "initial_material_temp": 20.0,
@@ -55,9 +51,10 @@ The simulator searches for `simulator.conf` in:
 }
 ```
 
+**Note**: The simulator uses the tick duration from `controlunit.tick_length` in the main `halko.cfg` configuration file. This ensures the simulator always runs with the same timing as the control unit.
+
 ### Common Parameters
 
-- **tick_duration** (string): Time between simulation updates (Go duration format: "6s", "1m", etc.)
 - **status_interval** (int): Log status every N ticks (0 = disabled)
 - **initial_oven_temp** (float): Starting oven temperature in °C
 - **initial_material_temp** (float): Starting wood temperature in °C
@@ -77,7 +74,6 @@ Basic rate-based temperature model suitable for quick testing.
 
 ```json
 {
-  "tick_duration": "6s",
   "status_interval": 10,
   "initial_oven_temp": 20.0,
   "initial_material_temp": 20.0,
@@ -113,7 +109,6 @@ Thermal mass-based model using differential equations for more realistic behavio
 
 ```json
 {
-  "tick_duration": "6s",
   "status_interval": 10,
   "initial_oven_temp": 20.0,
   "initial_material_temp": 20.0,
@@ -153,7 +148,6 @@ High-fidelity physics simulation using thermodynamic principles.
 
 ```json
 {
-  "tick_duration": "6s",
   "status_interval": 10,
   "initial_oven_temp": 20.0,
   "initial_material_temp": 20.0,
@@ -189,12 +183,13 @@ High-fidelity physics simulation using thermodynamic principles.
       "temperature": 20.0
     },
     "physics": {
-      "stefan_boltzmann": 5.67e-8,
-      "time_step": 6.0
+      "stefan_boltzmann": 5.67e-8
     }
   }
 }
 ```
+
+**Note**: The `time_step` parameter is automatically injected by the simulator based on `controlunit.tick_length` from the main configuration.
 
 **Engine Parameters:**
 
@@ -231,7 +226,8 @@ High-fidelity physics simulation using thermodynamic principles.
 **Physics Constants:**
 
 - **stefan_boltzmann** (W/m²·K⁴): Stefan-Boltzmann constant (5.67e-8)
-- **time_step** (s): Simulation time step (should match tick_duration)
+
+**Note**: The `time_step` parameter (simulation time step in seconds) is automatically calculated from `controlunit.tick_length` and injected into the physics configuration at runtime.
 
 **Behavior:**
 
@@ -293,27 +289,11 @@ Emulates temperature sensor endpoints:
 }
 ```
 
-## Docker Integration
-
-The simulator is automatically configured in Docker Compose environments:
-
-```yaml
-simulator:
-  volumes:
-    - ./halko-docker.cfg:/etc/halko/halko.cfg:ro
-    - ./simulator.conf:/etc/halko/simulator.conf:ro
-  ports:
-    - "8088:8088"  # Shelly emulation
-    - "8093:8093"  # SensorUnit emulation
-```
-
-Both configuration files are mounted and used automatically.
-
 ## Status Logging
 
 When `status_interval > 0`, the simulator logs internal state periodically:
 
-```
+```text
 [INFO] Tick 10: Oven=45.2°C Material=42.5°C Heater=75% Fan=50%
 ```
 
@@ -324,7 +304,7 @@ Set to 0 to disable status logging (recommended for production-like testing).
 1. **Start with Simple**: Use `simple` engine first to verify program logic
 2. **Tune with Differential**: Use `differential` to tune PID/delta parameters
 3. **Validate with Thermodynamic**: Final testing with `thermodynamic` before hardware deployment
-4. **Match Tick Duration**: Set `tick_duration` to match `controlunit.tick_length` for realistic timing
+4. **Automatic Timing**: Simulator automatically uses `controlunit.tick_length` from `halko.cfg` for realistic timing
 5. **Realistic Initial Conditions**: Set `initial_*_temp` to room temperature (20°C) for realistic startup
 6. **Status Interval**: Use status logging during development, disable for performance testing
 
@@ -342,4 +322,4 @@ These limitations make the simulator suitable for temperature control developmen
 
 - [API.md](API.md) - Complete API endpoint documentation
 - [PROGRAM.md](PROGRAM.md) - Program structure and validation rules
-- [README.md](README.md#docker-deployment) - Docker deployment guide
+- [README.md](README.md) - System overview and deployment guide

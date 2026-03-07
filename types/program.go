@@ -172,9 +172,8 @@ func (p *ProgramStep) validateAcclimateStep() error {
 }
 
 func (p *ProgramStep) validateCoolingStep() error {
-	if p.Runtime != nil {
-		return errors.New("cooling step cannot have runtime")
-	}
+	// Runtime is optional for cooling steps - if specified, step progresses when
+	// either target temperature is reached OR runtime expires (whichever comes first)
 	// Validate heater - call validate first to capture any errors
 	heaterErr := p.Heater.Validate("heater")
 	if p.Heater.Type != PowerSettingTypeSimple {

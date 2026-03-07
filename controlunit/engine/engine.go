@@ -7,10 +7,12 @@ import (
 	"github.com/rmkhl/halko/controlunit/heartbeat"
 	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
+	"github.com/rmkhl/halko/types/log"
 )
 
 type (
 	ControlEngine struct {
+		mu               sync.RWMutex
 		wg               *sync.WaitGroup
 		config           *types.ControlUnitConfig
 		halkoConfig      *types.HalkoConfig
@@ -41,6 +43,9 @@ func NewEngine(halkoConfig *types.HalkoConfig, storage *storagefs.ExecutorFileSt
 }
 
 func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
+
 	if engine.runner == nil {
 		return nil
 	}
@@ -49,6 +54,9 @@ func (engine *ControlEngine) CurrentStatus() *types.ExecutionStatus {
 }
 
 func (engine *ControlEngine) CurrentProgramName() string {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
+
 	if engine.runner == nil {
 		return ""
 	}
@@ -60,23 +68,33 @@ func (engine *ControlEngine) GetDefaults() *types.Defaults {
 }
 
 func (engine *ControlEngine) StartEngine(program *types.Program) error {
+	engine.mu.Lock()
 	if engine.runner != nil {
+		engine.mu.Unlock()
 		return ErrProgramAlreadyRunning
 	}
 
 	runner, err := newProgramRunner(engine.halkoConfig, engine.storage, program, engine.endpoints, engine.heartbeatManager)
 	if err != nil {
+		engine.mu.Unlock()
 		return err
 	}
 
 	engine.runner = runner
+	engine.mu.Unlock()
+
 	engine.wg.Add(1)
-	engine.runner.Start()
+	runner.Start()
 
 	// Monitor runner completion to clean up
 	go func() {
-		engine.runner.wg.Wait()
+		log.Debug("Engine: Waiting for runner cleanup to complete")
+		runner.wg.Wait()
+		log.Info("Engine: Runner cleanup complete, clearing engine state")
+		engine.mu.Lock()
 		engine.runner = nil
+		engine.mu.Unlock()
+		log.Info("Engine: No program currently running")
 		engine.wg.Done()
 	}()
 
@@ -84,9 +102,14 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 }
 
 func (engine *ControlEngine) StopEngine() error {
-	if engine.runner != nil {
-		engine.runner.Stop()
-		engine.runner = nil
+	engine.mu.Lock()
+	runner := engine.runner
+	engine.mu.Unlock()
+
+	if runner != nil {
+		runner.Stop()
+		// Don't set engine.runner = nil here - let the monitoring goroutine handle it
+		// after the runner fully completes its cleanup
 		return nil
 	}
 	return ErrNoProgramRunning

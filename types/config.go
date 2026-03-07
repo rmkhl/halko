@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rmkhl/halko/types/log"
 )
@@ -30,16 +31,16 @@ type (
 
 	ControlUnitConfig struct {
 		BasePath         string    `json:"base_path"`
-		TickLength       int       `json:"tick_length"`
+		TickLength       string    `json:"tick_length"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
 	}
 
 	PowerUnit struct {
 		ShellyAddress string         `json:"shelly_address"`
-		CycleLength   int            `json:"cycle_length"`
+		CycleLength   string         `json:"cycle_length"`
 		PowerMapping  map[string]int `json:"power_mapping"`
-		MaxIdleTime   int            `json:"max_idle_time"`
+		MaxIdleTime   string         `json:"max_idle_time"`
 	}
 
 	SensorUnitConfig struct {
@@ -71,10 +72,18 @@ type (
 		Status   string `json:"status"`
 	}
 
+	DBusUnitEndpoints struct {
+		Endpoint `json:",inline"`
+		VPN      string `json:"vpn"`
+		Power    string `json:"power"`
+		Status   string `json:"status"`
+	}
+
 	APIEndpoints struct {
 		ControlUnit ControlUnitEndpoints `json:"controlunit"`
 		SensorUnit  SensorUnitEndpoints  `json:"sensorunit"`
 		PowerUnit   PowerUnitEndpoints   `json:"powerunit"`
+		DBusUnit    DBusUnitEndpoints    `json:"dbusunit"`
 	}
 
 	HalkoConfig struct {
@@ -107,6 +116,11 @@ func (e *SensorUnitEndpoints) GetStatusURL() string {
 
 // GetStatusURL returns the full status endpoint URL for PowerUnitEndpoints
 func (e *PowerUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for DBusUnitEndpoints
+func (e *DBusUnitEndpoints) GetStatusURL() string {
 	return e.URL + e.Status
 }
 
@@ -278,8 +292,11 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.ControlUnitConfig.BasePath == "" {
 		return errors.New("controlunit base path is required")
 	}
-	if c.ControlUnitConfig.TickLength <= 0 {
-		return errors.New("controlunit tick length is required and must be positive")
+	if c.ControlUnitConfig.TickLength == "" {
+		return errors.New("controlunit tick_length is required")
+	}
+	if _, err := time.ParseDuration(c.ControlUnitConfig.TickLength); err != nil {
+		return fmt.Errorf("controlunit tick_length must be a valid duration (e.g., '6s', '100ms'): %w", err)
 	}
 
 	if c.SensorUnit == nil {
@@ -298,11 +315,17 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if c.PowerUnit.ShellyAddress == "" {
 		return errors.New("power unit shelly address is required")
 	}
-	if c.PowerUnit.CycleLength <= 0 {
-		return errors.New("power unit cycle length is required and must be positive")
+	if c.PowerUnit.CycleLength == "" {
+		return errors.New("power unit cycle_length is required")
 	}
-	if c.PowerUnit.MaxIdleTime <= 0 {
-		return errors.New("power unit max idle time is required and must be positive")
+	if _, err := time.ParseDuration(c.PowerUnit.CycleLength); err != nil {
+		return fmt.Errorf("power unit cycle_length must be a valid duration (e.g., '60s', '1m'): %w", err)
+	}
+	if c.PowerUnit.MaxIdleTime == "" {
+		return errors.New("power unit max_idle_time is required")
+	}
+	if _, err := time.ParseDuration(c.PowerUnit.MaxIdleTime); err != nil {
+		return fmt.Errorf("power unit max_idle_time must be a valid duration (e.g., '70s', '1m10s'): %w", err)
 	}
 	if len(c.PowerUnit.PowerMapping) == 0 {
 		return errors.New("power unit power mapping is required")

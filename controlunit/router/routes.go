@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/rmkhl/halko/controlunit/engine"
-	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
@@ -41,7 +40,7 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, types.APIErrorResponse{Err: message})
 }
 
-func SetupRoutes(mux *http.ServeMux, execStorage *storagefs.ExecutorFileStorage, programStorage *storagefs.ProgramStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints) {
+func SetupRoutes(mux *http.ServeMux, execStorage types.ExecutionStorage, programStorage types.ProgramStorage, engine *engine.ControlEngine, endpoints *types.APIEndpoints, config *types.HalkoConfig) {
 	// WebSocket endpoint for live run log
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running/logws", StreamLiveRunLog(engine))
 	// Engine execution endpoints
@@ -56,7 +55,11 @@ func SetupRoutes(mux *http.ServeMux, execStorage *storagefs.ExecutorFileStorage,
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/defaults", corsMiddleware(getDefaults(engine)))
 
 	// Status endpoint
-	mux.HandleFunc("GET "+endpoints.ControlUnit.Status, corsMiddleware(getStatus(engine)))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Status, corsMiddleware(getStatus()))
+
+	// System endpoints
+	mux.HandleFunc("GET /system/status", corsMiddleware(getSystemStatus(execStorage, config)))
+	mux.HandleFunc("GET /system/hardware", corsMiddleware(getHardwareStatus(endpoints)))
 
 	// Program storage endpoints (stored/saved programs)
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Programs, corsMiddleware(listAllStoredPrograms(programStorage)))

@@ -14,7 +14,7 @@ Before starting the services, you **must** edit `/etc/opt/halko.cfg` to match yo
 
 **Default:** `"eth0"`
 
-This must match your system's actual network interface name. The controlunit heartbeat service uses this to determine its IP address.
+This must match your system's actual network interface name. The controlunit heartbeat service uses this to determine its IP address for display on the sensor unit and remote access.
 
 To find your interface name:
 
@@ -28,6 +28,14 @@ Common interface names:
 - `enp0s3`, `ens33`, `enp1s0` - Predictable PCI Ethernet names (modern Linux)
 - `wlan0`, `wlp2s0` - WiFi interfaces
 - Container environments typically use `eth0`
+
+**Raspberry Pi Production Setup:**
+
+For Raspberry Pi deployments with dual network interfaces (see [RASPBERRY_PI.md](../RASPBERRY_PI.md)):
+
+- Set `network_interface: "wlan0"` (WiFi for display IP and remote access)
+- Configure Ethernet (`eth0`) with static IP `192.168.10.1/24` for direct Shelly connection
+- This allows the sensor unit to display the WiFi IP for remote access while keeping Shelly on a dedicated network
 
 #### 2. Serial Device (`sensorunit.serial_device`)
 
@@ -53,9 +61,19 @@ Common paths:
 
 For production, change this to your actual Shelly smart switch IP address:
 
+**Standard network setup:**
+
 ```json
 "shelly_address": "http://192.168.1.50"
 ```
+
+**Raspberry Pi production setup** (direct Ethernet connection):
+
+```json
+"shelly_address": "http://192.168.10.2"
+```
+
+See [RASPBERRY_PI.md](../RASPBERRY_PI.md) for detailed Raspberry Pi network configuration with dual interfaces.
 
 #### 4. Base Path (`controlunit.base_path`)
 
@@ -63,20 +81,22 @@ For production, change this to your actual Shelly smart switch IP address:
 
 Storage location for programs and execution logs. This directory is created by `make install`.
 
-### Example Production Configuration
+### Example Production Configurations
+
+**Standard Linux server:**
 
 ```json
 {
   "controlunit": {
     "base_path": "/var/opt/halko",
-    "tick_length": 6000,
+    "tick_length": "6s",
     "network_interface": "enp0s3",  // ← Change to your interface
     "defaults": { ... }
   },
   "power_unit": {
     "shelly_address": "http://192.168.1.50",  // ← Change to your Shelly IP
-    "cycle_length": 60,
-    "max_idle_time": 70,
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
     "power_mapping": { ... }
   },
   "sensorunit": {
@@ -86,6 +106,32 @@ Storage location for programs and execution logs. This directory is created by `
   "api_endpoints": { ... }
 }
 ```
+
+**Raspberry Pi 3B (dual interface setup):**
+
+```json
+{
+  "controlunit": {
+    "base_path": "/var/opt/halko",
+    "tick_length": "6s",
+    "network_interface": "wlan0",  // WiFi for display IP
+    "defaults": { ... }
+  },
+  "power_unit": {
+    "shelly_address": "http://192.168.10.2",  // Shelly on eth0 static network
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
+    "power_mapping": { ... }
+  },
+  "sensorunit": {
+    "serial_device": "/dev/ttyUSB0",  // or /dev/ttyACM0
+    "baud_rate": 9600
+  },
+  "api_endpoints": { ... }
+}
+```
+
+See [RASPBERRY_PI.md](../RASPBERRY_PI.md) for detailed Raspberry Pi deployment instructions.
 
 ## halko-daemon.service
 

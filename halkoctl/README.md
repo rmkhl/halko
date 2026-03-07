@@ -100,6 +100,30 @@ halkoctl --verbose running          # Show with verbose HTTP output
 
 ---
 
+### stop
+
+Stops the currently running program in the ControlUnit.
+
+```bash
+halkoctl stop [options]
+```
+
+Sends a DELETE request to the ControlUnit to cancel the currently executing program. The program will be marked as canceled in the execution history.
+
+#### Stop Options
+
+- `-v, --verbose`: Enable verbose output for HTTP requests
+- `-h, --help`: Show help for stop command
+
+#### Stop Examples
+
+```bash
+halkoctl stop                       # Stop current program
+halkoctl --verbose stop             # Stop with verbose HTTP output
+```
+
+---
+
 ### stream
 
 Connects to the live execution log WebSocket and displays messages in real-time.
@@ -254,7 +278,6 @@ halkoctl nginx [options]
 ```bash
 halkoctl nginx -port 8080
 halkoctl nginx -port 80 -output /etc/nginx/sites-available/halko
-halkoctl -c halko-docker.cfg nginx -port 80 -output webapp/nginx-docker.conf
 ```
 
 The generated configuration includes:

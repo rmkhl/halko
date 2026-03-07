@@ -26,6 +26,7 @@ export const en = {
     running: "Status",
     history: "History",
     programs: "Programs",
+    system: "System",
   },
   programs: {
     ...common(),
@@ -42,5 +43,12 @@ export const en = {
   sensors: {
     material: "Material",
     oven: "Oven",
+  },
+  system: {
+    title: "System Status",
+    services: "Services",
+    storage: "Storage",
+    hardware: "Hardware",
+    systemInfo: "System Information",
   },
 };

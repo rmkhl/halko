@@ -3,6 +3,9 @@ import { configuratorApi } from "./services";
 import { controlunitApi } from "./services/controlunitApi";
 import programsSlice from "./features/programsSlice";
 import { sensorApi } from "./services/sensorsApi";
+import { systemApi } from "./services/systemApi";
+import { powerunitApi } from "./services/powerunitApi";
+import { dbusunitApi } from "./services/dbusunitApi";
 
 export const store = configureStore({
   reducer: {
@@ -10,12 +13,18 @@ export const store = configureStore({
     [configuratorApi.reducerPath]: configuratorApi.reducer,
     [controlunitApi.reducerPath]: controlunitApi.reducer,
     [sensorApi.reducerPath]: sensorApi.reducer,
+    [systemApi.reducerPath]: systemApi.reducer,
+    [powerunitApi.reducerPath]: powerunitApi.reducer,
+    [dbusunitApi.reducerPath]: dbusunitApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(configuratorApi.middleware)
       .concat(controlunitApi.middleware)
-      .concat(sensorApi.middleware),
+      .concat(sensorApi.middleware)
+      .concat(systemApi.middleware)
+      .concat(powerunitApi.middleware)
+      .concat(dbusunitApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
