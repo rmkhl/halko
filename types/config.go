@@ -72,10 +72,18 @@ type (
 		Status   string `json:"status"`
 	}
 
+	DBusUnitEndpoints struct {
+		Endpoint `json:",inline"`
+		VPN      string `json:"vpn"`
+		Power    string `json:"power"`
+		Status   string `json:"status"`
+	}
+
 	APIEndpoints struct {
 		ControlUnit ControlUnitEndpoints `json:"controlunit"`
 		SensorUnit  SensorUnitEndpoints  `json:"sensorunit"`
 		PowerUnit   PowerUnitEndpoints   `json:"powerunit"`
+		DBusUnit    DBusUnitEndpoints    `json:"dbusunit"`
 	}
 
 	HalkoConfig struct {
@@ -108,6 +116,11 @@ func (e *SensorUnitEndpoints) GetStatusURL() string {
 
 // GetStatusURL returns the full status endpoint URL for PowerUnitEndpoints
 func (e *PowerUnitEndpoints) GetStatusURL() string {
+	return e.URL + e.Status
+}
+
+// GetStatusURL returns the full status endpoint URL for DBusUnitEndpoints
+func (e *DBusUnitEndpoints) GetStatusURL() string {
 	return e.URL + e.Status
 }
 

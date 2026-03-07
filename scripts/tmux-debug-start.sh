@@ -50,6 +50,10 @@ tmux send-keys -t "$SESSION:powerunit" "./bin/powerunit -loglevel $LOGLEVEL" C-m
 tmux new-window -t "$SESSION:" -n controlunit -c "$HALKO_DIR"
 tmux send-keys -t "$SESSION:controlunit" "./bin/controlunit -loglevel $LOGLEVEL" C-m
 
+# Create dbusunit window (requires sudo for D-Bus access)
+tmux new-window -t "$SESSION:" -n dbusunit -c "$HALKO_DIR"
+tmux send-keys -t "$SESSION:dbusunit" "sudo ./bin/dbusunit -loglevel $LOGLEVEL" C-m
+
 # Create webapp window
 tmux new-window -t "$SESSION:" -n webapp -c "$HALKO_DIR"
 tmux send-keys -t "$SESSION:webapp" "make run-webapp" C-m
@@ -57,7 +61,7 @@ tmux send-keys -t "$SESSION:webapp" "make run-webapp" C-m
 # Create a shell window for commands
 tmux new-window -t "$SESSION:" -n shell -c "$HALKO_DIR"
 
-echo "✓ Session '$SESSION' created with windows: simulator, powerunit, controlunit, webapp, shell"
+echo "✓ Session '$SESSION' created with windows: simulator, powerunit, controlunit, dbusunit, webapp, shell"
 echo "  Log level: $LOGLEVEL (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)"
 if [ -n "$SIMULATOR" ]; then
     echo "  Simulator: $SIM_CONFIG"
@@ -82,7 +86,7 @@ else
     echo "Tmux keybindings:"
     echo "  Ctrl+b n       - Next window"
     echo "  Ctrl+b p       - Previous window"
-    echo "  Ctrl+b 0-4     - Jump to window by number (0=simulator, 1=powerunit, 2=controlunit, 3=webapp, 4=shell)"
+    echo "  Ctrl+b 0-5     - Jump to window by number (0=simulator, 1=powerunit, 2=controlunit, 3=dbusunit, 4=webapp, 5=shell)"
     echo "  Ctrl+b w       - Interactive window list"
     echo "  Ctrl+b d       - Detach from session (keeps it running)"
     echo "  Ctrl+b &       - Kill current window"

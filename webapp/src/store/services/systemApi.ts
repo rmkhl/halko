@@ -20,6 +20,7 @@ export interface SystemInfo {
   swap_used_mb: number;
   swap_total_mb: number;
   disk_space_mb: number;
+  uptime_seconds: number;
 }
 
 export interface SystemStatusResponse {

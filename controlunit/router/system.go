@@ -110,6 +110,14 @@ func getSystemInfo(storage types.ExecutionStorage) types.SystemInfo {
 	// Get disk space from storage abstraction
 	info.DiskSpaceMB = storage.GetAvailableSpaceMB()
 
+	// Read system uptime from /proc/uptime
+	if data, err := os.ReadFile("/proc/uptime"); err == nil {
+		var uptimeSeconds float64
+		if _, err := fmt.Sscanf(string(data), "%f", &uptimeSeconds); err == nil {
+			info.UptimeSeconds = int64(uptimeSeconds)
+		}
+	}
+
 	return info
 }
 

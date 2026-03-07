@@ -163,6 +163,7 @@ type (
 		SwapUsedMB    int64 `json:"swap_used_mb"`
 		SwapTotalMB   int64 `json:"swap_total_mb"`
 		DiskSpaceMB   int64 `json:"disk_space_mb"`
+		UptimeSeconds int64 `json:"uptime_seconds"`
 	}
 
 	// SystemStatusResponse aggregates all system information

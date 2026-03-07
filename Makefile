@@ -1,4 +1,4 @@
-MODULES = controlunit powerunit simulator sensorunit halkoctl
+MODULES = controlunit powerunit simulator sensorunit halkoctl dbusunit
 BINDIR = bin
 
 # Build flags - use OPTIMIZED=yes for memory-constrained environments (Raspberry Pi)
@@ -204,14 +204,25 @@ systemd-units: install
 	@echo "Creating and installing systemd unit files for all binaries except simulator..."
 	for bin in $(MODULES); do \
 		if [ "$$bin" != "simulator" ]; then \
-			sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
-			sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
-			sudo systemctl daemon-reload; \
-			sudo systemctl enable halko@$$bin.service; \
-			if systemctl is-active --quiet halko@$$bin.service; then \
-				sudo systemctl restart halko@$$bin.service; \
+			if [ "$$bin" = "dbusunit" ]; then \
+				sudo cp templates/halko-dbusunit.service /etc/systemd/system/halko-dbusunit.service; \
+				sudo systemctl daemon-reload; \
+				sudo systemctl enable halko-dbusunit.service; \
+				if systemctl is-active --quiet halko-dbusunit.service; then \
+					sudo systemctl restart halko-dbusunit.service; \
+				else \
+					sudo systemctl start halko-dbusunit.service; \
+				fi; \
 			else \
-				sudo systemctl start halko@$$bin.service; \
+				sudo cp templates/halko-daemon.service /etc/systemd/system/halko@$$bin.service; \
+				sudo sed -i "s/%i/$$bin/g" /etc/systemd/system/halko@$$bin.service; \
+				sudo systemctl daemon-reload; \
+				sudo systemctl enable halko@$$bin.service; \
+				if systemctl is-active --quiet halko@$$bin.service; then \
+					sudo systemctl restart halko@$$bin.service; \
+				else \
+					sudo systemctl start halko@$$bin.service; \
+				fi; \
 			fi; \
 		fi; \
 	done

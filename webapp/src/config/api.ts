@@ -19,6 +19,7 @@ interface ApiEndpoints {
   controlunit: string;
   sensors: string;
   powerunit: string;
+  dbusunit: string;
 }
 
 /**
@@ -39,6 +40,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
       controlunit: `${API_PREFIX}/controlunit`,
       sensors: `${API_PREFIX}/sensorunit`,
       powerunit: `${API_PREFIX}/powerunit`,
+      dbusunit: `${API_PREFIX}/dbusunit`,
     };
   }
 
@@ -49,6 +51,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
     controlunit: 'http://localhost:8090',
     sensors: 'http://localhost:8093',
     powerunit: 'http://localhost:8092',
+    dbusunit: 'http://localhost:8094',
   };
 };
 

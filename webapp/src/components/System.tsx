@@ -1,9 +1,11 @@
 import React from "react";
-import { Box, CircularProgress, Alert, Typography } from "@mui/material";
+import { Box, CircularProgress, Alert, Typography, Grid } from "@mui/material";
 import { useGetSystemStatusQuery, useGetHardwareStatusQuery } from "../store/services/systemApi";
 import { SubsystemStatusCard } from "./system/SubsystemStatusCard";
 import { ModuleStatusCard } from "./system/ModuleStatusCard";
 import { SystemInfoCard } from "./system/SystemInfoCard";
+import { VPNCard } from "./system/VPNCard";
+import { PowerCard } from "./system/PowerCard";
 
 export const System: React.FC = () => {
   const { data: systemStatus, isLoading, error } = useGetSystemStatusQuery(undefined, {
@@ -80,8 +82,18 @@ export const System: React.FC = () => {
         )}
       </Box>
 
-      {/* System Resources */}
-      <SystemInfoCard system={systemStatus.system} />
+      {/* System Resources, VPN, and Power Management */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <SystemInfoCard system={systemStatus.system} />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <VPNCard />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <PowerCard uptimeSeconds={systemStatus.system.uptime_seconds} />
+        </Grid>
+      </Grid>
     </Box>
   );
 };
