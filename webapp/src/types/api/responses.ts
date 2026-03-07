@@ -40,6 +40,22 @@ export interface PSUStatus {
 }
 
 /**
+ * Power response for individual device
+ * Matches Go's PowerResponse struct
+ */
+export interface PowerResponse {
+  percent: number;
+}
+
+/**
+ * Power status response map
+ * Matches Go's PowerStatusResponse (map[string]PowerResponse)
+ */
+export interface PowerStatusResponse {
+  [deviceName: string]: PowerResponse;
+}
+
+/**
  * Execution status for a running program
  * Matches Go's ExecutionStatus struct
  */

@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/rmkhl/halko/controlunit/engine"
-	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types"
 )
 
-func listAllRuns(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
+func listAllRuns(storage types.ExecutionStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		var savedPrograms []types.RunHistory
 
@@ -64,7 +63,7 @@ func startTimeFromName(name string) int64 {
 	return 0
 }
 
-func getRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
+func getRun(storage types.ExecutionStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		program, err := storage.LoadExecutedProgram(programName)
@@ -82,7 +81,7 @@ func getRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	}
 }
 
-func deleteRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
+func deleteRun(storage types.ExecutionStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 
@@ -95,7 +94,7 @@ func deleteRun(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	}
 }
 
-func getRunLog(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
+func getRunLog(storage types.ExecutionStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
 		logPath := storage.GetLogPath(programName)
@@ -112,7 +111,7 @@ func getRunLog(storage *storagefs.ExecutorFileStorage) http.HandlerFunc {
 	}
 }
 
-func getRunningLog(storage *storagefs.ExecutorFileStorage, engine *engine.ControlEngine) http.HandlerFunc {
+func getRunningLog(storage types.ExecutionStorage, engine *engine.ControlEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		programName := engine.CurrentProgramName()
 		if programName == "" {

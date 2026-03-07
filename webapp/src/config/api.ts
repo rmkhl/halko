@@ -18,6 +18,7 @@ interface ApiEndpoints {
   storage: string;
   controlunit: string;
   sensors: string;
+  powerunit: string;
 }
 
 /**
@@ -37,6 +38,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
       storage: `${API_PREFIX}/storage`,
       controlunit: `${API_PREFIX}/controlunit`,
       sensors: `${API_PREFIX}/sensorunit`,
+      powerunit: `${API_PREFIX}/powerunit`,
     };
   }
 
@@ -46,6 +48,7 @@ export const getApiEndpoints = (): ApiEndpoints => {
     storage: 'http://localhost:8090',
     controlunit: 'http://localhost:8090',
     sensors: 'http://localhost:8093',
+    powerunit: 'http://localhost:8092',
   };
 };
 

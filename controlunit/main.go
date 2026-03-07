@@ -74,7 +74,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	router.SetupRoutes(mux, storage, programStorage, engine, configuration.APIEndpoints)
+	router.SetupRoutes(mux, storage, programStorage, engine, configuration.APIEndpoints, configuration)
 
 	corsHandler := addCORSHeaders(mux)
 

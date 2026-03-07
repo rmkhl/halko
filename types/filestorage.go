@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 var (
@@ -80,4 +81,14 @@ func (storage *FileStorage) DeleteProgram(filePath string) error {
 	}
 
 	return os.Remove(filePath)
+}
+
+// GetAvailableSpaceMB returns the available disk space in megabytes for the storage base path
+func (storage *FileStorage) GetAvailableSpaceMB() int64 {
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(storage.BasePath, &stat); err == nil {
+		// Available space in MB
+		return int64(stat.Bavail * uint64(stat.Bsize) / 1024 / 1024)
+	}
+	return 0
 }

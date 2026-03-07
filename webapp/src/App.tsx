@@ -15,6 +15,7 @@ import { Programs } from "./components/programs/Programs";
 import { Program } from "./components/programs/Program";
 import { Running } from "./components/Running";
 import { History } from "./components/History";
+import { System } from "./components/System";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const getRouter = (routes: Route[]) =>
@@ -51,6 +52,11 @@ export const App: React.FC = () => {
         name: t("tabs.history"),
         path: "history",
         element: <History />,
+      },
+      {
+        name: t("tabs.system"),
+        path: "system",
+        element: <System />,
       },
     ],
     [t]
