@@ -60,20 +60,15 @@ Fetches current temperature readings from all sensors.
 {
   "data": {
     "oven": 45.2,
-    "wood": 32.1,
-    "ovenPrimary": 45.2,
-    "ovenSecondary": 44.8
+    "material": 32.1
   }
 }
 ```
 
 The response includes:
 
-- `oven`: The highest of the two oven temperatures or a single oven
-  temperature if one sensor is unavailable
-- `wood`: The current wood temperature
-- `ovenPrimary`: The primary oven temperature sensor reading
-- `ovenSecondary`: The secondary oven temperature sensor reading
+- `oven`: The highest of the two oven temperature sensors, or a single oven temperature if one sensor is unavailable
+- `material`: The current material (wood) temperature
 
 ### Status Endpoints
 
@@ -222,8 +217,8 @@ Operates a specific power channel.
 
 ## 3. ControlUnit API
 
-Base Path: `/engine` (execution management), `/programs` (stored program templates)
-Default Port: `8090`
+Base Path: `/engine` (execution management), `/programs` (stored program templates)  
+Default Port: `8090` (configured in `api_endpoints.controlunit.url`)
 
 The ControlUnit serves both execution management and program storage endpoints:
 
@@ -276,17 +271,26 @@ Lists all completed program executions, sorted by completion date (latest first)
   "data": [
     {
       "name": "Standard Drying@2024-01-15T10:30:00Z",
-    "started_at": "2024-01-15T10:30:00Z",
-    "completed_at": "2024-01-15T18:45:00Z"
+      "state": "completed",
+      "started_at": 1705316400,
+      "completed_at": 1705346700
     },
     {
       "name": "Quick Drying@2024-01-14T08:00:00Z",
-      "started_at": "2024-01-14T08:00:00Z",
-      "completed_at": "2024-01-14T14:30:00Z"
+      "state": "completed",
+      "started_at": 1705223200,
+      "completed_at": 1705246800
     }
   ]
 }
 ```
+
+**Fields:**
+
+- `name`: The full name of the execution (includes timestamp)
+- `state`: Execution state (`"completed"`, `"failed"`, `"canceled"`, `"running"`, `"pending"`, or `"unknown"`)
+- `started_at`: Unix timestamp when execution started (optional)
+- `completed_at`: Unix timestamp when execution completed (optional)
 
 #### GET `/engine/history/{name}`
 
@@ -301,13 +305,27 @@ Gets details of a specific completed program execution.
 ```json
 {
   "data": {
-    "program": { /* full program definition */ },
-    "started_at": 1734007854,
-    "completed_at": 1734037854,
-    "status": "completed"
+    "name": "Standard Drying@2024-01-15T10:30:00Z",
+    "state": "completed",
+    "started_at": 1705316400,
+    "completed_at": 1705346700,
+    "program": {
+      "name": "Standard Drying",
+      "steps": [
+        /* program steps */
+      ]
+    }
   }
 }
 ```
+
+**Fields:**
+
+- `name`: The full name of the execution (includes timestamp)
+- `state`: Execution state (`"completed"`, `"failed"`, `"canceled"`)
+- `started_at`: Unix timestamp when execution started
+- `completed_at`: Unix timestamp when execution completed
+- `program`: The full program definition that was executed
 
 #### GET `/engine/history/{name}/log`
 
@@ -350,12 +368,22 @@ When a program is running:
 {
   "data": {
     "program": {
-      "program_name": "Four-Stage Kiln Drying Program using delta acclimation",
-      "program_steps": [
+      "name": "Four-Stage Kiln Drying Program using delta acclimation",
+      "steps": [
         {
           "name": "Initial Heating",
-          "target_temperature": 50,
-          "runtime": 7200
+          "type": "heating",
+          "temperature_target": 50,
+          "heater": {
+            "min_delta": 5.0,
+            "max_delta": 10.0
+          },
+          "fan": {
+            "power": 50
+          },
+          "humidifier": {
+            "power": 0
+          }
         }
       ]
     },
@@ -397,25 +425,65 @@ If no program is running, returns HTTP 204 No Content with error message:
 
 #### POST `/engine/running`
 
-Starts a new program (by providing its definition or name).
+Starts a new program by providing its complete definition.
 
 **Request Format:**
 
-```json
-{
-  "programName": "Standard Drying"
-}
-```
-
-OR
+The request body should contain a complete Program structure (see PROGRAM.md for details):
 
 ```json
 {
-  "program": {
-    "name": "Custom Program",
-    "description": "One-time custom program",
-    "phases": []
-  }
+  "name": "Custom Drying Program",
+  "steps": [
+    {
+      "name": "Initial Heating",
+      "type": "heating",
+      "temperature_target": 60,
+      "heater": {
+        "min_delta": 5.0,
+        "max_delta": 10.0
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 50
+      }
+    },
+    {
+      "name": "Acclimation",
+      "type": "acclimate",
+      "temperature_target": 60,
+      "runtime": "6h",
+      "heater": {
+        "pid": {
+          "kp": 2.0,
+          "ki": 1.0,
+          "kd": 0.5
+        }
+      },
+      "fan": {
+        "power": 75
+      },
+      "humidifier": {
+        "power": 25
+      }
+    },
+    {
+      "name": "Cool Down",
+      "type": "cooling",
+      "temperature_target": 25,
+      "heater": {
+        "power": 0
+      },
+      "fan": {
+        "power": 100
+      },
+      "humidifier": {
+        "power": 0
+      }
+    }
+  ]
 }
 ```
 
@@ -424,21 +492,35 @@ OR
 ```json
 {
   "data": {
-    "status": "started",
-    "program": {
-      "name": "Standard Drying"
-    }
+    "name": "Custom Drying Program",
+    "steps": [
+      /* program steps with defaults applied */
+    ]
   }
 }
 ```
+
+**Status Codes:**
+
+- `201 Created`: Program started successfully
+- `400 Bad Request`: Invalid program structure or validation failed
 
 #### DELETE `/engine/running`
 
 Cancels the currently running program.
 
-**Response:**
+**Response Format:**
 
-- Status 204 No Content on success
+```json
+{
+  "data": "Stopped"
+}
+```
+
+**Status Codes:**
+
+- `200 OK`: Program stopped successfully
+- `404 Not Found`: No program is currently running
 
 #### GET `/engine/running/log`
 
@@ -676,9 +758,7 @@ Gets readings from all simulated temperature sensors.
 {
   "data": {
     "oven": 45.2,
-    "wood": 32.1,
-    "ovenPrimary": 45.2,
-    "ovenSecondary": 44.8
+    "material": 32.1
   }
 }
 ```
