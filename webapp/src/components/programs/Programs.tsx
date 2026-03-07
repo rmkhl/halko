@@ -32,6 +32,8 @@ import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import CodeIcon from "@mui/icons-material/Code";
+import DownloadIcon from "@mui/icons-material/Download";
 import { Program as ApiProgram, APIResponse, StoredProgramInfo, RTKQueryError } from "../../types/api";
 
 type SortBy = "name" | "modified";
@@ -39,6 +41,34 @@ type SortOrder = "asc" | "desc";
 
 const formatTimestamp = (timestamp: string): string => {
   return new Date(timestamp).toLocaleString();
+};
+
+const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"], label: string = ""): string => {
+  if (!power) return "Default PID";
+
+  // Check explicit type first
+  if (power.type === "simple" && power.power !== undefined) {
+    return `${power.power}%`;
+  }
+  if (power.type === "delta" && power.min_delta !== undefined && power.max_delta !== undefined) {
+    return `Delta (${power.min_delta}–${power.max_delta}°C)`;
+  }
+  if (power.type === "pid") {
+    return "PID";
+  }
+
+  // Infer from fields (matching backend validation logic)
+  if (power.pid) {
+    return "PID";
+  }
+  if (power.min_delta !== undefined && power.max_delta !== undefined) {
+    return `Delta (${power.min_delta}–${power.max_delta}°C)`;
+  }
+  if (power.power !== undefined) {
+    return `${power.power}%`;
+  }
+
+  return "Default PID";
 };
 
 export const Programs: React.FC = () => {
@@ -59,6 +89,7 @@ export const Programs: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<string | null>(null);
+  const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
   const { data, isLoading, error } = useGetProgramsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: programData, isLoading: isLoadingProgram } = useGetProgramQuery(selectedProgram || "", {
     skip: !selectedProgram,
@@ -130,6 +161,21 @@ export const Programs: React.FC = () => {
   const cancelDelete = () => {
     setProgramToDelete(null);
     setDeleteDialogOpen(false);
+  };
+
+  const handleDownloadJson = () => {
+    if (!selectedProgramData) return;
+
+    const jsonString = JSON.stringify(selectedProgramData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedProgramData.name}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSortChange = (newSortBy: SortBy) => {
@@ -306,6 +352,13 @@ export const Programs: React.FC = () => {
                 <Typography variant="h5">{selectedProgramData.name}</Typography>
                 <Stack direction="row" spacing={2}>
                   <Button
+                    variant="outlined"
+                    startIcon={<CodeIcon />}
+                    onClick={() => setJsonDialogOpen(true)}
+                  >
+                    JSON
+                  </Button>
+                  <Button
                     variant="contained"
                     startIcon={<EditIcon />}
                     onClick={() => handleEdit(selectedProgram)}
@@ -331,20 +384,14 @@ export const Programs: React.FC = () => {
                   <Stack spacing={2} sx={{ paddingBottom: 2 }}>
                     {selectedProgramData.steps.map((step, index) => (
                       <Paper key={index} variant="outlined" sx={{ padding: 2 }}>
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          {index + 1}. {step.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Type: {step.type}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Target Temperature: {step.temperature_target}°C
-                        </Typography>
-                        {step.runtime && (
-                          <Typography variant="body2" color="text.secondary">
-                            Runtime: {step.runtime}
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" fontWeight="bold">
+                            {index + 1}. {step.name}
                           </Typography>
-                        )}
+                          <Typography variant="body2" color="text.secondary">
+                            Type: {step.type} • Target: {step.temperature_target}°C • Heater: {formatPowerInfo(step.heater)} • Fan: {formatPowerInfo(step.fan)} • Humidifier: {formatPowerInfo(step.humidifier)}{step.runtime ? ` • Runtime: ${step.runtime}` : ''}
+                          </Typography>
+                        </Stack>
                       </Paper>
                     ))}
                   </Stack>
@@ -404,6 +451,44 @@ export const Programs: React.FC = () => {
           </Button>
           <Button onClick={confirmDelete} color="error" variant="contained" autoFocus>
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* JSON Viewer Dialog */}
+      <Dialog
+        open={jsonDialogOpen}
+        onClose={() => setJsonDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        aria-labelledby="json-dialog-title"
+      >
+        <DialogTitle id="json-dialog-title">
+          Program JSON: {selectedProgramData?.name}
+        </DialogTitle>
+        <DialogContent>
+          <Box
+            component="pre"
+            sx={{
+              backgroundColor: "#f5f5f5",
+              color: "#000000",
+              padding: 2,
+              borderRadius: 1,
+              overflow: "auto",
+              fontSize: "0.875rem",
+              fontFamily: "monospace",
+              margin: 0,
+            }}
+          >
+            {selectedProgramData && JSON.stringify(selectedProgramData, null, 2)}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDownloadJson} startIcon={<DownloadIcon />} color="primary">
+            Download
+          </Button>
+          <Button onClick={() => setJsonDialogOpen(false)} variant="contained">
+            Close
           </Button>
         </DialogActions>
       </Dialog>
