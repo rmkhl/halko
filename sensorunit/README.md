@@ -26,6 +26,50 @@ The Arduino firmware for the sensor unit is located at
 - Responding to serial commands from the Go service
 - Managing connection status with visual indicators
 
+### Building and Uploading Firmware
+
+The Arduino firmware can be compiled and uploaded using Make targets from the
+project root:
+
+```bash
+## Setup (one-time)
+make install-arduino-cli  # Installs Arduino CLI, AVR core, and required libraries
+
+## Build firmware
+make build-arduino        # Compiles firmware to firmware/sensorunit.ino.hex
+
+## Upload to Arduino
+make upload-arduino       # Uploads to /dev/ttyUSB0 (default)
+make upload-arduino PORT=/dev/ttyUSB1  # Custom port
+
+## Backup existing firmware
+make backup-arduino       # Backs up current firmware from Arduino
+make backup-arduino PORT=/dev/ttyUSB1  # Custom port
+
+## Restore backed-up firmware
+make restore-arduino BACKUP=firmware/backup/arduino_backup_20260308_143022.hex
+make restore-arduino BACKUP=firmware/backup/arduino_backup_20260308_143022.hex PORT=/dev/ttyUSB1
+```
+
+**Backup functionality**: The `backup-arduino` target reads both flash memory
+and EEPROM from the connected Arduino and saves timestamped files to
+`firmware/backup/`:
+- `arduino_backup_YYYYMMDD_HHMMSS.hex` - Flash memory (program code)
+- `arduino_backup_YYYYMMDD_HHMMSS.eep` - EEPROM data
+
+This is useful before uploading new firmware or for disaster recovery purposes.
+
+**Restore functionality**: The `restore-arduino` target uploads a previously
+backed-up .hex file to the Arduino. When called without parameters, it lists
+available backups. The backup .eep (EEPROM) file is not automatically restored
+and must be uploaded separately if needed using avrdude directly.
+
+**Technical details**:
+- Board: Arduino Nano
+- Processor: ATmega328P
+- Libraries: MAX6675 library 1.1.2 (Adafruit), LiquidCrystal 1.0.7
+- Bootloader: Arduino/STK500v1 at 57600 baud
+
 ## Serial Commands
 
 The unit accepts the following commands over the serial interface:
