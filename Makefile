@@ -349,10 +349,10 @@ backup-arduino:
 	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 	BACKUP_PREFIX="firmware/backup/arduino_backup_$$TIMESTAMP"; \
 	echo "Reading flash memory from $$BACKUP_PORT..."; \
-	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 57600 \
+	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 115200 \
 		-U flash:r:$$BACKUP_PREFIX.hex:i || exit 1; \
 	echo "Reading EEPROM from $$BACKUP_PORT..."; \
-	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 57600 \
+	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 115200 \
 		-U eeprom:r:$$BACKUP_PREFIX.eep:i || exit 1; \
 	echo ""; \
 	echo "✓ Firmware backed up successfully:"; \
