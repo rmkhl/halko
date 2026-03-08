@@ -124,7 +124,7 @@ void processSerial()
               buffer[bufferIndex] = c;
               if (bufferIndex < MAX_COMMAND_LENGTH)
               {
-                  buffer[bufferIndex++] = c;
+                  bufferIndex++;
               }
         }
     }
@@ -210,7 +210,7 @@ void loop()
               is_valid[i] = true;
               measurement[i][n_measure] = sensor_temperature;
               temperature[i] = 0.0;
-              for (int j = 0; j < 3; j++) {
+              for (int j = 0; j < 4; j++) {
                 temperature[i] += measurement[i][j];
               }
               temperature[i] = temperature[i] / 4.0;
