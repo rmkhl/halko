@@ -100,6 +100,7 @@ float previousCommandMillis = 0.0;
 #define MAX_COMMAND_LENGTH 24
 
 char status_text[16] = "";
+bool shown_disconnect = false;
 
 void processSerial()
 {
@@ -124,17 +125,20 @@ void processSerial()
               buffer[bufferIndex] = c;
               if (bufferIndex < MAX_COMMAND_LENGTH)
               {
-                  buffer[bufferIndex++] = c;
+                  bufferIndex++;
               }
         }
     }
 
     if (command_ready)
     {
+        shown_disconnect = false;  // Reset flag on any command
+
         char *command = strtok(buffer, " ");
         if (strcmp(command, "show") == 0)
         {
             strcpy(status_text, &buffer[5]);
+            displayStatus(status_text);
         }
         else if (strcmp(command, "read") == 0)
         {
@@ -168,7 +172,6 @@ void processSerial()
         command_ready = false;
     }
     previousCommandMillis = millis();
-    displayStatus(status_text);
 }
 
 unsigned long previousMillis = millis();
@@ -192,38 +195,51 @@ int n_measure = 0;
 
 void loop()
 {
+    static int current_sensor = 0;  // Track which sensor to read this cycle
+
     unsigned long currentMillis = millis();
     if (Serial.available())
     {
         processSerial();
     }
-    // Read the sensors every second and keep running average
+    // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
-        for (int i = 0; i < 3; i++)
-        {
-            float sensor_temperature = sensor[i].readCelsius();
-            if (isnan(sensor_temperature)) {
-              is_valid[i] = false;
-              displayTemperature(i, sensor_temperature);
-            } else {
-              is_valid[i] = true;
-              measurement[i][n_measure] = sensor_temperature;
-              temperature[i] = 0.0;
-              for (int j = 0; j < 3; j++) {
-                temperature[i] += measurement[i][j];
-              }
-              temperature[i] = temperature[i] / 4.0;
-              displayTemperature(i, temperature[i]);
+        // Read only the current sensor this cycle
+        float sensor_temperature = sensor[current_sensor].readCelsius();
+        if (isnan(sensor_temperature)) {
+            is_valid[current_sensor] = false;
+            displayTemperature(current_sensor, sensor_temperature);
+        } else {
+            is_valid[current_sensor] = true;
+            measurement[current_sensor][n_measure] = sensor_temperature;
+            temperature[current_sensor] = 0.0;
+            for (int j = 0; j < 4; j++) {
+                temperature[current_sensor] += measurement[current_sensor][j];
             }
+            temperature[current_sensor] = temperature[current_sensor] / 4.0;
+            displayTemperature(current_sensor, temperature[current_sensor]);
         }
-        n_measure = (n_measure + 1) % 4;
+
+        // Move to next sensor for next cycle (0→1→2→0...)
+        current_sensor = (current_sensor + 1) % 3;
+
+        // Advance measurement slot when wrapping back to sensor 0
+        // This ensures all 3 sensors fill the same slot before moving to next slot
+        // Pattern: sensors[0-2][0], then sensors[0-2][1], then sensors[0-2][2], etc.
+        if (current_sensor == 0) {
+            n_measure = (n_measure + 1) % 4;
+        }
+
         displayRunning();
         previousMillis = currentMillis;
 
         if (currentMillis - previousCommandMillis >= DISCONNECTED_INTERVAL)
         {
-            displayStatus("Disconnected");
+            if (!shown_disconnect) {
+                displayStatus("Disconnected");
+                shown_disconnect = true;
+            }
         }
     }
 }

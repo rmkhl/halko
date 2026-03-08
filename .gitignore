@@ -33,10 +33,19 @@ bin
 tmp
 .golangci.bck.yaml
 
+# Arduino firmware build artifacts
+firmware
+
 .vscode
 
 # Local Node.js installation
 .nodejs
+
+# Local Arduino CLI installation and data
+.arduino-cli
+.arduino-data
+.arduino-user
+arduino-cli.yaml
 
 # Root build tool dependencies
 node_modules
