@@ -100,6 +100,7 @@ float previousCommandMillis = 0.0;
 #define MAX_COMMAND_LENGTH 24
 
 char status_text[16] = "";
+bool shown_disconnect = false;
 
 void processSerial()
 {
@@ -131,10 +132,13 @@ void processSerial()
 
     if (command_ready)
     {
+        shown_disconnect = false;  // Reset flag on any command
+
         char *command = strtok(buffer, " ");
         if (strcmp(command, "show") == 0)
         {
             strcpy(status_text, &buffer[5]);
+            displayStatus(status_text);
         }
         else if (strcmp(command, "read") == 0)
         {
@@ -168,7 +172,6 @@ void processSerial()
         command_ready = false;
     }
     previousCommandMillis = millis();
-    displayStatus(status_text);
 }
 
 unsigned long previousMillis = millis();
@@ -218,10 +221,12 @@ void loop()
             displayTemperature(current_sensor, temperature[current_sensor]);
         }
 
-        // Move to next sensor for next cycle
+        // Move to next sensor for next cycle (0→1→2→0...)
         current_sensor = (current_sensor + 1) % 3;
 
-        // Only advance measurement index after all 3 sensors have been read
+        // Advance measurement slot when wrapping back to sensor 0
+        // This ensures all 3 sensors fill the same slot before moving to next slot
+        // Pattern: sensors[0-2][0], then sensors[0-2][1], then sensors[0-2][2], etc.
         if (current_sensor == 0) {
             n_measure = (n_measure + 1) % 4;
         }
@@ -231,7 +236,10 @@ void loop()
 
         if (currentMillis - previousCommandMillis >= DISCONNECTED_INTERVAL)
         {
-            displayStatus("Disconnected");
+            if (!shown_disconnect) {
+                displayStatus("Disconnected");
+                shown_disconnect = true;
+            }
         }
     }
 }
