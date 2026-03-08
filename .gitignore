@@ -41,8 +41,11 @@ firmware
 # Local Node.js installation
 .nodejs
 
-# Local Arduino CLI installation
+# Local Arduino CLI installation and data
 .arduino-cli
+.arduino-data
+.arduino-user
+arduino-cli.yaml
 
 # Root build tool dependencies
 node_modules

@@ -36,7 +36,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean clean-webapp clean-arduino
-	@rm -rf .nodejs node_modules .arduino-cli
+	@rm -rf .nodejs node_modules .arduino-cli .arduino-data .arduino-user
 	@echo "✓ Removed local Node.js installation and node modules"
 	@echo "✓ Removed local Arduino CLI installation"
 	@echo "✓ Removed Arduino firmware build artifacts"
@@ -126,8 +126,84 @@ prepare:
 	cd webapp && npm install
 	@echo "✓ Webapp dependencies installed"
 
-.PHONY: install-arduino-cli
-install-arduino-cli:
+# Arduino workspace-local paths
+ARDUINO_DATA_DIR := $(shell pwd)/.arduino-data
+ARDUINO_USER_DIR := $(shell pwd)/.arduino-user
+ARDUINO_CLI_CONFIG := $(shell pwd)/arduino-cli.yaml
+
+# File target: creates arduino-cli.yaml config file (host-specific)
+arduino-cli.yaml:
+	@echo "Creating Arduino CLI configuration..."
+	@mkdir -p $(ARDUINO_DATA_DIR) $(ARDUINO_USER_DIR)
+	@echo "board_manager:" > $@
+	@echo "    additional_urls: []" >> $@
+	@echo "directories:" >> $@
+	@echo "    data: $(ARDUINO_DATA_DIR)" >> $@
+	@echo "    user: $(ARDUINO_USER_DIR)" >> $@
+	@echo "✓ Config file created at $@"
+	@if [ -d .vscode ]; then \
+		echo "Updating VS Code IntelliSense configuration..."; \
+		$(MAKE) .vscode/c_cpp_properties.json; \
+	fi
+
+# File target: creates VS Code C/C++ IntelliSense configuration
+.vscode/c_cpp_properties.json:
+	@mkdir -p .vscode
+	@echo "{" > $@
+	@echo "    \"configurations\": [" >> $@
+	@echo "        {" >> $@
+	@echo "            \"name\": \"Arduino\"," >> $@
+	@echo "            \"includePath\": [" >> $@
+	@echo "                \"\$${workspaceFolder}/**\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/hardware/avr/1.8.7/cores/arduino\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/hardware/avr/1.8.7/variants/eightanaloginputs\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-user/libraries/MAX6675_library\"," >> $@
+	@echo "                \"\$${workspaceFolder}/.arduino-user/libraries/LiquidCrystal/src\"" >> $@
+	@echo "            ]," >> $@
+	@echo "            \"defines\": [" >> $@
+	@echo "                \"ARDUINO=10607\"," >> $@
+	@echo "                \"ARDUINO_AVR_NANO\"," >> $@
+	@echo "                \"ARDUINO_ARCH_AVR\"," >> $@
+	@echo "                \"F_CPU=16000000L\"," >> $@
+	@echo "                \"__AVR_ATmega328P__\"" >> $@
+	@echo "            ]," >> $@
+	@echo "            \"compilerPath\": \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-gcc\"," >> $@
+	@echo "            \"cStandard\": \"c11\"," >> $@
+	@echo "            \"cppStandard\": \"c++11\"," >> $@
+	@echo "            \"intelliSenseMode\": \"gcc-x64\"" >> $@
+	@echo "        }" >> $@
+	@echo "    ]," >> $@
+	@echo "    \"version\": 4" >> $@
+	@echo "}" >> $@
+	@echo "✓ VS Code IntelliSense configuration created"
+
+.PHONY: arduino-help
+arduino-help:
+	@echo ""
+	@echo "Arduino Firmware Development:"
+	@echo ""
+	@echo "First-time setup:"
+	@echo "  make prepare-arduino            # Install Arduino CLI and AVR core (workspace-local)"
+	@echo ""
+	@echo "Build and upload targets:"
+	@echo "  make build-arduino              # Compile firmware (requires prepare-arduino)"
+	@echo "  make upload-arduino             # Upload to /dev/ttyUSB0 (auto-compiles first)"
+	@echo "  make upload-arduino PORT=/dev/ttyUSB1  # Upload to specific port"
+	@echo "  make backup-arduino             # Backup existing firmware from device"
+	@echo "  make restore-arduino BACKUP=path.hex  # Restore backed-up firmware"
+	@echo "  make clean-arduino              # Remove firmware/ build directory"
+	@echo ""
+	@echo "Direct arduino-cli usage (after prepare-arduino):"
+	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml compile --fqbn arduino:avr:nano:cpu=atmega328 --output-dir firmware sensorunit/arduino/sensorunit"
+	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml upload -p /dev/ttyUSB0 --fqbn arduino:avr:nano:cpu=atmega328 --input-dir firmware"
+	@echo ""
+	@echo "Note: All targets use workspace-local Arduino installation (.arduino-cli/, .arduino-data/, .arduino-user/)"
+	@echo ""
+
+.PHONY: prepare-arduino
+prepare-arduino: arduino-cli.yaml
 	@echo "Checking for Arduino CLI..."
 	@if [ -f .arduino-cli/bin/arduino-cli ]; then \
 		export PATH="$$(pwd)/.arduino-cli/bin:$$PATH"; \
@@ -173,30 +249,22 @@ install-arduino-cli:
 		echo "✓ Arduino CLI installed to .arduino-cli/bin/"; \
 		ARDUINO_CLI_CMD=".arduino-cli/bin/arduino-cli"; \
 	fi; \
-	echo "Initializing Arduino CLI configuration..."; \
-	$$ARDUINO_CLI_CMD config init --overwrite || true; \
 	echo "Installing Arduino AVR core (for Arduino Nano)..."; \
-	$$ARDUINO_CLI_CMD core update-index; \
-	$$ARDUINO_CLI_CMD core install arduino:avr; \
-	echo "✓ Arduino AVR core installed"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core update-index; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core install arduino:avr; \
+	echo "✓ Arduino AVR core installed to $(ARDUINO_DATA_DIR)"; \
 	echo "Installing required libraries..."; \
-	$$ARDUINO_CLI_CMD lib install "MAX6675 library@1.1.2"; \
-	$$ARDUINO_CLI_CMD lib install "LiquidCrystal@1.0.7"; \
-	echo "✓ Required libraries installed"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "MAX6675 library@1.1.2"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "LiquidCrystal@1.0.7"; \
+	echo "✓ Required libraries installed to $(ARDUINO_USER_DIR)"; \
 	echo ""; \
-	echo "✓ Arduino CLI setup complete"; \
-	echo ""; \
-	echo "To use Arduino CLI:"; \
-	if [ -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "  export PATH=\"\$$(pwd)/.arduino-cli/bin:\$$PATH\""; \
-		echo "  arduino-cli version"; \
-	fi; \
-	echo ""; \
-	echo "To compile firmware:"; \
-	echo "  arduino-cli compile --fqbn arduino:avr:nano sensorunit/arduino/sensorunit"; \
-	echo ""; \
-	echo "To upload firmware (requires Arduino connected):"; \
-	echo "  arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:nano sensorunit/arduino/sensorunit"
+	echo "✓ Arduino CLI setup complete (workspace-local installation)"; \
+	echo "  Data directory: $(ARDUINO_DATA_DIR)"; \
+	echo "  User libraries: $(ARDUINO_USER_DIR)"; \
+	echo "  Config file: $(ARDUINO_CLI_CONFIG)"; \
+	@$(MAKE) arduino-help
+	echo "  Config file: $(ARDUINO_CLI_CONFIG)"; \
+	@$(MAKE) arduino-help
 
 .PHONY: build
 build: clean $(MODULES:%=$(BINDIR)/%)
@@ -206,11 +274,15 @@ build: clean $(MODULES:%=$(BINDIR)/%)
 build-arduino:
 	@echo "Compiling Arduino firmware for Nano (ATmega328P)..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make install-arduino-cli' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
+		exit 1; \
+	fi
+	@if [ ! -f $(ARDUINO_CLI_CONFIG) ]; then \
+		echo "Error: Arduino config not found. Run 'make prepare-arduino' first."; \
 		exit 1; \
 	fi
 	@mkdir -p firmware
-	@.arduino-cli/bin/arduino-cli compile \
+	@.arduino-cli/bin/arduino-cli --config-file $(ARDUINO_CLI_CONFIG) compile \
 		--fqbn arduino:avr:nano:cpu=atmega328 \
 		--output-dir firmware \
 		sensorunit/arduino/sensorunit
@@ -228,7 +300,7 @@ clean-arduino:
 upload-arduino: build-arduino
 	@echo "Uploading firmware to Arduino Nano..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make install-arduino-cli' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
 		exit 1; \
 	fi
 	@if [ -z "$(PORT)" ]; then \
@@ -242,7 +314,7 @@ upload-arduino: build-arduino
 		UPLOAD_PORT="$(PORT)"; \
 	fi; \
 	echo "Uploading to $$UPLOAD_PORT..."; \
-	.arduino-cli/bin/arduino-cli upload \
+	.arduino-cli/bin/arduino-cli --config-file $(ARDUINO_CLI_CONFIG) upload \
 		-p $$UPLOAD_PORT \
 		--fqbn arduino:avr:nano:cpu=atmega328 \
 		--input-dir firmware
@@ -253,14 +325,14 @@ upload-arduino: build-arduino
 backup-arduino:
 	@echo "Backing up Arduino firmware..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make install-arduino-cli' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
 		exit 1; \
 	fi
-	@AVRDUDE=$$(find ~/.arduino15/packages/arduino/tools/avrdude -name "avrdude" -type f | head -1); \
-	AVRDUDE_CONF=$$(find ~/.arduino15/packages/arduino/tools/avrdude -name "avrdude.conf" -type f | head -1); \
+	@AVRDUDE=$$(find $(ARDUINO_DATA_DIR)/packages/arduino/tools/avrdude -name "avrdude" -type f | head -1); \
+	AVRDUDE_CONF=$$(find $(ARDUINO_DATA_DIR)/packages/arduino/tools/avrdude -name "avrdude.conf" -type f | head -1); \
 	if [ -z "$$AVRDUDE" ] || [ -z "$$AVRDUDE_CONF" ]; then \
 		echo "Error: avrdude not found. Arduino AVR core may not be installed."; \
-		echo "Run 'make install-arduino-cli' to install it."; \
+		echo "Run 'make prepare-arduino' to install it."; \
 		exit 1; \
 	fi; \
 	if [ -z "$(PORT)" ]; then \
@@ -290,7 +362,7 @@ backup-arduino:
 restore-arduino:
 	@echo "Restoring Arduino firmware from backup..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make install-arduino-cli' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
 		exit 1; \
 	fi
 	@if [ -z "$(BACKUP)" ]; then \
@@ -545,9 +617,10 @@ help:
 	@echo "Available targets:"
 	@echo "  help                       Show this help message (default)."
 	@echo "  prepare                    Check for required tools, install Node.js if needed, setup workspace."
-	@echo "  install-arduino-cli        Install Arduino CLI locally and setup AVR core + libraries."
 	@echo ""
-	@echo "Build Targets:"
+	@echo "Arduino Firmware:"
+	@echo "  prepare-arduino            Install Arduino CLI locally and setup AVR core + libraries."
+	@echo "                               Creates arduino-cli.yaml config file automatically."
 	@echo "  build-arduino              Compile Arduino firmware for Nano (ATmega328P) to firmware/."
 	@echo "  upload-arduino             Upload compiled firmware to Arduino (default: /dev/ttyUSB0)."
 	@echo "                               Override port: make upload-arduino PORT=/dev/ttyUSB1"
@@ -556,6 +629,9 @@ help:
 	@echo "  restore-arduino            Restore a backed-up firmware to Arduino."
 	@echo "                               Usage: make restore-arduino BACKUP=firmware/backup/file.hex"
 	@echo "  clean-arduino              Remove Arduino firmware build artifacts."
+	@echo "  arduino-help               Show Arduino CLI usage information."
+	@echo ""
+	@echo "Build Targets:"
 	@echo "  all                        Build all Go executables to bin/ directory."
 	@echo "  build                      Clean and rebuild all Go executables."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."

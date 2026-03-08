@@ -192,32 +192,40 @@ int n_measure = 0;
 
 void loop()
 {
+    static int current_sensor = 0;  // Track which sensor to read this cycle
+
     unsigned long currentMillis = millis();
     if (Serial.available())
     {
         processSerial();
     }
-    // Read the sensors every second and keep running average
+    // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
-        for (int i = 0; i < 3; i++)
-        {
-            float sensor_temperature = sensor[i].readCelsius();
-            if (isnan(sensor_temperature)) {
-              is_valid[i] = false;
-              displayTemperature(i, sensor_temperature);
-            } else {
-              is_valid[i] = true;
-              measurement[i][n_measure] = sensor_temperature;
-              temperature[i] = 0.0;
-              for (int j = 0; j < 4; j++) {
-                temperature[i] += measurement[i][j];
-              }
-              temperature[i] = temperature[i] / 4.0;
-              displayTemperature(i, temperature[i]);
+        // Read only the current sensor this cycle
+        float sensor_temperature = sensor[current_sensor].readCelsius();
+        if (isnan(sensor_temperature)) {
+            is_valid[current_sensor] = false;
+            displayTemperature(current_sensor, sensor_temperature);
+        } else {
+            is_valid[current_sensor] = true;
+            measurement[current_sensor][n_measure] = sensor_temperature;
+            temperature[current_sensor] = 0.0;
+            for (int j = 0; j < 4; j++) {
+                temperature[current_sensor] += measurement[current_sensor][j];
             }
+            temperature[current_sensor] = temperature[current_sensor] / 4.0;
+            displayTemperature(current_sensor, temperature[current_sensor]);
         }
-        n_measure = (n_measure + 1) % 4;
+
+        // Move to next sensor for next cycle
+        current_sensor = (current_sensor + 1) % 3;
+
+        // Only advance measurement index after all 3 sensors have been read
+        if (current_sensor == 0) {
+            n_measure = (n_measure + 1) % 4;
+        }
+
         displayRunning();
         previousMillis = currentMillis;
 
