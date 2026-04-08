@@ -86,10 +86,10 @@ type (
 		LastModified string `json:"last_modified"`
 	}
 
-	// TemperatureStatus represents the current temperature of the material and oven in Celsius.
+	// TemperatureStatus represents the current temperature of the material and kiln in Celsius.
 	TemperatureStatus struct {
 		Material float32 `json:"material"`
-		Oven     float32 `json:"oven"`
+		Kiln     float32 `json:"kiln"`
 	}
 
 	// PSUStatus represents the power level (in percentage) of the heater, fan, and humidifier.

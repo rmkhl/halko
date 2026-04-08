@@ -108,14 +108,14 @@ func main() {
 	humidifier := elements.NewPower("Humidifier")
 	humidifier.TurnOn(false) // Start the power controller in off state
 	wood := elements.NewWood(float32(simConfig.InitialMaterialTemp), float32(simConfig.EnvironmentTemp))
-	heater := elements.NewHeater("oven", float32(simConfig.InitialOvenTemp), float32(simConfig.EnvironmentTemp), wood)
+	heater := elements.NewHeater("kiln", float32(simConfig.InitialKilnTemp), float32(simConfig.EnvironmentTemp), wood)
 	heater.TurnOn(false) // Start the heater power controller in off state
-	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (oven: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
-		simConfig.InitialOvenTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
+	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (kiln: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
+		simConfig.InitialKilnTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
 
 	// Initialize physics state
 	physicsState := &physics.SimulationState{
-		OvenTemp:        float32(simConfig.InitialOvenTemp),
+		KilnTemp:        float32(simConfig.InitialKilnTemp),
 		MaterialTemp:    float32(simConfig.InitialMaterialTemp),
 		EnvironmentTemp: float32(simConfig.EnvironmentTemp),
 		HeaterIsOn:      false,
@@ -142,7 +142,7 @@ func main() {
 	}
 	log.Info("Configured %d Shelly switch mappings from power_unit.power_mapping", len(shellyControls))
 
-	temperatureSensors := map[string]engine.TemperatureSensor{"oven": heater, "material": wood}
+	temperatureSensors := map[string]engine.TemperatureSensor{"kiln": heater, "material": wood}
 
 	ticker := time.NewTicker(tickDuration)
 	stop := make(chan struct{})
@@ -161,7 +161,7 @@ func main() {
 		Fan:                 fan,
 		Humidifier:          humidifier,
 		PhysicsState:        physicsState,
-		InitialOvenTemp:     float32(simConfig.InitialOvenTemp),
+		InitialKilnTemp:     float32(simConfig.InitialKilnTemp),
 		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
 		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
 	}
@@ -208,7 +208,7 @@ func main() {
 				physicsEngine.Tick(physicsState)
 
 				// Apply physics results back to elements
-				heater.SetTemperature(physicsState.OvenTemp)
+				heater.SetTemperature(physicsState.KilnTemp)
 				wood.SetTemperature(physicsState.MaterialTemp)
 
 				// Log status summary at configured interval
@@ -216,7 +216,7 @@ func main() {
 					_, heaterPower := heater.Info()
 					_, fanPower := fan.Info()
 					_, humidifierPower := humidifier.Info()
-					log.Info("Simulation status - Tick #%d: Oven=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Humidifier=%v",
+					log.Info("Simulation status - Tick #%d: Kiln=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Humidifier=%v",
 						tickCount, heater.Temperature(), wood.Temperature(), heaterPower, fanPower, humidifierPower)
 				}
 			case <-stop:

@@ -16,7 +16,7 @@ type SimulationResetter struct {
 	Fan                 interface{ TurnOn(bool) }
 	Humidifier          interface{ TurnOn(bool) }
 	PhysicsState        *physics.SimulationState
-	InitialOvenTemp     float32
+	InitialKilnTemp     float32
 	InitialMaterialTemp float32
 	EnvironmentTemp     float32
 	Mutex               sync.Mutex

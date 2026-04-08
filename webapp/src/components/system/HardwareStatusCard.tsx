@@ -42,9 +42,9 @@ export const HardwareStatusCard: React.FC<Props> = ({ hardware }) => {
                 primary={
                   <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                     <Typography variant="body2" color="text.secondary">
-                      Oven:
+                      Kiln:
                     </Typography>
-                    <Typography variant="body2">{celsius(hardware.temperatures.oven)}</Typography>
+                    <Typography variant="body2">{celsius(hardware.temperatures.kiln)}</Typography>
                   </Box>
                 }
               />
@@ -58,7 +58,7 @@ export const HardwareStatusCard: React.FC<Props> = ({ hardware }) => {
                       Primary:
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                      {celsius(hardware.temperatures.oven_primary)}
+                      {celsius(hardware.temperatures.kiln_primary)}
                     </Typography>
                   </Box>
                 }
@@ -73,7 +73,7 @@ export const HardwareStatusCard: React.FC<Props> = ({ hardware }) => {
                       Secondary:
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: "0.85rem" }}>
-                      {celsius(hardware.temperatures.oven_secondary)}
+                      {celsius(hardware.temperatures.kiln_secondary)}
                     </Typography>
                   </Box>
                 }

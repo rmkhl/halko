@@ -43,7 +43,7 @@ The simulator searches for `simulator.conf` in:
 ```json
 {
   "status_interval": 10,
-  "initial_oven_temp": 20.0,
+  "initial_kiln_temp": 20.0,
   "initial_material_temp": 20.0,
   "environment_temp": 20.0,
   "simulation_engine": "simple|differential|thermodynamic",
@@ -56,7 +56,7 @@ The simulator searches for `simulator.conf` in:
 ### Common Parameters
 
 - **status_interval** (int): Log status every N ticks (0 = disabled)
-- **initial_oven_temp** (float): Starting oven temperature in °C
+- **initial_kiln_temp** (float): Starting kiln temperature in °C
 - **initial_material_temp** (float): Starting wood temperature in °C
 - **environment_temp** (float): Ambient temperature in °C
 - **simulation_engine** (string): Physics engine to use (`simple`, `differential`, or `thermodynamic`)
@@ -75,7 +75,7 @@ Basic rate-based temperature model suitable for quick testing.
 ```json
 {
   "status_interval": 10,
-  "initial_oven_temp": 20.0,
+  "initial_kiln_temp": 20.0,
   "initial_material_temp": 20.0,
   "environment_temp": 20.0,
   "simulation_engine": "simple",
@@ -110,7 +110,7 @@ Thermal mass-based model using differential equations for more realistic behavio
 ```json
 {
   "status_interval": 10,
-  "initial_oven_temp": 20.0,
+  "initial_kiln_temp": 20.0,
   "initial_material_temp": 20.0,
   "environment_temp": 20.0,
   "simulation_engine": "differential",
@@ -149,12 +149,12 @@ High-fidelity physics simulation using thermodynamic principles.
 ```json
 {
   "status_interval": 10,
-  "initial_oven_temp": 20.0,
+  "initial_kiln_temp": 20.0,
   "initial_material_temp": 20.0,
   "environment_temp": 20.0,
   "simulation_engine": "thermodynamic",
   "engine_config": {
-    "oven": {
+    "kiln": {
       "mass": 140.0,
       "specific_heat": 500.0,
       "surface_area": 4.5,
@@ -193,7 +193,7 @@ High-fidelity physics simulation using thermodynamic principles.
 
 **Engine Parameters:**
 
-**Oven Properties:**
+**Kiln Properties:**
 
 - **mass** (kg): Mass of kiln structure
 - **specific_heat** (J/kg·K): Heat capacity of kiln walls
@@ -281,7 +281,7 @@ Emulates temperature sensor endpoints:
 ```json
 {
   "data": {
-    "oven": 45.2,
+    "kiln": 45.2,
     "wood": 42.5,
     "ovenPrimary": 45.2,
     "ovenSecondary": 44.8

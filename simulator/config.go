@@ -12,7 +12,7 @@ import (
 
 type SimulatorConfig struct {
 	StatusInterval      int                    `json:"status_interval"`
-	InitialOvenTemp     float64                `json:"initial_oven_temp"`
+	InitialKilnTemp     float64                `json:"initial_kiln_temp"`
 	InitialMaterialTemp float64                `json:"initial_material_temp"`
 	EnvironmentTemp     float64                `json:"environment_temp"`
 	SimulationEngine    string                 `json:"simulation_engine"`

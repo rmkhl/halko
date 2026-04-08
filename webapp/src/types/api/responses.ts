@@ -25,8 +25,8 @@ export interface RTKQueryError {
  */
 export interface TemperatureStatus {
   material: number;
-  oven: number;
-  delta?: number; // Calculated delta between material and oven
+  kiln: number;
+  delta?: number; // Calculated delta between material and kiln
 }
 
 /**

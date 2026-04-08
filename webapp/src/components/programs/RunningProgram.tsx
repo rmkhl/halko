@@ -88,8 +88,8 @@ export const RunningProgram: React.FC = () => {
       {temperatures && (
         <Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
-            <Typography>{t("sensors.oven")}:</Typography>
-            <Typography>{celsius(temperatures.data.oven)}</Typography>
+            <Typography>{t("sensors.kiln")}:</Typography>
+            <Typography>{celsius(temperatures.data.kiln)}</Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
             <Typography>{t("sensors.material")}:</Typography>

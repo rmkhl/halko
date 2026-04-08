@@ -59,7 +59,7 @@ Fetches current temperature readings from all sensors.
 ```json
 {
   "data": {
-    "oven": 45.2,
+    "kiln": 45.2,
     "material": 32.1
   }
 }
@@ -67,7 +67,7 @@ Fetches current temperature readings from all sensors.
 
 The response includes:
 
-- `oven`: The highest of the two oven temperature sensors, or a single oven temperature if one sensor is unavailable
+- `kiln`: The highest of the two kiln temperature sensors, or a single kiln temperature if one sensor is unavailable
 - `material`: The current material (wood) temperature
 
 ### Status Endpoints
@@ -338,7 +338,7 @@ Gets the execution log CSV for a completed program.
 **Response:** Returns CSV data directly (not JSON-wrapped)
 
 ```csv
-timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
 1734007890,Initial Heating,45.2,42.5,75,50,0
 ...
 ```
@@ -392,7 +392,7 @@ When a program is running:
     "current_step_started_at": 1734007890,
     "temperatures": {
       "material": 42.5,
-      "oven": 45.2
+      "kiln": 45.2
     },
     "power_status": {
       "heater": 75,
@@ -410,7 +410,7 @@ When a program is running:
 - `current_step`: Name of the currently executing step
 - `current_step_started_at`: Unix timestamp when current step began
 - `temperatures.material`: Current material (wood) temperature in °C
-- `temperatures.oven`: Current oven temperature in °C
+- `temperatures.oven`: Current kiln temperature in °C
 - `power_status.heater`: Heater power level (0-100%)
 - `power_status.fan`: Fan power level (0-100%)
 - `power_status.humidifier`: Humidifier power level (0-100%)
@@ -531,7 +531,7 @@ Fetches the accumulated execution log as CSV data for the currently running prog
 When a program is running, returns CSV data:
 
 ```csv
-timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
 1734007890,Initial Heating,45.2,42.5,75,50,0
 1734007896,Initial Heating,46.1,42.8,75,50,0
 ...
@@ -558,7 +558,7 @@ WebSocket endpoint for real-time execution log streaming.
 The server sends CSV lines as text messages:
 
 ```csv
-timestamp,step_name,oven_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
 ```
 
 **Behavior:**
@@ -757,7 +757,7 @@ Gets readings from all simulated temperature sensors.
 ```json
 {
   "data": {
-    "oven": 45.2,
+    "kiln": 45.2,
     "material": 32.1
   }
 }

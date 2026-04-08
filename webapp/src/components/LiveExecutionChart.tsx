@@ -51,7 +51,7 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
           const firstMaterial = parseFloat(values[3]);
           const firstOven = parseFloat(values[4]);
           if (!isNaN(firstMaterial) && !isNaN(firstOven)) {
-            // Min is the lowest of: 0, first material temp, first oven temp
+            // Min is the lowest of: 0, first material temp, first kiln temp
             minTemp = Math.floor(Math.min(0, firstMaterial, firstOven));
           }
         }

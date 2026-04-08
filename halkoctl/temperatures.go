@@ -151,8 +151,8 @@ func getTemperatures(sensorunitURL string, verbose bool) error {
 // formatTemperatureName converts internal temperature names to user-friendly names
 func formatTemperatureName(name string) string {
 	switch name {
-	case "oven":
-		return "Oven"
+	case "kiln":
+		return "Kiln"
 	case "material":
 		return "Material/Wood"
 	default:

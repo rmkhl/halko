@@ -11,7 +11,7 @@ import (
 type SimpleSimulation struct {
 	heatingRate  float32 // Temperature increase per tick when heater is on
 	coolingRate  float32 // Temperature decrease per tick when heater is off
-	transferRate float32 // Heat transfer rate between oven and material
+	transferRate float32 // Heat transfer rate between kiln and material
 }
 
 func (s *SimpleSimulation) Name() string {
@@ -68,22 +68,22 @@ func (s *SimpleSimulation) Initialize(config map[string]interface{}) error {
 func (s *SimpleSimulation) Tick(state *SimulationState) {
 	log.Debug("Simulation[simple] tick - Heater:%v Fan:%v Humidifier:%v", state.HeaterIsOn, state.FanIsOn, state.HumidifierIsOn)
 
-	// Update oven temperature based on heater state
-	oldOvenTemp := state.OvenTemp
+	// Update kiln temperature based on heater state
+	oldKilnTemp := state.KilnTemp
 	if state.HeaterIsOn {
-		state.OvenTemp += s.heatingRate
-		log.Debug("Simulation[simple]: Oven heating %.1f°C -> %.1f°C", oldOvenTemp, state.OvenTemp)
+		state.KilnTemp += s.heatingRate
+		log.Debug("Simulation[simple]: Kiln heating %.1f°C -> %.1f°C", oldKilnTemp, state.KilnTemp)
 	} else {
-		state.OvenTemp = max(state.EnvironmentTemp, state.OvenTemp-s.coolingRate)
-		if state.OvenTemp != oldOvenTemp {
-			log.Debug("Simulation[simple]: Oven cooling %.1f°C -> %.1f°C (min: %.1f°C)",
-				oldOvenTemp, state.OvenTemp, state.EnvironmentTemp)
+		state.KilnTemp = max(state.EnvironmentTemp, state.KilnTemp-s.coolingRate)
+		if state.KilnTemp != oldKilnTemp {
+			log.Debug("Simulation[simple]: Kiln cooling %.1f°C -> %.1f°C (min: %.1f°C)",
+				oldKilnTemp, state.KilnTemp, state.EnvironmentTemp)
 		}
 	}
 
-	// Update material temperature based on oven temperature
+	// Update material temperature based on kiln temperature
 	oldMaterialTemp := state.MaterialTemp
-	delta := state.OvenTemp - state.MaterialTemp
+	delta := state.KilnTemp - state.MaterialTemp
 
 	var effectiveDelta float32
 	switch {
@@ -95,7 +95,7 @@ func (s *SimpleSimulation) Tick(state *SimulationState) {
 
 	state.MaterialTemp = max(state.EnvironmentTemp, state.MaterialTemp+effectiveDelta)
 	if state.MaterialTemp != oldMaterialTemp {
-		log.Debug("Simulation[simple]: Material %.1f°C -> %.1f°C (oven: %.1f°C, delta: %.2f°C)",
-			oldMaterialTemp, state.MaterialTemp, state.OvenTemp, delta)
+		log.Debug("Simulation[simple]: Material %.1f°C -> %.1f°C (kiln: %.1f°C, delta: %.2f°C)",
+			oldMaterialTemp, state.MaterialTemp, state.KilnTemp, delta)
 	}
 }

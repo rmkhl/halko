@@ -209,7 +209,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 	}
 
 	log.Trace("Parsing temperature response: %q", response)
-	// Parse response format: OvenPrimary=XX.XC,OvenSecondary=XX.XC,Wood=XX.XC
+	// Parse response format: KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC
 	readings := strings.Split(response, ",")
 	if len(readings) != 3 {
 		log.Trace("Invalid temperature reading format, expected 3 readings but got %d", len(readings))

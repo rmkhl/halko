@@ -352,7 +352,7 @@ Sends a GET request to `/engine/running` and displays the current execution stat
     "current_step_started_at": 1734007890,
     "temperatures": {
       "material": 42.5,
-      "oven": 45.2
+      "kiln": 45.2
     },
     "power_status": {
       "heater": 75,

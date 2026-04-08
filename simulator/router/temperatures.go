@@ -18,7 +18,7 @@ func readAllTemperatureSensors(sensors map[string]engine.TemperatureSensor) http
 		log.Trace("Retrieved %d temperature readings from simulator", len(resp))
 
 		response := types.APIResponse[types.TemperatureResponse]{Data: resp}
-		log.Trace("Returning temperature data: oven=%.1f°C, material=%.1f°C", resp["oven"], resp["material"])
+		log.Trace("Returning temperature data: kiln=%.1f°C, material=%.1f°C", resp["kiln"], resp["material"])
 		writeJSON(w, http.StatusOK, response)
 	}
 }

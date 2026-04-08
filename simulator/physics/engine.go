@@ -21,8 +21,8 @@ type SimulationEngine interface {
 
 // SimulationState holds the current state of all simulated elements
 type SimulationState struct {
-	// Oven/heater state
-	OvenTemp        float32
+	// Kiln/heater state
+	KilnTemp        float32
 	HeaterIsOn      bool
 	EnvironmentTemp float32
 

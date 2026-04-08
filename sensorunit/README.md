@@ -76,7 +76,7 @@ The unit accepts the following commands over the serial interface:
 
 - `helo;` - Initial handshake, responds with "helo"
 - `read;` - Request temperature readings, returns values in format:
-  `OvenPrimary=XX.XC,OvenSecondary=XX.XC,Wood=XX.XC`
+  `KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC`
 - `show TEXT;` - Updates the status text on the LCD display
 
 ## Connection Status

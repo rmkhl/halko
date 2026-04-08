@@ -33,7 +33,7 @@ interface ExecutionChartProps {
 }
 
 // Static CSV data from ,run.csv (used as fallback)
-const defaultCsvData = `time,step,steptime,material,oven,heater,fan,humidifier
+const defaultCsvData = `time,step,steptime,material,kiln,heater,fan,humidifier
 6,Initializing,0,0.000000,0.000000,0,0,0
 24,Initial Heating,0,20.000000,20.000000,0,0,0
 84,Initial Heating,60,20.240005,22.500010,100,100,100
@@ -84,7 +84,7 @@ interface DataPoint {
   step: string;
   steptime: number;
   material: number;
-  oven: number;
+  kiln: number;
   heater: number;
   fan: number;
   humidifier: number;
@@ -107,10 +107,10 @@ const parseCSV = (csv: string): DataPoint[] => {
 
     const time = parseFloat(values[0]);
     const material = parseFloat(values[3]);
-    const oven = parseFloat(values[4]);
+    const kiln = parseFloat(values[4]);
 
     // Skip lines with invalid numeric values
-    if (isNaN(time) || isNaN(material) || isNaN(oven)) {
+    if (isNaN(time) || isNaN(material) || isNaN(kiln)) {
       continue;
     }
 
@@ -119,7 +119,7 @@ const parseCSV = (csv: string): DataPoint[] => {
       step: values[1],
       steptime: parseFloat(values[2]),
       material,
-      oven,
+      kiln,
       heater: parseFloat(values[5]),
       fan: parseFloat(values[6]),
       humidifier: parseFloat(values[7]),
@@ -193,8 +193,8 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         tension: 0.3,
       },
       {
-        label: "Oven Temperature (°C)",
-        data: dataPoints.map((point) => point.oven),
+        label: "Kiln Temperature (°C)",
+        data: dataPoints.map((point) => point.kiln),
         borderColor: "rgb(255, 159, 64)",
         backgroundColor: "rgba(255, 159, 64, 0.5)",
         yAxisID: "y-temperature",
