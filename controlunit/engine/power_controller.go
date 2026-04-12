@@ -25,6 +25,7 @@ type (
 		PidController     *PidController
 		TargetTemperature float32
 		Settings          *types.PowerPidSettings
+		HeaterOn          bool
 	}
 )
 
@@ -72,15 +73,12 @@ func (c *PowerController) Update(power uint8, owenTemperature float32, woodTempe
 		return *c.Settings.Power
 
 	case types.PowerSettingTypeDelta:
-		targetTemperature := c.TargetTemperature
-
-		maxOvenTemp := woodTemperature + *c.Settings.MaxDelta
-		targetTemperature = min(targetTemperature, maxOvenTemp)
-
-		minOvenTemp := woodTemperature + *c.Settings.MinDelta
-		targetTemperature = max(targetTemperature, minOvenTemp)
-
-		if owenTemperature < targetTemperature {
+		if c.HeaterOn && owenTemperature > woodTemperature+*c.Settings.MaxDelta {
+			c.HeaterOn = false
+		} else if !c.HeaterOn && owenTemperature < woodTemperature+*c.Settings.MinDelta {
+			c.HeaterOn = true
+		}
+		if c.HeaterOn {
 			return 100
 		}
 		return 0
