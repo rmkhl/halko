@@ -274,6 +274,9 @@ func (p *Program) validateStepOrderAndTemperatureProgression() error {
 				return errors.New("heating step temperature must be higher than previous step")
 			}
 		case StepTypeAcclimate:
+			if currentStep.StepType == StepTypeHeating && nextStep.TargetTemperature != currentStep.TargetTemperature {
+				return errors.New("acclimate step temperature must match the preceding heating step temperature")
+			}
 			if nextStep.TargetTemperature < currentStep.TargetTemperature {
 				return errors.New("acclimate step temperature must be greater than or equal to previous step")
 			}

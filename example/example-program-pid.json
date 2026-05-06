@@ -19,7 +19,7 @@
     {
       "name": "Secondary Heating",
       "type": "heating",
-      "temperature_target": 150,
+      "temperature_target": 160,
       "heater": {
         "min_delta": 5,
         "max_delta": 15

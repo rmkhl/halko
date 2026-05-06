@@ -234,9 +234,9 @@ func (h *heatUpStateHandler) executeState() fsmState {
 
 func (h *heatUpStateHandler) enterState() {
 	log.Info("FSM: Entered heat_up state - target: %d°C", h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan, false)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, false)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier, false)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *acclimateStateHandler) executeState() fsmState {
@@ -277,9 +277,9 @@ func (h *acclimateStateHandler) enterState() {
 	log.Info("FSM: Entered acclimate state - target: %d°C, duration: %.0fs",
 		h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature,
 		h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds())
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan, false)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, true)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier, false)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *coolDownStateHandler) executeState() fsmState {
@@ -326,9 +326,9 @@ func (h *coolDownStateHandler) executeState() fsmState {
 
 func (h *coolDownStateHandler) enterState() {
 	log.Info("FSM: Entered cool_down state - target: %d°C", h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan, false)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater, false)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier, false)
+	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
+	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
+	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
 }
 
 func (h *failedStateHandler) executeState() fsmState {

@@ -22,11 +22,9 @@ type (
 	}
 
 	PowerController struct {
-		PidController        *PidController
-		TargetTemperature    float32
-		Settings             *types.PowerPidSettings
-		HeaterOn             bool
-		UseTargetAsReference bool
+		PidController     *PidController
+		TargetTemperature float32
+		Settings          *types.PowerPidSettings
 	}
 )
 
@@ -53,12 +51,10 @@ func (c *PidController) Update(reference float32, actual float32) float32 {
 }
 
 // New power controller with the given configuration and settings.
-func NewPowerController(targetTemperature float32, settings *types.PowerPidSettings, useTargetAsReference bool) *PowerController {
+func NewPowerController(targetTemperature float32, settings *types.PowerPidSettings) *PowerController {
 	controller := &PowerController{
-		TargetTemperature:    targetTemperature,
-		Settings:             settings,
-		HeaterOn:             settings.Type == types.PowerSettingTypeDelta,
-		UseTargetAsReference: useTargetAsReference,
+		TargetTemperature: targetTemperature,
+		Settings:          settings,
 	}
 
 	if settings.Type == types.PowerSettingTypePid {
@@ -76,16 +72,15 @@ func (c *PowerController) Update(power uint8, owenTemperature float32, woodTempe
 		return *c.Settings.Power
 
 	case types.PowerSettingTypeDelta:
-		reference := woodTemperature
-		if c.UseTargetAsReference {
-			reference = c.TargetTemperature
-		}
-		if c.HeaterOn && owenTemperature > reference+*c.Settings.MaxDelta {
-			c.HeaterOn = false
-		} else if !c.HeaterOn && owenTemperature < reference+*c.Settings.MinDelta {
-			c.HeaterOn = true
-		}
-		if c.HeaterOn {
+		targetTemperature := c.TargetTemperature
+
+		maxOvenTemp := woodTemperature + *c.Settings.MaxDelta
+		targetTemperature = min(targetTemperature, maxOvenTemp)
+
+		minOvenTemp := woodTemperature + *c.Settings.MinDelta
+		targetTemperature = max(targetTemperature, minOvenTemp)
+
+		if owenTemperature < targetTemperature {
 			return 100
 		}
 		return 0
