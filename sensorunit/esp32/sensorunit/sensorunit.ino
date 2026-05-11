@@ -93,63 +93,45 @@ int n_measure = 0;
 void displayTemperatures()
 {
     display.clearDisplay();
-
-    // Draw status line at top
-    display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
+
+    // Column x positions for 3 sensors — fits 3×3-digit temps in 128px at size 2
+    const int colX[3] = {0, 44, 88};
+    const char* labels[3] = {"K1", "K2", "Wd"};
+
+    // Row 1: temperatures in large font (size 2, 16px tall)
+    display.setTextSize(2);
+    for (int i = 0; i < 3; i++) {
+        display.setCursor(colX[i], 0);
+        if (is_valid[i]) {
+            display.print((int)temperature[i]);
+        } else {
+            display.print("NaN");
+        }
+    }
+
+    // Row 2: labels in small font (size 1, 8px tall) at y=17
+    display.setTextSize(1);
+    for (int i = 0; i < 3; i++) {
+        display.setCursor(colX[i], 17);
+        display.print(labels[i]);
+    }
+
+    // Separator line at y=27
+    display.drawLine(0, 27, SCREEN_WIDTH - 1, 27, SSD1306_WHITE);
+
+    // Row 3: status text at y=31
+    display.setCursor(0, 31);
     if (strlen(status_text) > 0) {
         display.print(status_text);
     } else {
-        display.print("Halko Sensor Unit");
+        display.print("Halko Sensor");
     }
 
-    // Draw separator line
-    display.drawLine(0, 10, SCREEN_WIDTH, 10, SSD1306_WHITE);
-
-    // Draw temperatures in larger font
-    display.setTextSize(1);
-
-    // Kiln Primary (line 2)
-    display.setCursor(0, 18);
-    display.print("K1:");
-    if (is_valid[KILN_PRIMARY]) {
-        display.setCursor(24, 18);
-        display.print(temperature[KILN_PRIMARY], 1);
-        display.print("C");
-    } else {
-        display.setCursor(30, 14);
-        display.print("NaN");
-    }
-
-    // Kiln Secondary (line 3)
-    display.setCursor(0, 28);
-    display.print("K2:");
-    if (is_valid[KILN_SECONDARY]) {
-        display.setCursor(24, 28);
-        display.print(temperature[KILN_SECONDARY], 1);
-        display.print("C");
-    } else {
-        display.setCursor(30, 28);
-        display.print("NaN");
-    }
-
-    // Wood (line 4)
-    display.setCursor(0, 42);
-    display.print("Wod:");
-    if (is_valid[WOOD]) {
-        display.setCursor(30, 42);
-        display.print(temperature[WOOD], 1);
-        display.print("C");
-    } else {
-        display.setCursor(30, 42);
-        display.print("NaN");
-    }
-
-    // Activity indicator (bottom right corner)
+    // Blinking activity dot (right side of status row)
     static bool blink = false;
     if (blink) {
-        display.fillCircle(SCREEN_WIDTH - 4, SCREEN_HEIGHT - 4, 2, SSD1306_WHITE);
+        display.fillCircle(SCREEN_WIDTH - 4, 35, 3, SSD1306_WHITE);
     }
     blink = !blink;
 
@@ -263,7 +245,7 @@ void setup()
     // Initialize SPI
     SPI.begin();
 
-    // Wait for MAX31855 to stabilize
+    // Wait for sensors to stabilize
     delay(500);
 
     // Update display
@@ -289,33 +271,17 @@ void loop()
     // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
-        // Read the current sensor
         double sensor_temperature = sensor[current_sensor].readCelsius();
-
-        // MAX31855 has built-in error detection
         uint8_t fault = sensor[current_sensor].readError();
 
         if (isnan(sensor_temperature) || fault != 0)
         {
-            // Sensor read failed or has a fault
             is_valid[current_sensor] = false;
-
-            // Optional: Log fault codes for debugging via serial
-            // Uncomment to enable fault reporting:
-            // if (fault != 0) {
-            //     Serial.print("Sensor ");
-            //     Serial.print(current_sensor);
-            //     Serial.print(" fault: 0x");
-            //     Serial.println(fault, HEX);
-            // }
         }
         else
         {
-            // Valid reading - update moving average
             is_valid[current_sensor] = true;
             measurement[current_sensor][n_measure] = sensor_temperature;
-
-            // Calculate average of last 4 readings
             temperature[current_sensor] = 0.0;
             for (int j = 0; j < 4; j++)
             {
@@ -324,14 +290,12 @@ void loop()
             temperature[current_sensor] = temperature[current_sensor] / 4.0;
         }
 
-        // Move to next sensor for next cycle (0→1→2→0...)
+        // Sensor counter drives display refresh timing
         current_sensor = (current_sensor + 1) % 3;
 
-        // Advance measurement slot when wrapping back to sensor 0
         if (current_sensor == 0)
         {
             n_measure = (n_measure + 1) % 4;
-            // Update display after reading all sensors
             displayTemperatures();
         }
 

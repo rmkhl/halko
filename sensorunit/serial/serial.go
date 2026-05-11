@@ -384,10 +384,7 @@ func (s *SensorUnit) clearInputBuffer() {
 // happens it will get a new tty device that will not match the configuration rendering
 // the sensorunit inoperable.
 func (s *SensorUnit) CloseIfUnavailable() error {
-	log.Trace("Checking if serial device %s exists", s.config.Name)
-
 	if !s.connected {
-		log.Trace("Not connected to device %s, skipping existence check", s.config.Name)
 		return nil
 	}
 
@@ -411,7 +408,6 @@ func (s *SensorUnit) CloseIfUnavailable() error {
 		return fmt.Errorf("failed to check device status: %w", err)
 	}
 
-	log.Trace("Serial device %s exists", s.config.Name)
 	return nil
 }
 

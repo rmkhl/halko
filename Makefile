@@ -162,7 +162,7 @@ esp32-help:
 	@echo "  make build-esp32                # Compile ESP32 sensorunit firmware"
 	@echo "  make upload-esp32               # Upload to /dev/ttyUSB0 (auto-compiles first)"
 	@echo "  make upload-esp32 PORT=/dev/ttyUSB1  # Upload to specific port"
-	@echo "  make monitor-esp32              # Connect to serial port (115200 baud)"
+	@echo "  make monitor-esp32              # Connect to serial port (9600 baud)"
 	@echo "  make monitor-esp32 PORT=/dev/ttyUSB1  # Monitor specific port"
 	@echo ""
 	@echo "Maintenance:"
@@ -177,6 +177,24 @@ esp32-help:
 
 .PHONY: prepare-esp32
 prepare-esp32: arduino-cli.yaml
+	@echo "Checking for Python..."
+	@if command -v python3 > /dev/null; then \
+		echo "✓ Python 3 found ($$(python3 --version 2>&1))"; \
+	elif command -v python > /dev/null; then \
+		echo "✓ Python found ($$(python --version 2>&1))"; \
+	else \
+		echo "⚠ Warning: Python not found. Required by esptool for uploading firmware."; \
+		echo "  Install with: sudo apt-get install python3"; \
+	fi
+	@echo "Checking for serial monitor..."
+	@if command -v screen > /dev/null; then \
+		echo "✓ screen found"; \
+	elif command -v minicom > /dev/null; then \
+		echo "✓ minicom found"; \
+	else \
+		echo "⚠ Warning: Neither screen nor minicom found. Required for make monitor-esp32."; \
+		echo "  Install with: sudo apt-get install screen"; \
+	fi
 	@echo "Checking for Arduino CLI..."
 	@if [ -f .arduino-cli/bin/arduino-cli ]; then \
 		export PATH="$$(pwd)/.arduino-cli/bin:$$PATH"; \
@@ -234,10 +252,10 @@ prepare-esp32: arduino-cli.yaml
 	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core install esp32:esp32; \
 	echo "✓ ESP32 board support installed to $(ARDUINO_DATA_DIR)"; \
 	echo "Installing required libraries for ESP32..."; \
-	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit MAX31855 library@1.5.3"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit MAX31855 library@1.4.2"; \
 	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit SSD1306@2.5.16"; \
 	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit GFX Library@1.12.5"; \
-	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit BusIO@1.17.5"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit BusIO@1.17.4"; \
 	echo "✓ Required libraries installed to $(ARDUINO_USER_DIR)"; \
 	echo "Creating ESP32 firmware directory structure..."; \
 	mkdir -p firmware-esp32; \
@@ -317,17 +335,16 @@ monitor-esp32:
 	else \
 		MONITOR_PORT="$(PORT)"; \
 	fi; \
-	echo "Opening serial monitor on $$MONITOR_PORT (115200 baud)"; \
+	echo "Opening serial monitor on $$MONITOR_PORT (9600 baud)"; \
 	echo "Press Ctrl+C to exit"; \
 	echo ""; \
 	if command -v screen > /dev/null; then \
-		screen $$MONITOR_PORT 115200; \
+		screen $$MONITOR_PORT 9600; \
 	elif command -v minicom > /dev/null; then \
-		minicom -D $$MONITOR_PORT -b 115200; \
+		minicom -D $$MONITOR_PORT -b 9600; \
 	else \
 		echo "Error: No serial terminal found. Please install 'screen' or 'minicom'."; \
-		echo "  Ubuntu/Debian: sudo apt-get install screen"; \
-		echo "  Fedora/RHEL:   sudo dnf install screen"; \
+		echo "  sudo apt-get install screen"; \
 		exit 1; \
 	fi
 

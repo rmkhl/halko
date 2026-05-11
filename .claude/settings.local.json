@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(git ls-tree *)",
+      "Read(//home/mte/.claude/**)"
     ]
   }
 }
