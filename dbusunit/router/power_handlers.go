@@ -31,10 +31,8 @@ func shutdown(manager *dbus.Manager) http.HandlerFunc {
 			return
 		}
 
-		response := types.APIResponse[map[string]string]{
-			Data: map[string]string{
-				"message": "System shutdown initiated",
-			},
+		response := types.APIResponse[types.PowerOperationResponse]{
+			Data: types.PowerOperationResponse{Message: "System shutdown initiated"},
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -61,10 +59,8 @@ func reboot(manager *dbus.Manager) http.HandlerFunc {
 			return
 		}
 
-		response := types.APIResponse[map[string]string]{
-			Data: map[string]string{
-				"message": "System reboot initiated",
-			},
+		response := types.APIResponse[types.PowerOperationResponse]{
+			Data: types.PowerOperationResponse{Message: "System reboot initiated"},
 		}
 
 		w.Header().Set("Content-Type", "application/json")

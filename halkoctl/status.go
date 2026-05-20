@@ -27,11 +27,11 @@ func handleStatusCommand() {
 	// Check status for each requested service
 	for _, service := range opts.Services {
 		switch service {
-		case "controlunit":
+		case types.ServiceNameControlUnit:
 			queryControlUnitStatus(globalOpts.Verbose, opts.Details)
-		case "sensorunit":
+		case types.ServiceNameSensorUnit:
 			querySensorUnitStatus(globalOpts.Verbose, opts.Details)
-		case "powerunit":
+		case types.ServiceNamePowerUnit:
 			queryPowerUnitStatus(globalOpts.Verbose, opts.Details)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown service: %s\n", service)

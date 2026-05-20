@@ -15,7 +15,7 @@ func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
 
 	response := types.ServiceStatusResponse{
 		Status:  types.ServiceStatusHealthy,
-		Service: "sensorunit",
+		Service: types.ServiceNameSensorUnit,
 		Details: details,
 	}
 

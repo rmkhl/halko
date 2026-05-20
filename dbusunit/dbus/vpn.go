@@ -2,6 +2,7 @@ package dbus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -79,7 +80,7 @@ func (m *Manager) GetVPNStatus(name string) (*VPNStatus, error) {
 
 	activeState, ok := properties["ActiveState"].(string)
 	if !ok {
-		return nil, fmt.Errorf("failed to get ActiveState")
+		return nil, errors.New("failed to get ActiveState")
 	}
 
 	// Get enabled status

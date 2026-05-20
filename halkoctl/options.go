@@ -134,13 +134,13 @@ func ParseStatusOptions() (*StatusOptions, error) {
 
 	// If no services specified, check all available services
 	if len(args) == 0 {
-		opts.Services = []string{"controlunit", "sensorunit", "powerunit"}
+		opts.Services = []string{types.ServiceNameControlUnit, types.ServiceNameSensorUnit, types.ServiceNamePowerUnit}
 	} else {
 		// Validate and set the specified services
 		validServices := map[string]bool{
-			"controlunit": true,
-			"sensorunit":  true,
-			"powerunit":   true,
+			types.ServiceNameControlUnit: true,
+			types.ServiceNameSensorUnit:  true,
+			types.ServiceNamePowerUnit:   true,
 		}
 
 		for _, service := range args {

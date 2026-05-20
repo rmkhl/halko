@@ -22,7 +22,7 @@ func (api *API) getStatus(w http.ResponseWriter, r *http.Request) {
 
 	response := types.ServiceStatusResponse{
 		Status:  status,
-		Service: "sensorunit",
+		Service: types.ServiceNameSensorUnit,
 		Details: details,
 	}
 

@@ -1,6 +1,7 @@
 package dbus
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/coreos/go-systemd/v22/dbus"
@@ -14,7 +15,7 @@ type Manager struct {
 
 // NewManager creates a new D-Bus manager with system bus connection
 func NewManager() (*Manager, error) {
-	conn, err := dbus.NewSystemConnection()
+	conn, err := dbus.NewSystemConnectionContext(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to D-Bus: %w", err)
 	}

@@ -88,7 +88,8 @@ func main() {
 	}
 	globalConfig = config
 
-	newArgs := []string{os.Args[0]}
+	newArgs := make([]string, 0, 1+(len(os.Args)-commandIndex))
+	newArgs = append(newArgs, os.Args[0])
 	newArgs = append(newArgs, os.Args[commandIndex:]...)
 	os.Args = newArgs
 

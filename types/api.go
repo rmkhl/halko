@@ -24,6 +24,13 @@ const (
 	ServiceStatusUnavailable ServiceStatus = "unavailable"
 )
 
+// Service name constants
+const (
+	ServiceNameControlUnit = "controlunit"
+	ServiceNamePowerUnit   = "powerunit"
+	ServiceNameSensorUnit  = "sensorunit"
+)
+
 const (
 	// signals invalid temperature reading
 	InvalidTemperatureReading = -273.15 // Absolute zero in Celsius, used to indicate an invalid reading
@@ -127,6 +134,12 @@ type (
 		Message string `json:"message"`
 	}
 )
+
+// D-Bus unit API
+type VPNOperationResponse struct {
+	Message string `json:"message"`
+	Name    string `json:"name"`
+}
 
 // Temperature sensor API
 type TemperatureResponse map[string]float32
