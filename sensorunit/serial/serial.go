@@ -258,28 +258,28 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 }
 
 func (s *SensorUnit) SetStatusText(text string) error {
-	log.Debug("Updating LCD display text: %q", text)
+	log.Debug("Updating OLED display text: %q", text)
 	if err := s.Connect(); err != nil {
 		log.Error("Failed to connect for status text update: %v", err)
 		return err
 	}
 
 	originalText := text
-	if len(text) > 15 {
-		log.Debug("Truncating LCD text from %d to 15 characters", len(text))
-		text = text[:15]
+	if len(text) > 18 {
+		log.Debug("Truncating OLED text from %d to 18 characters", len(text))
+		text = text[:18]
 	}
 
 	command := fmt.Sprintf("%s %s;", ShowCommand, text)
 	log.Trace("Sending status command: %q", command)
 	_, err := s.sendCommand(command)
 	if err != nil {
-		log.Error("Failed to set LCD status text: %v", err)
+		log.Error("Failed to set OLED status text: %v", err)
 	} else {
 		if originalText != text {
-			log.Info("LCD display updated (truncated): %q", text)
+			log.Info("OLED display updated (truncated): %q", text)
 		} else {
-			log.Info("LCD display updated: %q", text)
+			log.Info("OLED display updated: %q", text)
 		}
 	}
 	return err

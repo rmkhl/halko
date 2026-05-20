@@ -53,9 +53,9 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 
 		for _, temp := range temperatures {
 			switch temp.Name {
-			case "OvenPrimary":
+			case "KilnPrimary":
 				kilnPrimary = temp.Value
-			case "OvenSecondary":
+			case "KilnSecondary":
 				kilnSecondary = temp.Value
 			case "Wood":
 				response["material"] = temp.Value

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(xargs cat)",
       "Bash(git ls-tree *)",
-      "Read(//home/mte/.claude/**)"
+      "Read(//home/mte/.claude/**)",
+      "Bash(make lint-golang *)"
     ]
   }
 }
