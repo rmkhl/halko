@@ -118,8 +118,7 @@ func (s *SensorUnit) Connect() error {
 		log.Warning("Sensor unit handshake failed: err=%v, response=%q", err, response)
 		// If communication fails, we need to close the port and mark as disconnected
 		s.mutex.Lock()
-		s.port.Close()
-		s.connected = false
+		_ = s.closeLocked()
 		s.mutex.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to connect to sensor unit: %w", err)
@@ -133,10 +132,15 @@ func (s *SensorUnit) Connect() error {
 }
 
 func (s *SensorUnit) Close() error {
-	log.Trace("Closing connection to sensor unit")
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	return s.closeLocked()
+}
+
+// closeLocked closes the serial connection. The caller must already hold s.mutex.
+func (s *SensorUnit) closeLocked() error {
+	log.Trace("Closing connection to sensor unit")
 
 	if !s.connected {
 		log.Trace("Sensor unit already disconnected")
@@ -300,7 +304,7 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		// On write failure, mark as disconnected and release the device
 		// In case of disconnect / reconnect scenarios for the USB serial device
 		// it will get a new tty assignment if we hold on to the old one
-		s.Close()
+		_ = s.closeLocked()
 		log.Error("Failed to write command to serial port: %v", err)
 		return "", fmt.Errorf("failed to send command: %w", err)
 	}
