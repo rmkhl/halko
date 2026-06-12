@@ -11,7 +11,7 @@ Halko is a distributed system for controlling and monitoring wood drying kilns. 
 
 ## Go Module Structure
 
-```
+```text
 types/        — shared types, imported by all other modules
 controlunit/  — kiln control logic and program execution
 powerunit/    — Shelly smart switch control

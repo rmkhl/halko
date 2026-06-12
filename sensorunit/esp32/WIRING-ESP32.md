@@ -133,7 +133,7 @@ Same specs as 0.96" but larger physical size:
 
 ## Visual Wiring Diagram
 
-```
+```text
                                    ESP32 DevKit V1
                               ┌───────────────────────┐
                               │                       │
@@ -205,7 +205,7 @@ Same specs as 0.96" but larger physical size:
 
 ## Breadboard Layout Example
 
-```
+```text
 Power Rails:        ESP32 DevKit V1        MAX31855 Modules
 ════════════        ═══════════════        ════════════════
 
@@ -256,10 +256,12 @@ Power Rails:        ESP32 DevKit V1        MAX31855 Modules
 ## OLED I2C Address
 
 Most OLED displays use one of two I2C addresses:
+
 - **0x3C** (most common)
 - **0x3D** (less common)
 
 If the display doesn't work, try changing the address in the firmware:
+
 ```cpp
 #define SCREEN_ADDRESS 0x3C  // Try 0x3D if this doesn't work
 ```
@@ -281,33 +283,38 @@ USB 2.0 provides 500mA @ 5V, ESP32 3.3V regulator handles 600-800mA.
 ## Assembly Tips
 
 ### 1. **Power Distribution**
-   - Use breadboard power rails for 3.3V and GND
-   - Connect ESP32 3.3V and GND pins to power rails
-   - Connect all modules to power rails
+
+- Use breadboard power rails for 3.3V and GND
+- Connect ESP32 3.3V and GND pins to power rails
+- Connect all modules to power rails
 
 ### 2. **Wire Management**
-   - Keep SPI wires (SCK, MISO) as short as possible
-   - Route SPI wires together, separate from I2C wires
-   - Use different colored wires for power (red), ground (black), signals (others)
+
+- Keep SPI wires (SCK, MISO) as short as possible
+- Route SPI wires together, separate from I2C wires
+- Use different colored wires for power (red), ground (black), signals (others)
 
 ### 3. **Testing Order**
-   1. Connect only ESP32, verify USB serial works
-   2. Add OLED display, test with simple sketch
-   3. Add one MAX31855, test temperature reading
-   4. Add remaining MAX31855 modules
-   5. Upload final firmware
+
+1. Connect only ESP32, verify USB serial works
+2. Add OLED display, test with simple sketch
+3. Add one MAX31855, test temperature reading
+4. Add remaining MAX31855 modules
+5. Upload final firmware
 
 ### 4. **Prototyping Shield Option**
-   - ESP32 prototyping shields available for $4-5
-   - Provides solderable proto area for permanent installation
-   - Cleaner than breadboard for final assembly
+
+- ESP32 prototyping shields available for $4-5
+- Provides solderable proto area for permanent installation
+- Cleaner than breadboard for final assembly
 
 ## Common OLED Module Pinouts
 
 Most modules have one of these pin orders:
 
 **Type 1 (Most common):**
-```
+
+```text
 ┌────────────┐
 │   OLED     │
 │  Display   │
@@ -317,7 +324,8 @@ Most modules have one of these pin orders:
 ```
 
 **Type 2 (Alternative):**
-```
+
+```text
 ┌────────────┐
 │   OLED     │
 │  Display   │
@@ -333,6 +341,7 @@ Most modules have one of these pin orders:
 ### OLED Display Not Working
 
 1. **Check I2C address:**
+
    ```bash
    # On ESP32, use I2C scanner sketch to find address
    # Usually 0x3C or 0x3D
@@ -374,7 +383,7 @@ Most modules have one of these pin orders:
 
 ### Arduino IDE
 
-```
+```text
 Tools → Manage Libraries
 Search and install:
   - "Adafruit MAX31855 library"

@@ -5,6 +5,7 @@ This directory contains ESP32-based firmware for the Halko sensor unit.
 ## Overview
 
 The ESP32 is a more powerful alternative to the Arduino Nano ATmega328P, offering:
+
 - Faster processor (240 MHz dual-core vs 16 MHz)
 - More memory (520 KB SRAM vs 2 KB)
 - Built-in WiFi and Bluetooth (disabled for simplicity and power savings)
@@ -13,7 +14,7 @@ The ESP32 is a more powerful alternative to the Arduino Nano ATmega328P, offerin
 
 ## Directory Structure
 
-```
+```text
 sensorunit/esp32/
 ├── README.md              # This file
 ├── WIRING-ESP32.md        # Hardware wiring guide
@@ -24,6 +25,7 @@ sensorunit/esp32/
 ## Hardware
 
 ### NodeMCU-32S (AZDelivery ESP32 with CP2102)
+
 - **Microcontroller**: ESP32-WROOM-32
 - **USB-to-Serial**: CP2102 chip
 - **USB**: Micro-USB
@@ -35,12 +37,14 @@ sensorunit/esp32/
 ### Pin Mapping (for future MAX31855 integration)
 
 **Hardware SPI (VSPI):**
+
 - SCK:  GPIO18
 - MISO: GPIO19
 - MOSI: GPIO23 (not used by MAX31855, but part of SPI bus)
 - CS pins: GPIO5, GPIO16, GPIO17 (for three sensors)
 
 **I2C (for OLED display):**
+
 - SDA: GPIO21
 - SCL: GPIO22
 
@@ -49,9 +53,11 @@ sensorunit/esp32/
 ### First-Time Setup
 
 1. **Install ESP32 board support:**
+
    ```bash
    make prepare-esp32
    ```
+
    This will:
    - Install Arduino CLI (if not already installed)
    - Add ESP32 board manager URL to configuration
@@ -60,13 +66,16 @@ sensorunit/esp32/
 
 ### Building and Uploading
 
-2. **Build the sensorunit firmware:**
+1. **Build the sensorunit firmware:**
+
    ```bash
    make build-esp32
    ```
+
    Compiles `sensorunit/esp32/sensorunit/sensorunit.ino` to `firmware-esp32/`
 
-3. **Upload to ESP32:**
+2. **Upload to ESP32:**
+
    ```bash
    make upload-esp32             # Upload to /dev/ttyUSB0
    make upload-esp32 PORT=/dev/ttyUSB1  # Upload to specific port
@@ -74,11 +83,13 @@ sensorunit/esp32/
 
 ### Testing
 
-4. **Monitor serial output:**
+1. **Monitor serial output:**
+
    ```bash
    make monitor-esp32            # Connect to /dev/ttyUSB0
    make monitor-esp32 PORT=/dev/ttyUSB1  # Connect to specific port
    ```
+
    - Baud rate: 115200
    - Displays temperature readings from MAX31855 sensors
    - Shows status on OLED display
@@ -94,6 +105,7 @@ make esp32-help               # Show all available commands
 ## Firmware Features
 
 The ESP32 sensorunit firmware provides:
+
 - **Temperature Reading**: 3x MAX31855 thermocouple amplifiers (K-type)
 - **Display**: I2C OLED (SSD1306/SH1106) for local temperature display
 - **Serial Protocol**: USB serial interface compatible with controlunit
@@ -108,6 +120,7 @@ The ESP32 sensorunit firmware provides:
 ### Serial Port Permissions
 
 If you get permission errors accessing `/dev/ttyUSB0`:
+
 ```bash
 sudo usermod -a -G dialout $USER
 # Then log out and back in
@@ -127,15 +140,18 @@ ls /dev/ttyUSB*
 ### Troubleshooting
 
 **Upload fails with "Failed to connect to ESP32":**
+
 - Hold the BOOT button on ESP32 during upload
 - Try a different USB cable (some are power-only)
 - Check that port has correct permissions
 
 **Serial monitor shows garbage characters:**
+
 - Verify baud rate is 115200
 - Press the EN (reset) button on ESP32 to restart the program
 
 **Build fails with "esp32:esp32:esp32 not found":**
+
 - Run `make prepare-esp32` to install board support
 - Check that `.arduino-cli/bin/arduino-cli` exists
 
@@ -152,6 +168,7 @@ See [WIRING-ESP32.md](WIRING-ESP32.md) for complete wiring instructions.
 ## Future Enhancements
 
 Potential improvements:
+
 - WiFi-based temperature reporting (currently disabled for power savings)
 - OTA (Over-The-Air) firmware updates
 - Web-based configuration interface
