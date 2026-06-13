@@ -397,7 +397,7 @@ update-modules:
 	done
 
 .PHONY: install
-install: clean all
+install: $(MODULES:%=$(BINDIR)/%)
 	@echo "Installing binaries to /opt/halko (excluding simulator)..."
 	sudo install -d /opt/halko
 	for bin in $(MODULES); do \
