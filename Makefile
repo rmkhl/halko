@@ -146,6 +146,10 @@ arduino-cli.yaml:
 build: clean $(MODULES:%=$(BINDIR)/%)
 	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
 
+.PHONY: release
+release:
+	@$(MAKE) all OPTIMIZED=yes
+
 # ============================================================================
 # ESP32 Firmware Development Targets
 # ============================================================================
@@ -421,9 +425,9 @@ install: clean all
 
 .PHONY: systemd-units
 systemd-units: install
-	@echo "Creating and installing systemd unit files for all binaries except simulator..."
+	@echo "Creating and installing systemd unit files for all daemon binaries (excluding simulator and halkoctl)..."
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ]; then \
+		if [ "$$bin" != "simulator" ] && [ "$$bin" != "halkoctl" ]; then \
 			if [ "$$bin" = "dbusunit" ]; then \
 				sudo cp templates/halko-dbusunit.service /etc/systemd/system/halko-dbusunit.service; \
 				sudo systemctl daemon-reload; \
@@ -577,6 +581,8 @@ help:
 	@echo "Build Targets:"
 	@echo "  all                        Build all Go executables to bin/ directory."
 	@echo "  build                      Clean and rebuild all Go executables."
+	@echo "  release                    Clean and rebuild all Go executables as release builds"
+	@echo "                               (stripped, -s -w, -trimpath; equivalent to OPTIMIZED=yes make all)."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
