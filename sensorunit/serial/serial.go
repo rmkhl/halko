@@ -316,6 +316,13 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 	scanner := bufio.NewScanner(s.port)
 	var response string
 
+	// Cap how many non-matching lines we tolerate. Right after the ESP32
+	// resets (e.g. on port open) it can spew boot-banner lines for a bit
+	// before settling down; without a bound we'd scan those lines forever
+	// and never return, blocking Connect()'s retry loop.
+	const maxUnexpectedLines = 20
+	unexpectedLines := 0
+
 	// Wait for a relevant response based on the command type
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -341,6 +348,10 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		}
 
 		log.Warning("Received unexpected line from sensor unit for command %q: %q", cmd, line)
+		unexpectedLines++
+		if unexpectedLines >= maxUnexpectedLines {
+			return "", fmt.Errorf("too many unexpected responses while waiting for reply to %q", cmd)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -358,9 +369,14 @@ func (s *SensorUnit) clearInputBuffer() {
 	log.Trace("Clearing serial input buffer")
 	tempBuf := make([]byte, 1024)
 
+	// Bound how much we'll discard. This runs while holding s.mutex, so a
+	// device that streams continuously (e.g. a boot loop) must not keep us
+	// here forever.
+	const maxClearBytes = 8192
+
 	// Clear any garbage by reading it off from the line
 	totalCleared := 0
-	for {
+	for totalCleared < maxClearBytes {
 		n, err := s.port.Read(tempBuf)
 		log.Debug("Read %d bytes, (%v)", n, err)
 		if err != nil || n == 0 {
