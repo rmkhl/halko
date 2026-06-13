@@ -86,26 +86,21 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 				response["kiln"] = kilnSecondary
 				selectedKilnTemp = "secondary (higher)"
 			}
+			api.updateKilnStatus(kilnSensorBothOK)
 		case kilnPrimary != types.InvalidTemperatureReading:
-			log.Warning("Secondary kiln temperature reading is invalid, using primary only")
 			response["kiln"] = kilnPrimary
 			selectedKilnTemp = "primary only"
+			api.updateKilnStatus(kilnSensorPrimaryOnly)
 		case kilnSecondary != types.InvalidTemperatureReading:
-			log.Warning("Primary kiln temperature reading is invalid, using secondary only")
 			response["kiln"] = kilnSecondary
 			selectedKilnTemp = "secondary only"
+			api.updateKilnStatus(kilnSensorSecondaryOnly)
 		default:
-			log.Warning("Both kiln temperature readings are invalid")
 			response["kiln"] = types.InvalidTemperatureReading
 			selectedKilnTemp = "invalid"
+			api.updateKilnStatus(kilnSensorBothInvalid)
 		}
-		if response["material"] == types.InvalidTemperatureReading {
-			log.Warning("Material temperature reading is invalid")
-		}
-
-		if allInvalid {
-			log.Warning("All temperature readings remain invalid after %d attempts", maxAttempts)
-		}
+		api.updateMaterialStatus(response["material"] != types.InvalidTemperatureReading)
 
 		log.Debug("Temperature selection complete: kiln=%.1f°C (%s), material=%.1f°C",
 			response["kiln"], selectedKilnTemp, response["material"])

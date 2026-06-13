@@ -281,9 +281,9 @@ func (s *SensorUnit) SetStatusText(text string) error {
 		log.Error("Failed to set OLED status text: %v", err)
 	} else {
 		if originalText != text {
-			log.Info("OLED display updated (truncated): %q", text)
+			log.Debug("OLED display updated (truncated): %q", text)
 		} else {
-			log.Info("OLED display updated: %q", text)
+			log.Debug("OLED display updated: %q", text)
 		}
 	}
 	return err
