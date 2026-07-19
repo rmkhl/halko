@@ -161,8 +161,8 @@ func TestGetServiceURLs(t *testing.T) {
 		t.Errorf("Expected PowerUnit URL http://localhost:8092, got %s", config.APIEndpoints.PowerUnit.GetURL())
 	}
 
-	if config.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
-		t.Errorf("Expected SensorUnit URL http://localhost:8088, got %s", config.APIEndpoints.SensorUnit.GetURL())
+	if config.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8093" {
+		t.Errorf("Expected SensorUnit URL http://localhost:8093, got %s", config.APIEndpoints.SensorUnit.GetURL())
 	}
 
 	// Test specific endpoint methods
@@ -176,7 +176,7 @@ func TestGetServiceURLs(t *testing.T) {
 		t.Errorf("Expected Engine URL %s, got %s", expectedEngineURL, config.APIEndpoints.ControlUnit.GetEngineURL())
 	}
 
-	expectedTemperaturesURL := "http://localhost:8088/temperatures"
+	expectedTemperaturesURL := "http://localhost:8093/temperatures"
 	if config.APIEndpoints.SensorUnit.GetTemperaturesURL() != expectedTemperaturesURL {
 		t.Errorf("Expected Temperatures URL %s, got %s", expectedTemperaturesURL, config.APIEndpoints.SensorUnit.GetTemperaturesURL())
 	}
@@ -198,7 +198,7 @@ func TestGetPortMethod(t *testing.T) {
 	}{
 		{"Executor", &config.APIEndpoints.ControlUnit.Endpoint, "8090"},
 		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, "8092"},
-		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8088"},
+		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8093"},
 	}
 
 	for _, tt := range tests {
@@ -268,7 +268,7 @@ func TestJSONMarshaling(t *testing.T) {
 	if newConfig.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
 		t.Error("PowerUnit endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
+	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8093" {
 		t.Error("SensorUnit endpoint URL not preserved after JSON round-trip")
 	}
 
