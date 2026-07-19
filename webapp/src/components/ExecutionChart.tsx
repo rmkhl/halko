@@ -85,9 +85,6 @@ interface DataPoint {
   steptime: number;
   material: number;
   kiln: number;
-  heater: number;
-  fan: number;
-  humidifier: number;
 }
 
 const parseCSV = (csv: string): DataPoint[] => {
@@ -120,9 +117,6 @@ const parseCSV = (csv: string): DataPoint[] => {
       steptime: parseFloat(values[2]),
       material,
       kiln,
-      heater: parseFloat(values[5]),
-      fan: parseFloat(values[6]),
-      humidifier: parseFloat(values[7]),
     });
   }
 
@@ -201,36 +195,6 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         pointRadius: 2,
         tension: 0.3,
       },
-      {
-        label: "Heater Power (%)",
-        data: dataPoints.map((point) => point.heater),
-        borderColor: "rgb(54, 162, 235)",
-        backgroundColor: "rgba(54, 162, 235, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
-      },
-      {
-        label: "Fan Power (%)",
-        data: dataPoints.map((point) => point.fan),
-        borderColor: "rgb(34, 139, 34)",
-        backgroundColor: "rgba(34, 139, 34, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
-      },
-      {
-        label: "Humidifier Power (%)",
-        data: dataPoints.map((point) => point.humidifier),
-        borderColor: "rgb(255, 206, 86)",
-        backgroundColor: "rgba(255, 206, 86, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
-      },
     ],
   };
 
@@ -274,7 +238,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
       "y-temperature": {
         type: "linear" as const,
         display: true,
-        position: "right" as const,
+        position: "left" as const,
         title: {
           display: true,
           text: "Temperature (°C)",
@@ -286,20 +250,6 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         } : {
           grace: "5%",
         }),
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-      "y-power": {
-        type: "linear" as const,
-        display: true,
-        position: "left" as const,
-        title: {
-          display: true,
-          text: "Power (%)",
-        },
-        min: 0,
-        max: 100,
       },
     },
   };
