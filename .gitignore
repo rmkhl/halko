@@ -60,3 +60,4 @@ package-lock.json
 *-test.json
 .superpowers/
 docs/
+.claude/settings.local.json
