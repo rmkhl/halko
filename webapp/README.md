@@ -21,19 +21,12 @@ React-based user interface for the Halko kiln control system.
 
 ### Installing Node.js
 
-If you don't have Node.js 18+ installed, you can install it locally in the project using the provided Make target:
+If you don't have Node.js 18+ installed, the Makefile installs it for you:
+`make prepare` (and the webapp targets that depend on it) downloads Node.js
+18 standalone binaries into the `.nodejs/` directory in the project root.
+No system-wide or user-wide installation is required.
 
-```bash
-make webapp-install-node
-```
-
-This will:
-
-1. Download Node.js 18.20.5 standalone binaries
-2. Extract them to `.nodejs/` directory in the project root
-3. No system-wide or user-wide installation required
-
-The installed Node.js is automatically used by all `webapp-*` Make targets. If you want to use it manually:
+The installed Node.js is automatically used by the webapp Make targets. If you want to use it manually:
 
 ```bash
 export PATH="$(pwd)/.nodejs/bin:$PATH"
@@ -47,15 +40,13 @@ node --version
 1. Install dependencies:
 
    ```bash
-   make webapp-install
-   # or directly:
    cd webapp && npm install
    ```
 
-2. Start the development server:
+2. Start the development server (installs dependencies if needed):
 
    ```bash
-   make webapp-dev
+   make run-webapp
    # or directly:
    cd webapp && npm start
    ```
@@ -68,7 +59,7 @@ The webapp uses a centralized API configuration (`src/config/api.ts`) that deter
 
 **Development Mode** (default):
 
-- Uses direct localhost URLs: `http://localhost:8090`, `http://localhost:8093`, `http://localhost:8088`
+- Uses direct localhost URLs: `http://localhost:8090`, `http://localhost:8092`, `http://localhost:8093`, `http://localhost:8094`
 - Backend services must be running locally
 - No environment variables needed
 
@@ -76,13 +67,13 @@ The webapp uses a centralized API configuration (`src/config/api.ts`) that deter
 
 - Uses relative paths: `/api/v1/controlunit`, `/api/v1/sensorunit`
 - Requires nginx to proxy requests to backend services
-- Set environment variable: `VITE_API_PREFIX=/api/v1`
+- Set environment variable: `API_PREFIX=/api/v1`
 
 To configure for production, create a `.env` file:
 
 ```bash
 cp .env.example .env
-# Edit .env and uncomment VITE_API_PREFIX=/api/v1
+# Edit .env and uncomment API_PREFIX=/api/v1
 ```
 
 Or use the provided `.env.production` file during build:
@@ -96,7 +87,7 @@ npm run build  # Automatically uses .env.production
 ### Build for Production
 
 ```bash
-make webapp-build
+make build-webapp
 ```
 
 This creates an optimized production build in `webapp/dist/` with:
@@ -132,7 +123,7 @@ The development server provided by Parcel includes:
 Start with:
 
 ```bash
-make webapp-dev
+make run-webapp
 ```
 
 ### Nginx Configuration
@@ -162,6 +153,7 @@ Generates `webapp/nginx-host.conf` using `halko.cfg` which proxies to localhost 
 - `/api/v1/storage/` → `http://localhost:8090` (stored programs)
 - `/api/v1/powerunit/` → `http://localhost:8092`
 - `/api/v1/sensorunit/` → `http://localhost:8093`
+- `/api/v1/dbusunit/` → `http://localhost:8094`
 
 ## Project Structure
 
@@ -195,21 +187,23 @@ webapp/
 
 | Target | Description |
 |--------|-------------|
-| `webapp-install-node` | Install Node.js 18 locally in `.nodejs/` (project-specific) |
-| `webapp-check-node` | Verify Node.js 18+ and npm are installed |
-| `webapp-install` | Install npm dependencies |
-| `webapp-dev` | Start development server with hot reload |
-| `webapp-build` | Build for production |
-| `webapp-clean` | Remove build artifacts and dependencies |
-| `webapp-nginx-config` | Generate nginx config for standard installation (uses `halko.cfg`) |
+| `prepare` | Check tools; installs Node.js 18 locally to `.nodejs/` if missing |
+| `run-webapp` | Start development server with hot reload |
+| `build-webapp` | Build for production and generate nginx config (uses `halko.cfg`) |
+| `lint-webapp` | Run ESLint and the TypeScript type check |
+| `clean-webapp` | Remove build artifacts and dependencies |
+| `install-webapp` | Build and install to `/var/www/halko` with nginx config |
 
 ## API Integration
 
 The webapp communicates with backend services through RTK Query services in `src/store/services/`:
 
-- `configuratorApi.ts`: Not yet implemented (placeholder)
-- `executorApi.ts`: Program execution control
+- `configuratorApi.ts`: Stored program templates
+- `controlunitApi.ts`: Program execution control
 - `sensorsApi.ts`: Temperature and sensor data
+- `powerunitApi.ts`: Power channel status
+- `dbusunitApi.ts`: VPN and host power management
+- `systemApi.ts`: Aggregated system status
 - `queryBuilders.ts`: Common query utilities
 
 API base URLs should be configured based on deployment environment:
@@ -222,7 +216,7 @@ API base URLs should be configured based on deployment environment:
 Remove all build artifacts and dependencies:
 
 ```bash
-make webapp-clean
+make clean-webapp
 ```
 
 This removes:
@@ -236,13 +230,13 @@ This removes:
 ### Development server won't start
 
 - Ensure Node.js 18+ is installed: `node --version`
-- Delete `node_modules` and `.parcel-cache`, then reinstall: `make webapp-clean && make webapp-install`
+- Delete `node_modules` and `.parcel-cache`, then reinstall: `make clean-webapp && cd webapp && npm install`
 - Check if port 1234 is already in use
 
 ### Build fails
 
-- Check for TypeScript errors: `cd webapp && npx tsc --noEmit`
-- Ensure all dependencies are installed: `make webapp-install`
+- Check for TypeScript errors: `cd webapp && npm run typecheck`
+- Ensure all dependencies are installed: `cd webapp && npm install`
 - Check the build output for specific error messages
 
 ### API requests fail
@@ -254,10 +248,7 @@ This removes:
 
 ## Future Improvements
 
-- Add environment variable configuration for API endpoints
 - Implement automated tests (unit, integration, e2e)
-- Add TypeScript strict mode compliance
-- Set up ESLint and Prettier for code quality
 - Add CI/CD pipeline for automated builds and deployments
 - Implement service worker for offline capabilities
 - Add performance monitoring

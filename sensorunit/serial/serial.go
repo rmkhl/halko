@@ -97,7 +97,7 @@ func (s *SensorUnit) Connect() error {
 	s.clearInputBuffer()
 	s.mutex.Unlock()
 
-	// Try handshake with retries to handle Arduino serial initialization timing
+	// Try handshake with retries to handle ESP32 serial initialization timing
 	var response string
 	maxRetries := 3
 	for attempt := 1; attempt <= maxRetries; attempt++ {
@@ -108,7 +108,7 @@ func (s *SensorUnit) Connect() error {
 
 		if attempt < maxRetries {
 			backoffDuration := time.Duration(200*attempt) * time.Millisecond
-			log.Warning("Handshake attempt %d failed (err=%v, response=%q), Arduino may still be initializing, retrying in %v",
+			log.Warning("Handshake attempt %d failed (err=%v, response=%q), ESP32 may still be initializing, retrying in %v",
 				attempt, err, response, backoffDuration)
 			time.Sleep(backoffDuration)
 		}
@@ -364,7 +364,7 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 }
 
 // clearInputBuffer reads and discards any data in the input buffer
-// This helps handle any initialization garbage from the Arduino
+// This helps handle any initialization garbage from the ESP32
 func (s *SensorUnit) clearInputBuffer() {
 	log.Trace("Clearing serial input buffer")
 	tempBuf := make([]byte, 1024)
