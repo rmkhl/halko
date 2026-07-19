@@ -35,7 +35,11 @@ func main() {
 		log.Fatal("Failed to get dbusunit port: %v", err)
 	}
 
-	dbusManager, err := dbus.NewManager()
+	dbusSocket := ""
+	if configuration.DBusUnit != nil {
+		dbusSocket = configuration.DBusUnit.SystemBusSocket
+	}
+	dbusManager, err := dbus.NewManager(dbusSocket)
 	if err != nil {
 		log.Fatal("Failed to create D-Bus manager: %v", err)
 	}
