@@ -118,8 +118,7 @@ func (s *SensorUnit) Connect() error {
 		log.Warning("Sensor unit handshake failed: err=%v, response=%q", err, response)
 		// If communication fails, we need to close the port and mark as disconnected
 		s.mutex.Lock()
-		s.port.Close()
-		s.connected = false
+		_ = s.closeLocked()
 		s.mutex.Unlock()
 		if err != nil {
 			return fmt.Errorf("failed to connect to sensor unit: %w", err)
@@ -133,10 +132,15 @@ func (s *SensorUnit) Connect() error {
 }
 
 func (s *SensorUnit) Close() error {
-	log.Trace("Closing connection to sensor unit")
-
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	return s.closeLocked()
+}
+
+// closeLocked closes the serial connection. The caller must already hold s.mutex.
+func (s *SensorUnit) closeLocked() error {
+	log.Trace("Closing connection to sensor unit")
 
 	if !s.connected {
 		log.Trace("Sensor unit already disconnected")
@@ -209,7 +213,7 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 	}
 
 	log.Trace("Parsing temperature response: %q", response)
-	// Parse response format: OvenPrimary=XX.XC,OvenSecondary=XX.XC,Wood=XX.XC
+	// Parse response format: KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC
 	readings := strings.Split(response, ",")
 	if len(readings) != 3 {
 		log.Trace("Invalid temperature reading format, expected 3 readings but got %d", len(readings))
@@ -258,28 +262,28 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 }
 
 func (s *SensorUnit) SetStatusText(text string) error {
-	log.Debug("Updating LCD display text: %q", text)
+	log.Debug("Updating OLED display text: %q", text)
 	if err := s.Connect(); err != nil {
 		log.Error("Failed to connect for status text update: %v", err)
 		return err
 	}
 
 	originalText := text
-	if len(text) > 15 {
-		log.Debug("Truncating LCD text from %d to 15 characters", len(text))
-		text = text[:15]
+	if len(text) > 18 {
+		log.Debug("Truncating OLED text from %d to 18 characters", len(text))
+		text = text[:18]
 	}
 
 	command := fmt.Sprintf("%s %s;", ShowCommand, text)
 	log.Trace("Sending status command: %q", command)
 	_, err := s.sendCommand(command)
 	if err != nil {
-		log.Error("Failed to set LCD status text: %v", err)
+		log.Error("Failed to set OLED status text: %v", err)
 	} else {
 		if originalText != text {
-			log.Info("LCD display updated (truncated): %q", text)
+			log.Debug("OLED display updated (truncated): %q", text)
 		} else {
-			log.Info("LCD display updated: %q", text)
+			log.Debug("OLED display updated: %q", text)
 		}
 	}
 	return err
@@ -300,7 +304,7 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		// On write failure, mark as disconnected and release the device
 		// In case of disconnect / reconnect scenarios for the USB serial device
 		// it will get a new tty assignment if we hold on to the old one
-		s.Close()
+		_ = s.closeLocked()
 		log.Error("Failed to write command to serial port: %v", err)
 		return "", fmt.Errorf("failed to send command: %w", err)
 	}
@@ -311,6 +315,13 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 	}
 	scanner := bufio.NewScanner(s.port)
 	var response string
+
+	// Cap how many non-matching lines we tolerate. Right after the ESP32
+	// resets (e.g. on port open) it can spew boot-banner lines for a bit
+	// before settling down; without a bound we'd scan those lines forever
+	// and never return, blocking Connect()'s retry loop.
+	const maxUnexpectedLines = 20
+	unexpectedLines := 0
 
 	// Wait for a relevant response based on the command type
 	for scanner.Scan() {
@@ -337,6 +348,10 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		}
 
 		log.Warning("Received unexpected line from sensor unit for command %q: %q", cmd, line)
+		unexpectedLines++
+		if unexpectedLines >= maxUnexpectedLines {
+			return "", fmt.Errorf("too many unexpected responses while waiting for reply to %q", cmd)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -354,9 +369,14 @@ func (s *SensorUnit) clearInputBuffer() {
 	log.Trace("Clearing serial input buffer")
 	tempBuf := make([]byte, 1024)
 
+	// Bound how much we'll discard. This runs while holding s.mutex, so a
+	// device that streams continuously (e.g. a boot loop) must not keep us
+	// here forever.
+	const maxClearBytes = 8192
+
 	// Clear any garbage by reading it off from the line
 	totalCleared := 0
-	for {
+	for totalCleared < maxClearBytes {
 		n, err := s.port.Read(tempBuf)
 		log.Debug("Read %d bytes, (%v)", n, err)
 		if err != nil || n == 0 {
@@ -384,10 +404,7 @@ func (s *SensorUnit) clearInputBuffer() {
 // happens it will get a new tty device that will not match the configuration rendering
 // the sensorunit inoperable.
 func (s *SensorUnit) CloseIfUnavailable() error {
-	log.Trace("Checking if serial device %s exists", s.config.Name)
-
 	if !s.connected {
-		log.Trace("Not connected to device %s, skipping existence check", s.config.Name)
 		return nil
 	}
 
@@ -411,7 +428,6 @@ func (s *SensorUnit) CloseIfUnavailable() error {
 		return fmt.Errorf("failed to check device status: %w", err)
 	}
 
-	log.Trace("Serial device %s exists", s.config.Name)
 	return nil
 }
 

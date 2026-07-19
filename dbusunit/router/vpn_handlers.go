@@ -11,7 +11,7 @@ import (
 
 // listVPNs returns a handler that lists all OpenVPN client services
 func listVPNs(manager *dbus.Manager) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		log.Debug("Received request: GET /vpn")
 
 		vpns, err := manager.ListVPNs()
@@ -78,11 +78,8 @@ func startVPN(manager *dbus.Manager) http.HandlerFunc {
 			return
 		}
 
-		response := types.APIResponse[map[string]string]{
-			Data: map[string]string{
-				"message": "VPN started successfully",
-				"name":    name,
-			},
+		response := types.APIResponse[types.VPNOperationResponse]{
+			Data: types.VPNOperationResponse{Message: "VPN started successfully", Name: name},
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -109,11 +106,8 @@ func stopVPN(manager *dbus.Manager) http.HandlerFunc {
 			return
 		}
 
-		response := types.APIResponse[map[string]string]{
-			Data: map[string]string{
-				"message": "VPN stopped successfully",
-				"name":    name,
-			},
+		response := types.APIResponse[types.VPNOperationResponse]{
+			Data: types.VPNOperationResponse{Message: "VPN stopped successfully", Name: name},
 		}
 
 		w.Header().Set("Content-Type", "application/json")

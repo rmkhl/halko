@@ -14,7 +14,7 @@ const (
 )
 
 // Shutdown powers off the system
-func (m *Manager) Shutdown(delay int) error {
+func (m *Manager) Shutdown(_ int) error {
 	log.Warning("System shutdown requested")
 
 	// Get separate D-Bus connection for logind
@@ -39,7 +39,7 @@ func (m *Manager) Shutdown(delay int) error {
 }
 
 // Reboot restarts the system
-func (m *Manager) Reboot(delay int) error {
+func (m *Manager) Reboot(_ int) error {
 	log.Warning("System reboot requested")
 
 	// Get separate D-Bus connection for logind

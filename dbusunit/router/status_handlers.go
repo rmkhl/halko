@@ -11,7 +11,7 @@ import (
 
 // getStatus returns a handler that provides service health status
 func getStatus(manager *dbus.Manager) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		log.Debug("Received request: GET /status")
 
 		// Check if D-Bus connection is active

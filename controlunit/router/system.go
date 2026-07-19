@@ -28,9 +28,9 @@ func getSystemStatus(storage types.ExecutionStorage, config *types.HalkoConfig) 
 // getServicesStatus queries all service status endpoints
 func getServicesStatus(endpoints *types.APIEndpoints) types.SystemServicesStatus {
 	services := types.SystemServicesStatus{
-		ControlUnit: queryServiceStatus(endpoints.ControlUnit.GetStatusURL(), "controlunit"),
-		PowerUnit:   queryServiceStatus(endpoints.PowerUnit.GetStatusURL(), "powerunit"),
-		SensorUnit:  queryServiceStatus(endpoints.SensorUnit.GetStatusURL(), "sensorunit"),
+		ControlUnit: queryServiceStatus(endpoints.ControlUnit.GetStatusURL(), types.ServiceNameControlUnit),
+		PowerUnit:   queryServiceStatus(endpoints.PowerUnit.GetStatusURL(), types.ServiceNamePowerUnit),
+		SensorUnit:  queryServiceStatus(endpoints.SensorUnit.GetStatusURL(), types.ServiceNameSensorUnit),
 	}
 	return services
 }

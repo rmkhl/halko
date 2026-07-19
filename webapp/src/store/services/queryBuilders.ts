@@ -1,20 +1,14 @@
-import { MutationDefinition, QueryDefinition } from "@reduxjs/toolkit/query";
-import {
-  ApiBaseQueryFunc,
-  ApiBuilder,
-  Entity,
-  EntityType,
-  reducerPath,
-} from "./types";
+import { EndpointBuilder } from "@reduxjs/toolkit/query";
+import { ApiBaseQueryFunc } from "./types";
 import { EntityWithMeta } from "../../types/api";
 
 export const list = "LIST";
 
-export const fetchQuery = <T>(
-  builder: ApiBuilder,
-  endpoint: EntityType | string,
-  tag?: EntityType
-): QueryDefinition<void, ApiBaseQueryFunc, EntityType, T[], reducerPath> =>
+export const fetchQuery = <T, Tag extends string, Path extends string>(
+  builder: EndpointBuilder<ApiBaseQueryFunc, Tag, Path>,
+  endpoint: string,
+  tag?: Tag
+) =>
   builder.query<T[], void>({
     query: () => ({
       url: endpoint,
@@ -29,18 +23,18 @@ export const fetchQuery = <T>(
     providesTags: () => (tag ? [{ type: tag, id: list }] : []),
   });
 
-export const fetchSingleQuery = <T>(
-  builder: ApiBuilder,
-  endpoint: EntityType | string,
-  tag?: EntityType
-): QueryDefinition<void, ApiBaseQueryFunc, EntityType, T, reducerPath> =>
+export const fetchSingleQuery = <T, Tag extends string, Path extends string>(
+  builder: EndpointBuilder<ApiBaseQueryFunc, Tag, Path>,
+  endpoint: string,
+  tag?: Tag
+) =>
   builder.query<T, void>({
     query: () => ({
       url: endpoint,
       responseHandler: (response) => {
         // Handle 204 No Content - return null
         if (response.status === 204) {
-          return null;
+          return Promise.resolve(null);
         }
 
         if (!response.ok) {
@@ -53,13 +47,13 @@ export const fetchSingleQuery = <T>(
     providesTags: () => (tag ? [{ type: tag, id: list }] : []),
   });
 
-export const saveMutation = <T extends Entity>(
-  builder: ApiBuilder,
-  endpoint: EntityType,
-  tag: EntityType
-): MutationDefinition<T, ApiBaseQueryFunc, EntityType, string, reducerPath> =>
-  builder.mutation<string, T>({
-    query: (record: EntityWithMeta<T>) => {
+export const saveMutation = <T extends { name: string }, Tag extends string, Path extends string>(
+  builder: EndpointBuilder<ApiBaseQueryFunc, Tag, Path>,
+  endpoint: string,
+  tag: Tag
+) =>
+  builder.mutation<string, EntityWithMeta<T>>({
+    query: (record) => {
       // Use explicit isNew flag if present
       const isNew = record.isNew === true;
       // Remove isNew from payload (eslint: _isNew is intentionally unused)

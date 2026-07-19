@@ -35,6 +35,9 @@ tmp
 
 # Arduino firmware build artifacts
 firmware
+firmware-esp32
+*.log
+sensorunit/esp32/sensorunit/build
 
 .vscode
 
@@ -55,3 +58,6 @@ package-lock.json
 
 # Local test programs
 *-test.json
+.superpowers/
+docs/
+.claude/settings.local.json

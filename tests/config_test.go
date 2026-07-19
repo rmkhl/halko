@@ -161,8 +161,8 @@ func TestGetServiceURLs(t *testing.T) {
 		t.Errorf("Expected PowerUnit URL http://localhost:8092, got %s", config.APIEndpoints.PowerUnit.GetURL())
 	}
 
-	if config.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
-		t.Errorf("Expected SensorUnit URL http://localhost:8088, got %s", config.APIEndpoints.SensorUnit.GetURL())
+	if config.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8093" {
+		t.Errorf("Expected SensorUnit URL http://localhost:8093, got %s", config.APIEndpoints.SensorUnit.GetURL())
 	}
 
 	// Test specific endpoint methods
@@ -176,7 +176,7 @@ func TestGetServiceURLs(t *testing.T) {
 		t.Errorf("Expected Engine URL %s, got %s", expectedEngineURL, config.APIEndpoints.ControlUnit.GetEngineURL())
 	}
 
-	expectedTemperaturesURL := "http://localhost:8088/temperatures"
+	expectedTemperaturesURL := "http://localhost:8093/temperatures"
 	if config.APIEndpoints.SensorUnit.GetTemperaturesURL() != expectedTemperaturesURL {
 		t.Errorf("Expected Temperatures URL %s, got %s", expectedTemperaturesURL, config.APIEndpoints.SensorUnit.GetTemperaturesURL())
 	}
@@ -198,7 +198,7 @@ func TestGetPortMethod(t *testing.T) {
 	}{
 		{"Executor", &config.APIEndpoints.ControlUnit.Endpoint, "8090"},
 		{"PowerUnit", &config.APIEndpoints.PowerUnit.Endpoint, "8092"},
-		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8088"},
+		{"SensorUnit", &config.APIEndpoints.SensorUnit.Endpoint, "8093"},
 	}
 
 	for _, tt := range tests {
@@ -211,6 +211,32 @@ func TestGetPortMethod(t *testing.T) {
 				t.Errorf("Expected port %s for %s, got %s", tt.expectedPort, tt.name, port)
 			}
 		})
+	}
+}
+
+func TestDBusUnitConfigOptional(t *testing.T) {
+	// testConfigData has no dbusunit section; config must still load and validate
+	configPath := createTestConfigFile(t)
+	config, err := types.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config without dbusunit section: %v", err)
+	}
+	if config.DBusUnit != nil {
+		t.Error("Expected DBusUnit to be nil when the dbusunit section is missing")
+	}
+}
+
+func TestDBusUnitConfigParsing(t *testing.T) {
+	data := `{"dbusunit": {"system_bus_socket": "/run/host/run/dbus/system_bus_socket"}}`
+	var config types.HalkoConfig
+	if err := json.Unmarshal([]byte(data), &config); err != nil {
+		t.Fatalf("Failed to unmarshal dbusunit section: %v", err)
+	}
+	if config.DBusUnit == nil {
+		t.Fatal("Expected DBusUnit to be set when the dbusunit section is present")
+	}
+	if config.DBusUnit.SystemBusSocket != "/run/host/run/dbus/system_bus_socket" {
+		t.Errorf("Expected system_bus_socket /run/host/run/dbus/system_bus_socket, got %s", config.DBusUnit.SystemBusSocket)
 	}
 }
 
@@ -242,7 +268,7 @@ func TestJSONMarshaling(t *testing.T) {
 	if newConfig.APIEndpoints.PowerUnit.GetURL() != "http://localhost:8092" {
 		t.Error("PowerUnit endpoint URL not preserved after JSON round-trip")
 	}
-	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8088" {
+	if newConfig.APIEndpoints.SensorUnit.GetURL() != "http://localhost:8093" {
 		t.Error("SensorUnit endpoint URL not preserved after JSON round-trip")
 	}
 

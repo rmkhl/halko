@@ -12,6 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { Box, Paper, Typography, CircularProgress } from "@mui/material";
+import { parseExecutionLog } from "../util/executionLog";
 
 // Register Chart.js components
 ChartJS.register(
@@ -30,10 +31,11 @@ interface ExecutionChartProps {
   isLoading?: boolean;
   isLive?: boolean;
   temperatureRange?: { min: number; max: number };
+  headerAction?: React.ReactNode;
 }
 
 // Static CSV data from ,run.csv (used as fallback)
-const defaultCsvData = `time,step,steptime,material,oven,heater,fan,humidifier
+const defaultCsvData = `time,step,steptime,material,kiln,heater,fan,humidifier
 6,Initializing,0,0.000000,0.000000,0,0,0
 24,Initial Heating,0,20.000000,20.000000,0,0,0
 84,Initial Heating,60,20.240005,22.500010,100,100,100
@@ -79,64 +81,15 @@ const defaultCsvData = `time,step,steptime,material,oven,heater,fan,humidifier
 2328,Cooling Phase,1200,20.600014,20.593916,0,100,0
 2376,Completed,0,20.000000,20.000000,0,100,0`;
 
-interface DataPoint {
-  time: number;
-  step: string;
-  steptime: number;
-  material: number;
-  oven: number;
-  heater: number;
-  fan: number;
-  humidifier: number;
-}
-
-const parseCSV = (csv: string): DataPoint[] => {
-  const lines = csv.trim().split("\n").filter(line => line.trim().length > 0);
-  const data: DataPoint[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values = line.split(",");
-
-    // Skip lines that don't have enough values
-    if (values.length < 8) {
-      continue;
-    }
-
-    const time = parseFloat(values[0]);
-    const material = parseFloat(values[3]);
-    const oven = parseFloat(values[4]);
-
-    // Skip lines with invalid numeric values
-    if (isNaN(time) || isNaN(material) || isNaN(oven)) {
-      continue;
-    }
-
-    data.push({
-      time,
-      step: values[1],
-      steptime: parseFloat(values[2]),
-      material,
-      oven,
-      heater: parseFloat(values[5]),
-      fan: parseFloat(values[6]),
-      humidifier: parseFloat(values[7]),
-    });
-  }
-
-  return data;
-};
-
 export const ExecutionChart: React.FC<ExecutionChartProps> = ({
   csvData,
   title = "Program Execution Data",
   isLoading = false,
   isLive = false,
-  temperatureRange
+  temperatureRange,
+  headerAction
 }) => {
-  const dataPoints = parseCSV(csvData || defaultCsvData);
+  const dataPoints = parseExecutionLog(csvData || defaultCsvData);
 
   if (isLoading) {
     return (
@@ -193,43 +146,13 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         tension: 0.3,
       },
       {
-        label: "Oven Temperature (°C)",
-        data: dataPoints.map((point) => point.oven),
+        label: "Kiln Temperature (°C)",
+        data: dataPoints.map((point) => point.kiln),
         borderColor: "rgb(255, 159, 64)",
         backgroundColor: "rgba(255, 159, 64, 0.5)",
         yAxisID: "y-temperature",
         pointRadius: 2,
         tension: 0.3,
-      },
-      {
-        label: "Heater Power (%)",
-        data: dataPoints.map((point) => point.heater),
-        borderColor: "rgb(54, 162, 235)",
-        backgroundColor: "rgba(54, 162, 235, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
-      },
-      {
-        label: "Fan Power (%)",
-        data: dataPoints.map((point) => point.fan),
-        borderColor: "rgb(34, 139, 34)",
-        backgroundColor: "rgba(34, 139, 34, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
-      },
-      {
-        label: "Humidifier Power (%)",
-        data: dataPoints.map((point) => point.humidifier),
-        borderColor: "rgb(255, 206, 86)",
-        backgroundColor: "rgba(255, 206, 86, 0.5)",
-        yAxisID: "y-power",
-        pointRadius: 2,
-        tension: 0.3,
-        borderDash: [5, 5],
       },
     ],
   };
@@ -274,7 +197,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
       "y-temperature": {
         type: "linear" as const,
         display: true,
-        position: "right" as const,
+        position: "left" as const,
         title: {
           display: true,
           text: "Temperature (°C)",
@@ -286,20 +209,6 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         } : {
           grace: "5%",
         }),
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-      "y-power": {
-        type: "linear" as const,
-        display: true,
-        position: "left" as const,
-        title: {
-          display: true,
-          text: "Power (%)",
-        },
-        min: 0,
-        max: 100,
       },
     },
   };
@@ -312,9 +221,12 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         marginTop: 3,
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h6" gutterBottom>
+          {title}
+        </Typography>
+        {headerAction}
+      </Box>
       <Box sx={{ height: 500, width: "100%" }}>
         <Line options={options} data={chartData} />
       </Box>

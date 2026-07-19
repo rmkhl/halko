@@ -30,7 +30,16 @@ func main() {
 	}
 	log.Debug("Loaded configuration from %s", opts.ConfigPath)
 
-	dbusManager, err := dbus.NewManager()
+	port, err := configuration.APIEndpoints.DBusUnit.GetPort()
+	if err != nil {
+		log.Fatal("Failed to get dbusunit port: %v", err)
+	}
+
+	dbusSocket := ""
+	if configuration.DBusUnit != nil {
+		dbusSocket = configuration.DBusUnit.SystemBusSocket
+	}
+	dbusManager, err := dbus.NewManager(dbusSocket)
 	if err != nil {
 		log.Fatal("Failed to create D-Bus manager: %v", err)
 	}
@@ -40,11 +49,6 @@ func main() {
 	mux := http.NewServeMux()
 	router.SetupRoutes(mux, dbusManager, configuration.APIEndpoints)
 	log.Trace("HTTP routes configured")
-
-	port, err := configuration.APIEndpoints.DBusUnit.GetPort()
-	if err != nil {
-		log.Fatal("Failed to get dbusunit port: %v", err)
-	}
 	serverAddr := ":" + port
 	log.Debug("Server will listen on %s", serverAddr)
 

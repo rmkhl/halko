@@ -15,7 +15,7 @@
     {
       "name": "Secondary Heating",
       "type": "heating",
-      "temperature_target": 150,
+      "temperature_target": 160,
       "fan": {
         "power": 100
       },

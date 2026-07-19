@@ -4,7 +4,7 @@
 set -e
 
 SESSION="halko-debug"
-HALKO_DIR="/home/mte/rmkhaklab/halko"
+HALKO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Default to debug level (3) if LOGLEVEL not provided
 # Log levels: 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE
@@ -38,25 +38,25 @@ else
     echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL..."
 fi
 
+# Run each service as the window's command instead of typing it into an
+# interactive shell with send-keys: bash flushes pending tty input while it
+# initializes, so keystrokes sent before the shell is ready are lost.
+# "; exec bash" keeps the window open after the service exits.
+
 # Create new session with simulator window (detached)
-tmux new-session -d -s "$SESSION" -n simulator -c "$HALKO_DIR"
-tmux send-keys -t "$SESSION:simulator" "$SIM_CMD" C-m
+tmux new-session -d -s "$SESSION" -n simulator -c "$HALKO_DIR" "$SIM_CMD; exec bash"
 
 # Create powerunit window
-tmux new-window -t "$SESSION:" -n powerunit -c "$HALKO_DIR"
-tmux send-keys -t "$SESSION:powerunit" "./bin/powerunit -loglevel $LOGLEVEL" C-m
+tmux new-window -t "$SESSION:" -n powerunit -c "$HALKO_DIR" "./bin/powerunit -loglevel $LOGLEVEL; exec bash"
 
 # Create controlunit window
-tmux new-window -t "$SESSION:" -n controlunit -c "$HALKO_DIR"
-tmux send-keys -t "$SESSION:controlunit" "./bin/controlunit -loglevel $LOGLEVEL" C-m
+tmux new-window -t "$SESSION:" -n controlunit -c "$HALKO_DIR" "./bin/controlunit -loglevel $LOGLEVEL; exec bash"
 
 # Create dbusunit window (requires sudo for D-Bus access)
-tmux new-window -t "$SESSION:" -n dbusunit -c "$HALKO_DIR"
-tmux send-keys -t "$SESSION:dbusunit" "sudo ./bin/dbusunit -loglevel $LOGLEVEL" C-m
+tmux new-window -t "$SESSION:" -n dbusunit -c "$HALKO_DIR" "sudo ./bin/dbusunit -loglevel $LOGLEVEL; exec bash"
 
 # Create webapp window
-tmux new-window -t "$SESSION:" -n webapp -c "$HALKO_DIR"
-tmux send-keys -t "$SESSION:webapp" "make run-webapp" C-m
+tmux new-window -t "$SESSION:" -n webapp -c "$HALKO_DIR" "make run-webapp; exec bash"
 
 # Create a shell window for commands
 tmux new-window -t "$SESSION:" -n shell -c "$HALKO_DIR"

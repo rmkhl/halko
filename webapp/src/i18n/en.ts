@@ -42,7 +42,7 @@ export const en = {
   },
   sensors: {
     material: "Material",
-    oven: "Oven",
+    kiln: "Kiln",
   },
   system: {
     title: "System Status",

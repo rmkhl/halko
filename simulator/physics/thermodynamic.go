@@ -10,12 +10,12 @@ import (
 // ThermodynamicSimulation implements physics-based heat transfer using real material properties
 // and thermodynamic principles (conduction, convection, radiation)
 type ThermodynamicSimulation struct {
-	// Oven/kiln properties
-	ovenMass         float32 // kg - steel walls
-	ovenSpecificHeat float32 // J/kg·K - steel
-	ovenSurfaceArea  float32 // m² - exterior surface
+	// Kiln properties
+	kilnMass         float32 // kg - steel walls
+	kilnSpecificHeat float32 // J/kg·K - steel
+	kilnSurfaceArea  float32 // m² - exterior surface
 	wallUValue       float32 // W/m²·K - overall heat transfer coefficient (includes insulation)
-	ovenEmissivity   float32 // 0-1 - for radiation
+	kilnEmissivity   float32 // 0-1 - for radiation
 
 	// Air properties
 	airVolume       float32 // m³
@@ -48,13 +48,13 @@ func (t *ThermodynamicSimulation) Name() string {
 }
 
 func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) error {
-	// Oven properties
-	oven := config["oven"].(map[string]interface{})
-	t.ovenMass = float32(oven["mass"].(float64))
-	t.ovenSpecificHeat = float32(oven["specific_heat"].(float64))
-	t.ovenSurfaceArea = float32(oven["surface_area"].(float64))
-	t.wallUValue = float32(oven["wall_u_value"].(float64))
-	t.ovenEmissivity = float32(oven["emissivity"].(float64))
+	// Kiln properties
+	kiln := config["kiln"].(map[string]interface{})
+	t.kilnMass = float32(kiln["mass"].(float64))
+	t.kilnSpecificHeat = float32(kiln["specific_heat"].(float64))
+	t.kilnSurfaceArea = float32(kiln["surface_area"].(float64))
+	t.wallUValue = float32(kiln["wall_u_value"].(float64))
+	t.kilnEmissivity = float32(kiln["emissivity"].(float64))
 
 	// Air properties
 	air := config["air"].(map[string]interface{})
@@ -88,7 +88,7 @@ func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) erro
 	t.timeStep = float32(physics["time_step"].(float64))
 
 	log.Info("Thermodynamic simulation initialized:")
-	log.Info("  Oven: %.0f kg steel, %.1f m² surface, U=%.2f W/m²·K", t.ovenMass, t.ovenSurfaceArea, t.wallUValue)
+	log.Info("  Kiln: %.0f kg steel, %.1f m² surface, U=%.2f W/m²·K", t.kilnMass, t.kilnSurfaceArea, t.wallUValue)
 	log.Info("  Material: %.0f kg @ %.0f J/kg·K, %.1f m² surface", t.materialMass, t.materialSpecificHeat, t.materialSurfaceArea)
 	log.Info("  Heater: %.0f W @ %.0f%% efficiency", t.heaterWattage, t.heaterEfficiency*100)
 	log.Info("  Convection: natural=%.1f, forced=%.1f W/m²·K", t.convectionNatural, t.convectionForced)
@@ -97,7 +97,7 @@ func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) erro
 }
 
 func (t *ThermodynamicSimulation) ValidateConfig(config map[string]interface{}) error {
-	required := []string{"oven", "air", "material", "heater", "convection", "environment", "physics"}
+	required := []string{"kiln", "air", "material", "heater", "convection", "environment", "physics"}
 	for _, key := range required {
 		if _, exists := config[key]; !exists {
 			return fmt.Errorf("required configuration section missing: %s", key)
@@ -109,12 +109,12 @@ func (t *ThermodynamicSimulation) ValidateConfig(config map[string]interface{}) 
 func (t *ThermodynamicSimulation) Tick(state *SimulationState) {
 	// Calculate air density at current temperature (ideal gas approximation)
 	// ρ(T) = ρ₀ × (T₀ / T) where T in Kelvin
-	tempKelvin := state.OvenTemp + 273.15
+	tempKelvin := state.KilnTemp + 273.15
 	airDensity := 1.2 * (293.15 / tempKelvin) // kg/m³
 	airMass := airDensity * t.airVolume
 
-	// Total thermal mass of oven air space (steel + air)
-	ovenThermalCapacity := t.ovenMass*t.ovenSpecificHeat + airMass*t.airSpecificHeat // J/K
+	// Total thermal mass of kiln air space (steel + air)
+	kilnThermalCapacity := t.kilnMass*t.kilnSpecificHeat + airMass*t.airSpecificHeat // J/K
 
 	// Heater energy input (Watts × seconds = Joules)
 	var heaterEnergy float32
@@ -128,18 +128,18 @@ func (t *ThermodynamicSimulation) Tick(state *SimulationState) {
 	}
 
 	// Conduction heat loss through walls (W = U × A × ΔT)
-	wallDeltaT := state.OvenTemp - t.ambientTemp
-	conductionLoss := t.wallUValue * t.ovenSurfaceArea * wallDeltaT * t.timeStep // Joules
+	wallDeltaT := state.KilnTemp - t.ambientTemp
+	conductionLoss := t.wallUValue * t.kilnSurfaceArea * wallDeltaT * t.timeStep // Joules
 
 	// Radiation heat loss (Stefan-Boltzmann law)
 	// Q = ε × σ × A × (T⁴_hot - T⁴_cold)
-	ovenTempK := state.OvenTemp + 273.15
+	kilnTempK := state.KilnTemp + 273.15
 	ambientTempK := t.ambientTemp + 273.15
-	radiationPower := t.ovenEmissivity * t.stefanBoltzmann * t.ovenSurfaceArea *
-		(float32(math.Pow(float64(ovenTempK), 4)) - float32(math.Pow(float64(ambientTempK), 4)))
+	radiationPower := t.kilnEmissivity * t.stefanBoltzmann * t.kilnSurfaceArea *
+		(float32(math.Pow(float64(kilnTempK), 4)) - float32(math.Pow(float64(ambientTempK), 4)))
 	radiationLoss := radiationPower * t.timeStep // Joules
 
-	// Convection between oven air and material
+	// Convection between kiln air and material
 	// h depends on fan state
 	var convectionCoeff float32
 	if state.FanIsOn {
@@ -149,19 +149,19 @@ func (t *ThermodynamicSimulation) Tick(state *SimulationState) {
 	}
 
 	// Heat transfer from air to material (W = h × A × ΔT)
-	airMaterialDelta := state.OvenTemp - state.MaterialTemp
+	airMaterialDelta := state.KilnTemp - state.MaterialTemp
 	convectionPower := convectionCoeff * t.materialSurfaceArea * airMaterialDelta
 	convectionEnergy := convectionPower * t.timeStep // Joules
 
-	// Energy balance for oven/air
-	ovenNetEnergy := heaterEnergy - conductionLoss - radiationLoss - convectionEnergy
-	ovenTempChange := ovenNetEnergy / ovenThermalCapacity
+	// Energy balance for kiln/air
+	kilnNetEnergy := heaterEnergy - conductionLoss - radiationLoss - convectionEnergy
+	kilnTempChange := kilnNetEnergy / kilnThermalCapacity
 
-	oldOvenTemp := state.OvenTemp
-	state.OvenTemp = max(t.ambientTemp, state.OvenTemp+ovenTempChange)
+	oldKilnTemp := state.KilnTemp
+	state.KilnTemp = max(t.ambientTemp, state.KilnTemp+kilnTempChange)
 
 	// Energy balance for material
-	// Material also loses some heat to environment via radiation/convection (less than oven)
+	// Material also loses some heat to environment via radiation/convection (less than kiln)
 	materialWallDelta := state.MaterialTemp - t.ambientTemp
 	materialLossPower := 0.1 * convectionCoeff * t.materialSurfaceArea * materialWallDelta // reduced coefficient
 	materialLossEnergy := materialLossPower * t.timeStep
@@ -174,10 +174,10 @@ func (t *ThermodynamicSimulation) Tick(state *SimulationState) {
 	state.MaterialTemp = max(t.ambientTemp, state.MaterialTemp+materialTempChange)
 
 	// Detailed logging
-	if state.HeaterIsOn || state.OvenTemp != oldOvenTemp {
-		log.Debug("Simulation[thermodynamic]: Oven - heater=%.0fJ, loss(cond=%.0fJ, rad=%.0fJ), transfer=%.0fJ → %.1f°C → %.1f°C (Δ%.2f°C)",
+	if state.HeaterIsOn || state.KilnTemp != oldKilnTemp {
+		log.Debug("Simulation[thermodynamic]: Kiln - heater=%.0fJ, loss(cond=%.0fJ, rad=%.0fJ), transfer=%.0fJ → %.1f°C → %.1f°C (Δ%.2f°C)",
 			heaterEnergy, conductionLoss, radiationLoss, convectionEnergy,
-			oldOvenTemp, state.OvenTemp, ovenTempChange)
+			oldKilnTemp, state.KilnTemp, kilnTempChange)
 	}
 
 	if state.MaterialTemp != oldMaterialTemp {

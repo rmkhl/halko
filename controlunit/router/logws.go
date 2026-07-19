@@ -41,7 +41,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 		// Write CSV header (same as ExecutionLogWriter)
 		var buf bytes.Buffer
 		csvWriter := csv.NewWriter(&buf)
-		if err := csvWriter.Write([]string{"time", "step", "steptime", "material", "oven", "heater", "fan", "humidifier"}); err != nil {
+		if err := csvWriter.Write([]string{"time", "step", "steptime", "material", "kiln", "heater", "fan", "humidifier"}); err != nil {
 			log.Warning("CSV header write error: %v", err)
 		}
 		csvWriter.Flush()
@@ -103,7 +103,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 					status.CurrentStep,
 					strconv.Itoa(steptime),
 					fmt.Sprintf("%.1f", status.Temperatures.Material),
-					fmt.Sprintf("%.1f", status.Temperatures.Oven),
+					fmt.Sprintf("%.1f", status.Temperatures.Kiln),
 					strconv.Itoa(int(status.PowerStatus.Heater)),
 					strconv.Itoa(int(status.PowerStatus.Fan)),
 					strconv.Itoa(int(status.PowerStatus.Humidifier)),

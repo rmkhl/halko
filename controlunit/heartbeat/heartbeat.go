@@ -35,10 +35,12 @@ var (
 func NewManager(networkInterface string, apiEndpoints *types.APIEndpoints) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// The network interface may not have an address yet at boot (e.g. WiFi
+	// still associating). Don't fail startup for this - sendHeartbeat retries
+	// the lookup until an address becomes available.
 	executorIP, err := GetNetworkInterfaceIPv4(networkInterface)
 	if err != nil {
-		cancel() // Clean up the context since we're returning an error
-		return nil, errors.New("failed to get IP address for network interface " + networkInterface + ": " + err.Error())
+		log.Warning("Heartbeat: no IP address for interface %s yet, will retry: %v", networkInterface, err)
 	}
 
 	return &Manager{
@@ -104,6 +106,12 @@ func (hm *Manager) run() {
 }
 
 func (hm *Manager) sendHeartbeat() error {
+	if hm.executorIP == "" {
+		if ip, err := GetNetworkInterfaceIPv4(hm.networkInterface); err == nil {
+			hm.executorIP = ip
+		}
+	}
+
 	hm.displayMutex.RLock()
 	customMessage := hm.displayMessage
 	hm.displayMutex.RUnlock()

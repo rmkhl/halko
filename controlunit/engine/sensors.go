@@ -32,7 +32,7 @@ type (
 
 	temperatureReadings struct {
 		Material float32
-		Oven     float32
+		Kiln     float32
 	}
 
 	sensorReader struct {
@@ -87,7 +87,7 @@ func (controller *temperatureSensorReader) readTemperatures() (*temperatureReadi
 		return nil, err
 	}
 
-	return &temperatureReadings{Material: dataResponse.Data["material"], Oven: dataResponse.Data["oven"]}, nil
+	return &temperatureReadings{Material: dataResponse.Data["material"], Kiln: dataResponse.Data["kiln"]}, nil
 }
 
 func newTemperatureSensorReader(url string, commands <-chan string, responses chan<- temperatureReadings) (*temperatureSensorReader, error) {

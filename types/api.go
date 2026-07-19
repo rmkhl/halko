@@ -24,6 +24,13 @@ const (
 	ServiceStatusUnavailable ServiceStatus = "unavailable"
 )
 
+// Service name constants
+const (
+	ServiceNameControlUnit = "controlunit"
+	ServiceNamePowerUnit   = "powerunit"
+	ServiceNameSensorUnit  = "sensorunit"
+)
+
 const (
 	// signals invalid temperature reading
 	InvalidTemperatureReading = -273.15 // Absolute zero in Celsius, used to indicate an invalid reading
@@ -86,10 +93,10 @@ type (
 		LastModified string `json:"last_modified"`
 	}
 
-	// TemperatureStatus represents the current temperature of the material and oven in Celsius.
+	// TemperatureStatus represents the current temperature of the material and kiln in Celsius.
 	TemperatureStatus struct {
 		Material float32 `json:"material"`
-		Oven     float32 `json:"oven"`
+		Kiln     float32 `json:"kiln"`
 	}
 
 	// PSUStatus represents the power level (in percentage) of the heater, fan, and humidifier.
@@ -127,6 +134,12 @@ type (
 		Message string `json:"message"`
 	}
 )
+
+// D-Bus unit API
+type VPNOperationResponse struct {
+	Message string `json:"message"`
+	Name    string `json:"name"`
+}
 
 // Temperature sensor API
 type TemperatureResponse map[string]float32

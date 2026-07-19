@@ -35,11 +35,11 @@ clean:
 	@echo "✓ Cleaned Go binaries"
 
 .PHONY: distclean
-distclean: clean clean-webapp clean-arduino
+distclean: clean clean-webapp clean-esp32
 	@rm -rf .nodejs node_modules .arduino-cli .arduino-data .arduino-user
 	@echo "✓ Removed local Node.js installation and node modules"
 	@echo "✓ Removed local Arduino CLI installation"
-	@echo "✓ Removed Arduino firmware build artifacts"
+	@echo "✓ Removed ESP32 firmware build artifacts"
 
 .PHONY: prepare
 prepare:
@@ -141,69 +141,64 @@ arduino-cli.yaml:
 	@echo "    data: $(ARDUINO_DATA_DIR)" >> $@
 	@echo "    user: $(ARDUINO_USER_DIR)" >> $@
 	@echo "✓ Config file created at $@"
-	@if [ -d .vscode ]; then \
-		echo "Updating VS Code IntelliSense configuration..."; \
-		$(MAKE) .vscode/c_cpp_properties.json; \
-	fi
 
-# File target: creates VS Code C/C++ IntelliSense configuration
-.vscode/c_cpp_properties.json:
-	@mkdir -p .vscode
-	@echo "{" > $@
-	@echo "    \"configurations\": [" >> $@
-	@echo "        {" >> $@
-	@echo "            \"name\": \"Arduino\"," >> $@
-	@echo "            \"includePath\": [" >> $@
-	@echo "                \"\$${workspaceFolder}/**\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/hardware/avr/1.8.7/cores/arduino\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/hardware/avr/1.8.7/variants/eightanaloginputs\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-user/libraries/MAX6675_library\"," >> $@
-	@echo "                \"\$${workspaceFolder}/.arduino-user/libraries/LiquidCrystal/src\"" >> $@
-	@echo "            ]," >> $@
-	@echo "            \"defines\": [" >> $@
-	@echo "                \"ARDUINO=10607\"," >> $@
-	@echo "                \"ARDUINO_AVR_NANO\"," >> $@
-	@echo "                \"ARDUINO_ARCH_AVR\"," >> $@
-	@echo "                \"F_CPU=16000000L\"," >> $@
-	@echo "                \"__AVR_ATmega328P__\"" >> $@
-	@echo "            ]," >> $@
-	@echo "            \"compilerPath\": \"\$${workspaceFolder}/.arduino-data/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-gcc\"," >> $@
-	@echo "            \"cStandard\": \"c11\"," >> $@
-	@echo "            \"cppStandard\": \"c++11\"," >> $@
-	@echo "            \"intelliSenseMode\": \"gcc-x64\"" >> $@
-	@echo "        }" >> $@
-	@echo "    ]," >> $@
-	@echo "    \"version\": 4" >> $@
-	@echo "}" >> $@
-	@echo "✓ VS Code IntelliSense configuration created"
+.PHONY: build
+build: clean $(MODULES:%=$(BINDIR)/%)
+	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
 
-.PHONY: arduino-help
-arduino-help:
+.PHONY: release
+release:
+	@$(MAKE) all OPTIMIZED=yes
+
+# ============================================================================
+# ESP32 Firmware Development Targets
+# ============================================================================
+
+.PHONY: esp32-help
+esp32-help:
 	@echo ""
-	@echo "Arduino Firmware Development:"
+	@echo "ESP32 Firmware Development:"
 	@echo ""
 	@echo "First-time setup:"
-	@echo "  make prepare-arduino            # Install Arduino CLI and AVR core (workspace-local)"
+	@echo "  make prepare-esp32              # Install Arduino CLI (if needed) and ESP32 core"
 	@echo ""
 	@echo "Build and upload targets:"
-	@echo "  make build-arduino              # Compile firmware (requires prepare-arduino)"
-	@echo "  make upload-arduino             # Upload to /dev/ttyUSB0 (auto-compiles first)"
-	@echo "  make upload-arduino PORT=/dev/ttyUSB1  # Upload to specific port"
-	@echo "  make backup-arduino             # Backup existing firmware from device"
-	@echo "  make restore-arduino BACKUP=path.hex  # Restore backed-up firmware"
-	@echo "  make clean-arduino              # Remove firmware/ build directory"
+	@echo "  make build-esp32                # Compile ESP32 sensorunit firmware"
+	@echo "  make upload-esp32               # Upload to /dev/ttyUSB0 (auto-compiles first)"
+	@echo "  make upload-esp32 PORT=/dev/ttyUSB1  # Upload to specific port"
+	@echo "  make monitor-esp32              # Connect to serial port (9600 baud)"
+	@echo "  make monitor-esp32 PORT=/dev/ttyUSB1  # Monitor specific port"
 	@echo ""
-	@echo "Direct arduino-cli usage (after prepare-arduino):"
-	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml compile --fqbn arduino:avr:nano:cpu=atmega328 --output-dir firmware sensorunit/arduino/sensorunit"
-	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml upload -p /dev/ttyUSB0 --fqbn arduino:avr:nano:cpu=atmega328 --input-dir firmware"
+	@echo "Maintenance:"
+	@echo "  make clean-esp32                # Remove firmware-esp32/ build directory"
 	@echo ""
-	@echo "Note: All targets use workspace-local Arduino installation (.arduino-cli/, .arduino-data/, .arduino-user/)"
+	@echo "Direct arduino-cli usage (after prepare-esp32):"
+	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml compile --fqbn esp32:esp32:nodemcu-32s --output-dir firmware-esp32 sensorunit/esp32/sensorunit"
+	@echo "  .arduino-cli/bin/arduino-cli --config-file \$$(pwd)/arduino-cli.yaml upload -p /dev/ttyUSB0 --fqbn esp32:esp32:nodemcu-32s --input-dir firmware-esp32"
+	@echo ""
+	@echo "Note: ESP32 builds use workspace-local Arduino installation (.arduino-cli/, .arduino-data/, .arduino-user/)"
 	@echo ""
 
-.PHONY: prepare-arduino
-prepare-arduino: arduino-cli.yaml
+.PHONY: prepare-esp32
+prepare-esp32: arduino-cli.yaml
+	@echo "Checking for Python..."
+	@if command -v python3 > /dev/null; then \
+		echo "✓ Python 3 found ($$(python3 --version 2>&1))"; \
+	elif command -v python > /dev/null; then \
+		echo "✓ Python found ($$(python --version 2>&1))"; \
+	else \
+		echo "⚠ Warning: Python not found. Required by esptool for uploading firmware."; \
+		echo "  Install with: sudo apt-get install python3"; \
+	fi
+	@echo "Checking for serial monitor..."
+	@if command -v screen > /dev/null; then \
+		echo "✓ screen found"; \
+	elif command -v minicom > /dev/null; then \
+		echo "✓ minicom found"; \
+	else \
+		echo "⚠ Warning: Neither screen nor minicom found. Required for make monitor-esp32."; \
+		echo "  Install with: sudo apt-get install screen"; \
+	fi
 	@echo "Checking for Arduino CLI..."
 	@if [ -f .arduino-cli/bin/arduino-cli ]; then \
 		export PATH="$$(pwd)/.arduino-cli/bin:$$PATH"; \
@@ -249,64 +244,65 @@ prepare-arduino: arduino-cli.yaml
 		echo "✓ Arduino CLI installed to .arduino-cli/bin/"; \
 		ARDUINO_CLI_CMD=".arduino-cli/bin/arduino-cli"; \
 	fi; \
-	echo "Installing Arduino AVR core (for Arduino Nano)..."; \
+	echo "Adding ESP32 board manager URL..."; \
+	if ! grep -q "https://espressif.github.io/arduino-esp32/package_esp32_index.json" $(ARDUINO_CLI_CONFIG); then \
+		sed -i 's/additional_urls: \[\]/additional_urls: ["https:\/\/espressif.github.io\/arduino-esp32\/package_esp32_index.json"]/' $(ARDUINO_CLI_CONFIG); \
+		echo "✓ ESP32 board manager URL added to config"; \
+	else \
+		echo "✓ ESP32 board manager URL already configured"; \
+	fi; \
+	echo "Installing ESP32 board support..."; \
 	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core update-index; \
-	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core install arduino:avr; \
-	echo "✓ Arduino AVR core installed to $(ARDUINO_DATA_DIR)"; \
-	echo "Installing required libraries..."; \
-	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "MAX6675 library@1.1.2"; \
-	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "LiquidCrystal@1.0.7"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) core install esp32:esp32; \
+	echo "✓ ESP32 board support installed to $(ARDUINO_DATA_DIR)"; \
+	echo "Installing required libraries for ESP32..."; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit MAX31855 library@1.4.2"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit SSD1306@2.5.16"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit GFX Library@1.12.5"; \
+	$$ARDUINO_CLI_CMD --config-file $(ARDUINO_CLI_CONFIG) lib install "Adafruit BusIO@1.17.4"; \
 	echo "✓ Required libraries installed to $(ARDUINO_USER_DIR)"; \
+	echo "Creating ESP32 firmware directory structure..."; \
+	mkdir -p firmware-esp32; \
+	echo "✓ ESP32 firmware directory created (firmware-esp32/)"; \
 	echo ""; \
-	echo "✓ Arduino CLI setup complete (workspace-local installation)"; \
+	echo "✓ ESP32 setup complete"; \
 	echo "  Data directory: $(ARDUINO_DATA_DIR)"; \
-	echo "  User libraries: $(ARDUINO_USER_DIR)"; \
-	echo "  Config file: $(ARDUINO_CLI_CONFIG)"; \
-	@$(MAKE) arduino-help
-	echo "  Config file: $(ARDUINO_CLI_CONFIG)"; \
-	@$(MAKE) arduino-help
+	echo "  Config file: $(ARDUINO_CLI_CONFIG)"
+	@$(MAKE) esp32-help
 
-.PHONY: build
-build: clean $(MODULES:%=$(BINDIR)/%)
-	@echo "All Go binaries have been rebuilt: $(BUILD_TYPE)"
-
-.PHONY: build-arduino
-build-arduino:
-	@echo "Compiling Arduino firmware for Nano (ATmega328P)..."
+.PHONY: build-esp32
+build-esp32:
+	@echo "Compiling ESP32 sensorunit firmware..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-esp32' first."; \
 		exit 1; \
 	fi
 	@if [ ! -f $(ARDUINO_CLI_CONFIG) ]; then \
-		echo "Error: Arduino config not found. Run 'make prepare-arduino' first."; \
+		echo "Error: Arduino config not found. Run 'make prepare-esp32' first."; \
 		exit 1; \
 	fi
-	@mkdir -p firmware
+	@mkdir -p firmware-esp32
 	@.arduino-cli/bin/arduino-cli --config-file $(ARDUINO_CLI_CONFIG) compile \
-		--fqbn arduino:avr:nano:cpu=atmega328 \
-		--output-dir firmware \
-		sensorunit/arduino/sensorunit
-	@echo "✓ Firmware compiled to firmware/sensorunit.ino.hex"
-	@echo "  Board: Arduino Nano (ATmega328P)"
-	@ls -lh firmware/sensorunit.ino.* 2>/dev/null | awk '{print "  " $$9 " (" $$5 ")"}'
+		--fqbn esp32:esp32:nodemcu-32s \
+		--build-property "compiler.c.extra_flags=-Wno-pragma-messages" \
+		--build-property "compiler.cpp.extra_flags=-Wno-pragma-messages" \
+		--output-dir firmware-esp32 \
+		sensorunit/esp32/sensorunit
+	@echo "✓ ESP32 sensorunit firmware compiled to firmware-esp32/sensorunit.ino.bin"
+	@echo "  Board: NodeMCU-32S (AZDelivery ESP32 with CP2102)"
+	@ls -lh firmware-esp32/sensorunit.ino.* 2>/dev/null | awk '{print "  " $$9 " (" $$5 ")"}'
 
-.PHONY: clean-arduino
-clean-arduino:
-	@echo "Cleaning Arduino firmware build artifacts..."
-	@rm -rf firmware
-	@echo "✓ Firmware directory removed"
-
-.PHONY: upload-arduino
-upload-arduino: build-arduino
-	@echo "Uploading firmware to Arduino Nano..."
+.PHONY: upload-esp32
+upload-esp32: build-esp32
+	@echo "Uploading ESP32 firmware..."
 	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
+		echo "Error: Arduino CLI not found. Run 'make prepare-esp32' first."; \
 		exit 1; \
 	fi
 	@if [ -z "$(PORT)" ]; then \
 		if [ ! -e /dev/ttyUSB0 ]; then \
-			echo "Error: Arduino not found at /dev/ttyUSB0."; \
-			echo "Specify port with: make upload-arduino PORT=/dev/ttyUSB1"; \
+			echo "Error: ESP32 not found at /dev/ttyUSB0."; \
+			echo "Specify port with: make upload-esp32 PORT=/dev/ttyUSB1"; \
 			exit 1; \
 		fi; \
 		UPLOAD_PORT="/dev/ttyUSB0"; \
@@ -316,91 +312,45 @@ upload-arduino: build-arduino
 	echo "Uploading to $$UPLOAD_PORT..."; \
 	.arduino-cli/bin/arduino-cli --config-file $(ARDUINO_CLI_CONFIG) upload \
 		-p $$UPLOAD_PORT \
-		--fqbn arduino:avr:nano:cpu=atmega328 \
-		--input-dir firmware
-	@echo "✓ Firmware uploaded successfully"
-	@echo "  Note: Arduino will reset automatically after upload"
+		--fqbn esp32:esp32:nodemcu-32s \
+		--input-dir firmware-esp32
+	@echo "✓ ESP32 firmware uploaded successfully"
+	@echo "  Board: NodeMCU-32S (AZDelivery ESP32 with CP2102)"
+	@echo "  Note: ESP32 will reset automatically after upload"
+	@echo ""
+	@echo "To monitor serial output, run: make monitor-esp32"
 
-.PHONY: backup-arduino
-backup-arduino:
-	@echo "Backing up Arduino firmware..."
-	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
-		exit 1; \
-	fi
-	@AVRDUDE=$$(find $(ARDUINO_DATA_DIR)/packages/arduino/tools/avrdude -name "avrdude" -type f | head -1); \
-	AVRDUDE_CONF=$$(find $(ARDUINO_DATA_DIR)/packages/arduino/tools/avrdude -name "avrdude.conf" -type f | head -1); \
-	if [ -z "$$AVRDUDE" ] || [ -z "$$AVRDUDE_CONF" ]; then \
-		echo "Error: avrdude not found. Arduino AVR core may not be installed."; \
-		echo "Run 'make prepare-arduino' to install it."; \
-		exit 1; \
-	fi; \
-	if [ -z "$(PORT)" ]; then \
-		if [ ! -e /dev/ttyUSB0 ]; then \
-			echo "Error: Arduino not found at /dev/ttyUSB0."; \
-			echo "Specify port with: make backup-arduino PORT=/dev/ttyUSB1"; \
-			exit 1; \
-		fi; \
-		BACKUP_PORT="/dev/ttyUSB0"; \
-	else \
-		BACKUP_PORT="$(PORT)"; \
-	fi; \
-	mkdir -p firmware/backup; \
-	TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
-	BACKUP_PREFIX="firmware/backup/arduino_backup_$$TIMESTAMP"; \
-	echo "Reading flash memory from $$BACKUP_PORT..."; \
-	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 57600 \
-		-U flash:r:$$BACKUP_PREFIX.hex:i || exit 1; \
-	echo "Reading EEPROM from $$BACKUP_PORT..."; \
-	$$AVRDUDE -C $$AVRDUDE_CONF -v -p atmega328p -c arduino -P $$BACKUP_PORT -b 57600 \
-		-U eeprom:r:$$BACKUP_PREFIX.eep:i || exit 1; \
-	echo ""; \
-	echo "✓ Firmware backed up successfully:"; \
-	ls -lh $$BACKUP_PREFIX.* | awk '{print "  " $$9 " (" $$5 ")"}'
+.PHONY: clean-esp32
+clean-esp32:
+	@echo "Cleaning ESP32 firmware build artifacts..."
+	@rm -rf firmware-esp32
+	@echo "✓ ESP32 firmware directory removed"
 
-.PHONY: restore-arduino
-restore-arduino:
-	@echo "Restoring Arduino firmware from backup..."
-	@if [ ! -f .arduino-cli/bin/arduino-cli ]; then \
-		echo "Error: Arduino CLI not found. Run 'make prepare-arduino' first."; \
-		exit 1; \
-	fi
-	@if [ -z "$(BACKUP)" ]; then \
-		echo "Error: BACKUP parameter required."; \
-		echo ""; \
-		echo "Available backups:"; \
-		if [ -d firmware/backup ]; then \
-			ls -1t firmware/backup/*.hex 2>/dev/null | head -10 | sed 's/^/  /' || echo "  (no backups found)"; \
-		else \
-			echo "  (no backup directory found)"; \
-		fi; \
-		echo ""; \
-		echo "Usage:"; \
-		echo "  make restore-arduino BACKUP=firmware/backup/arduino_backup_20260308_143022.hex"; \
-		echo "  make restore-arduino BACKUP=firmware/backup/arduino_backup_20260308_143022.hex PORT=/dev/ttyUSB1"; \
-		exit 1; \
-	fi
-	@if [ ! -f "$(BACKUP)" ]; then \
-		echo "Error: Backup file not found: $(BACKUP)"; \
-		exit 1; \
-	fi
+.PHONY: monitor-esp32
+monitor-esp32:
+	@echo "Connecting to ESP32 serial port..."
 	@if [ -z "$(PORT)" ]; then \
 		if [ ! -e /dev/ttyUSB0 ]; then \
-			echo "Error: Arduino not found at /dev/ttyUSB0."; \
-			echo "Specify port with: make restore-arduino BACKUP=... PORT=/dev/ttyUSB1"; \
+			echo "Error: ESP32 not found at /dev/ttyUSB0."; \
+			echo "Specify port with: make monitor-esp32 PORT=/dev/ttyUSB1"; \
 			exit 1; \
 		fi; \
-		RESTORE_PORT="/dev/ttyUSB0"; \
+		MONITOR_PORT="/dev/ttyUSB0"; \
 	else \
-		RESTORE_PORT="$(PORT)"; \
+		MONITOR_PORT="$(PORT)"; \
 	fi; \
-	echo "Restoring $(BACKUP) to $$RESTORE_PORT..."; \
-	.arduino-cli/bin/arduino-cli upload \
-		-p $$RESTORE_PORT \
-		--fqbn arduino:avr:nano:cpu=atmega328 \
-		--input-file $(BACKUP)
-	@echo "✓ Firmware restored successfully"
-	@echo "  Note: Arduino has been reset"
+	echo "Opening serial monitor on $$MONITOR_PORT (9600 baud)"; \
+	echo "Press Ctrl+C to exit"; \
+	echo ""; \
+	if command -v screen > /dev/null; then \
+		screen $$MONITOR_PORT 9600; \
+	elif command -v minicom > /dev/null; then \
+		minicom -D $$MONITOR_PORT -b 9600; \
+	else \
+		echo "Error: No serial terminal found. Please install 'screen' or 'minicom'."; \
+		echo "  sudo apt-get install screen"; \
+		exit 1; \
+	fi
 
 .PHONY: lint
 lint: lint-golang lint-markdown lint-webapp
@@ -447,7 +397,7 @@ update-modules:
 	done
 
 .PHONY: install
-install: clean all
+install: $(MODULES:%=$(BINDIR)/%)
 	@echo "Installing binaries to /opt/halko (excluding simulator)..."
 	sudo install -d /opt/halko
 	for bin in $(MODULES); do \
@@ -475,9 +425,9 @@ install: clean all
 
 .PHONY: systemd-units
 systemd-units: install
-	@echo "Creating and installing systemd unit files for all binaries except simulator..."
+	@echo "Creating and installing systemd unit files for all daemon binaries (excluding simulator and halkoctl)..."
 	for bin in $(MODULES); do \
-		if [ "$$bin" != "simulator" ]; then \
+		if [ "$$bin" != "simulator" ] && [ "$$bin" != "halkoctl" ]; then \
 			if [ "$$bin" = "dbusunit" ]; then \
 				sudo cp templates/halko-dbusunit.service /etc/systemd/system/halko-dbusunit.service; \
 				sudo systemctl daemon-reload; \
@@ -598,7 +548,7 @@ lint-webapp:
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
 	fi; \
-	cd webapp && npm run lint
+	cd webapp && npm run lint && npm run typecheck
 
 .PHONY: tmux-debug-run tmux-debug-stop
 tmux-debug-run: all
@@ -618,22 +568,21 @@ help:
 	@echo "  help                       Show this help message (default)."
 	@echo "  prepare                    Check for required tools, install Node.js if needed, setup workspace."
 	@echo ""
-	@echo "Arduino Firmware:"
-	@echo "  prepare-arduino            Install Arduino CLI locally and setup AVR core + libraries."
-	@echo "                               Creates arduino-cli.yaml config file automatically."
-	@echo "  build-arduino              Compile Arduino firmware for Nano (ATmega328P) to firmware/."
-	@echo "  upload-arduino             Upload compiled firmware to Arduino (default: /dev/ttyUSB0)."
-	@echo "                               Override port: make upload-arduino PORT=/dev/ttyUSB1"
-	@echo "  backup-arduino             Backup existing firmware from Arduino to firmware/backup/."
-	@echo "                               Creates timestamped .hex and .eep files. Override port as above."
-	@echo "  restore-arduino            Restore a backed-up firmware to Arduino."
-	@echo "                               Usage: make restore-arduino BACKUP=firmware/backup/file.hex"
-	@echo "  clean-arduino              Remove Arduino firmware build artifacts."
-	@echo "  arduino-help               Show Arduino CLI usage information."
+	@echo "ESP32 Firmware:"
+	@echo "  prepare-esp32              Install Arduino CLI (if needed) and ESP32 board support."
+	@echo "  build-esp32                Compile ESP32 sensorunit firmware to firmware-esp32/."
+	@echo "  upload-esp32               Upload ESP32 firmware (default: /dev/ttyUSB0)."
+	@echo "                               Override port: make upload-esp32 PORT=/dev/ttyUSB1"
+	@echo "  monitor-esp32              Connect to ESP32 serial port (115200 baud)."
+	@echo "                               Override port: make monitor-esp32 PORT=/dev/ttyUSB1"
+	@echo "  clean-esp32                Remove ESP32 firmware build artifacts."
+	@echo "  esp32-help                 Show ESP32 development usage information."
 	@echo ""
 	@echo "Build Targets:"
 	@echo "  all                        Build all Go executables to bin/ directory."
 	@echo "  build                      Clean and rebuild all Go executables."
+	@echo "  release                    Clean and rebuild all Go executables as release builds"
+	@echo "                               (stripped, -s -w, -trimpath; equivalent to OPTIMIZED=yes make all)."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."

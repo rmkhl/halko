@@ -25,10 +25,14 @@ const formatDuration = (seconds: number): string => {
   }
 };
 
+// Identity of a program run, used to tie a stop request to the run it targets
+const programRunKey = (program?: RunningProgramResponse): string | null =>
+  program ? `${program.data.program.name}:${program.data.started_at ?? 0}` : null;
+
 export const RunningProgram: React.FC = () => {
   const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(() => Math.floor(Date.now() / 1000));
-  const [isStoppingLocally, setIsStoppingLocally] = useState(false);
+  const [stopRequestedFor, setStopRequestedFor] = useState<string | null>(null);
 
   // Update current time every second for duration display
   useEffect(() => {
@@ -52,30 +56,27 @@ export const RunningProgram: React.FC = () => {
   });
   const [stopProgram, { isLoading: isStopping }] = useStopRunningProgramMutation();
 
-  const handleStop = async () => {
-    try {
-      setIsStoppingLocally(true);
-      await stopProgram("").unwrap();
-      // Force immediate refetch after stop to clear stale data
-      refetchRunningProgram();
-    } catch (error) {
-      console.error("Failed to stop program:", error);
-      setIsStoppingLocally(false);
-    }
-  };
-
   const runningProgram = useMemo(() => {
     return runningProgramData
       ? (runningProgramData as RunningProgramResponse)
       : undefined;
   }, [runningProgramData]);
 
-  // Reset stopping state when program actually stops
-  useEffect(() => {
-    if (isStoppingLocally && !runningProgram) {
-      setIsStoppingLocally(false);
+  const handleStop = async () => {
+    try {
+      setStopRequestedFor(programRunKey(runningProgram));
+      await stopProgram("").unwrap();
+      // Force immediate refetch after stop to clear stale data
+      refetchRunningProgram();
+    } catch (error) {
+      console.error("Failed to stop program:", error);
+      setStopRequestedFor(null);
     }
-  }, [isStoppingLocally, runningProgram]);
+  };
+
+  // True from the stop request until polling confirms the run is gone
+  const isStoppingLocally =
+    stopRequestedFor !== null && stopRequestedFor === programRunKey(runningProgram);
 
   const temperatures = useMemo(() => {
     return sensorData
@@ -88,8 +89,8 @@ export const RunningProgram: React.FC = () => {
       {temperatures && (
         <Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
-            <Typography>{t("sensors.oven")}:</Typography>
-            <Typography>{celsius(temperatures.data.oven)}</Typography>
+            <Typography>{t("sensors.kiln")}:</Typography>
+            <Typography>{celsius(temperatures.data.kiln)}</Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
             <Typography>{t("sensors.material")}:</Typography>

@@ -88,7 +88,7 @@ export const Program: React.FC = () => {
   // Place this just before return:
   useEffect(() => {
     if (isSuccess) {
-      dispatch(setEditProgram(null));
+      dispatch(setEditProgram(undefined));
       navigate("/programs");
     }
   }, [isSuccess, dispatch, navigate]);

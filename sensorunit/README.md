@@ -54,6 +54,7 @@ make restore-arduino BACKUP=firmware/backup/arduino_backup_20260308_143022.hex P
 **Backup functionality**: The `backup-arduino` target reads both flash memory
 and EEPROM from the connected Arduino and saves timestamped files to
 `firmware/backup/`:
+
 - `arduino_backup_YYYYMMDD_HHMMSS.hex` - Flash memory (program code)
 - `arduino_backup_YYYYMMDD_HHMMSS.eep` - EEPROM data
 
@@ -65,6 +66,7 @@ available backups. The backup .eep (EEPROM) file is not automatically restored
 and must be uploaded separately if needed using avrdude directly.
 
 **Technical details**:
+
 - Board: Arduino Nano
 - Processor: ATmega328P
 - Libraries: MAX6675 library 1.1.2 (Adafruit), LiquidCrystal 1.0.7
@@ -76,7 +78,7 @@ The unit accepts the following commands over the serial interface:
 
 - `helo;` - Initial handshake, responds with "helo"
 - `read;` - Request temperature readings, returns values in format:
-  `OvenPrimary=XX.XC,OvenSecondary=XX.XC,Wood=XX.XC`
+  `KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC`
 - `show TEXT;` - Updates the status text on the LCD display
 
 ## Connection Status

@@ -43,7 +43,7 @@ const formatTimestamp = (timestamp: string): string => {
   return new Date(timestamp).toLocaleString();
 };
 
-const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"], label: string = ""): string => {
+const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
   if (!power) return "Default PID";
 
   // Check explicit type first

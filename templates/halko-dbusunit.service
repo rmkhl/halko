@@ -1,14 +1,17 @@
 [Unit]
 Description=Halko VPN and Power Management Service
-After=network.target dbus.service
+After=network-online.target dbus.service
+Wants=network-online.target
 Requires=dbus.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=root
 Group=root
-ExecStart=/opt/halko/dbusunit -c /etc/opt/halko/halko.cfg
+ExecStart=/opt/halko/dbusunit -c /etc/opt/halko.cfg
 Restart=on-failure
+RestartSec=5s
 TimeoutStopSec=10s
 KillMode=mixed
 KillSignal=SIGTERM

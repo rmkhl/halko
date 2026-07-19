@@ -33,7 +33,7 @@ A kiln drying program is defined as a JSON file with the following structure:
 - **Behavior**:
   - No fixed runtime - continues until target temperature is reached
   - Can use any power control method for the heater
-  - Progresses to next step when oven temperature reaches target
+  - Progresses to next step when kiln temperature reaches target
 - **Validation**: Runtime must not be specified
 
 ### Acclimate Steps
@@ -75,7 +75,7 @@ Maintains constant power output.
 
 ### Delta Control
 
-Maintains temperature difference between oven and wood.
+Maintains temperature difference between kiln and wood.
 
 ```json
 {
@@ -84,13 +84,13 @@ Maintains temperature difference between oven and wood.
 }
 ```
 
-- **max_delta**: Maximum temperature difference (oven - wood) in degrees
-- **min_delta**: Minimum temperature difference (oven - wood) in degrees
+- **max_delta**: Maximum temperature difference (kiln - wood) in degrees
+- **min_delta**: Minimum temperature difference (kiln - wood) in degrees
 - **Usage**: Heater only, primarily for heating steps
 - **Behavior**:
-  - Full power (100%) when oven temperature is below calculated target
-  - Zero power (0%) when oven temperature is above calculated target
-  - Target oven temperature = min(program_target, wood_temp + max_delta,
+  - Full power (100%) when kiln temperature is below calculated target
+  - Zero power (0%) when kiln temperature is above calculated target
+  - Target kiln temperature = min(program_target, wood_temp + max_delta,
     max(wood_temp + min_delta))
 
 ### PID Control
@@ -246,14 +246,14 @@ The `runtime` field uses Go's duration string format:
 The delta control method maintains the temperature difference between oven and
 wood within specified bounds:
 
-1. **Calculate target oven temperature**:
+1. **Calculate target kiln temperature**:
    - Start with program step target temperature
    - Apply max delta constraint: `min(target, wood_temp + max_delta)`
    - Apply min delta constraint: `max(result, wood_temp + min_delta)`
 
 2. **Power decision**:
-   - If oven temperature < target: 100% power
-   - If oven temperature ≥ target: 0% power
+   - If kiln temperature < target: 100% power
+   - If kiln temperature ≥ target: 0% power
 
 ### PID Control Algorithm
 
@@ -290,11 +290,11 @@ These defaults are defined in the main configuration file under `controlunit.def
 3. **Validate program**: Check all rules and constraints
 4. **Start execution**: FSM initializes and waits for initial sensor readings
 5. **Pre-heat phase** (automatic):
-   - If material temperature > oven temperature:
+   - If material temperature > kiln temperature:
      - Heater set to 100% power
      - Fan set to 50% power
      - Continues until oven reaches material temperature
-   - If oven temperature ≥ material temperature:
+   - If kiln temperature ≥ material temperature:
    - Pre-heat phase is skipped
    - Proceeds directly to first program step
    **Purpose**: Prevents thermal shock by ensuring oven doesn't start colder than wood

@@ -8,7 +8,7 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "lint:markdown": "markdownlint-cli2 '**/*.md' '#node_modules' '#webapp/node_modules' '#.nodejs' '#fsdb' '#.github'"
+    "lint:markdown": "markdownlint-cli2 '**/*.md' '#.github'"
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.17.1"

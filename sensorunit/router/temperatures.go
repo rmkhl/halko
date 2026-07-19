@@ -48,25 +48,25 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		log.Debug("Retrieved %d temperature readings from sensor unit (attempt %d/%d)", len(temperatures), attempt, maxAttempts)
 
 		response := make(types.TemperatureResponse)
-		var ovenPrimary float32
-		var ovenSecondary float32
+		var kilnPrimary float32
+		var kilnSecondary float32
 
 		for _, temp := range temperatures {
 			switch temp.Name {
-			case "OvenPrimary":
-				ovenPrimary = temp.Value
-			case "OvenSecondary":
-				ovenSecondary = temp.Value
+			case "KilnPrimary":
+				kilnPrimary = temp.Value
+			case "KilnSecondary":
+				kilnSecondary = temp.Value
 			case "Wood":
 				response["material"] = temp.Value
 			}
 		}
-		log.Debug("Temperature readings processed (attempt %d/%d): OvenPrimary=%.2f°C, OvenSecondary=%.2f°C, Material=%.2f°C",
-			attempt, maxAttempts, ovenPrimary, ovenSecondary, response["material"])
+		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C",
+			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"])
 
 		// Check if all readings are invalid
-		allInvalid := (ovenPrimary == types.InvalidTemperatureReading &&
-			ovenSecondary == types.InvalidTemperatureReading &&
+		allInvalid := (kilnPrimary == types.InvalidTemperatureReading &&
+			kilnSecondary == types.InvalidTemperatureReading &&
 			response["material"] == types.InvalidTemperatureReading)
 
 		if allInvalid && attempt < maxAttempts {
@@ -76,41 +76,36 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Process temperature readings (either some are valid or this is the final attempt)
-		var selectedOvenTemp string
+		var selectedKilnTemp string
 		switch {
-		case ovenPrimary != types.InvalidTemperatureReading && ovenSecondary != types.InvalidTemperatureReading:
-			if ovenPrimary > ovenSecondary {
-				response["oven"] = ovenPrimary
-				selectedOvenTemp = "primary (higher)"
+		case kilnPrimary != types.InvalidTemperatureReading && kilnSecondary != types.InvalidTemperatureReading:
+			if kilnPrimary > kilnSecondary {
+				response["kiln"] = kilnPrimary
+				selectedKilnTemp = "primary (higher)"
 			} else {
-				response["oven"] = ovenSecondary
-				selectedOvenTemp = "secondary (higher)"
+				response["kiln"] = kilnSecondary
+				selectedKilnTemp = "secondary (higher)"
 			}
-		case ovenPrimary != types.InvalidTemperatureReading:
-			log.Warning("Secondary oven temperature reading is invalid, using primary only")
-			response["oven"] = ovenPrimary
-			selectedOvenTemp = "primary only"
-		case ovenSecondary != types.InvalidTemperatureReading:
-			log.Warning("Primary oven temperature reading is invalid, using secondary only")
-			response["oven"] = ovenSecondary
-			selectedOvenTemp = "secondary only"
+			api.updateKilnStatus(kilnSensorBothOK)
+		case kilnPrimary != types.InvalidTemperatureReading:
+			response["kiln"] = kilnPrimary
+			selectedKilnTemp = "primary only"
+			api.updateKilnStatus(kilnSensorPrimaryOnly)
+		case kilnSecondary != types.InvalidTemperatureReading:
+			response["kiln"] = kilnSecondary
+			selectedKilnTemp = "secondary only"
+			api.updateKilnStatus(kilnSensorSecondaryOnly)
 		default:
-			log.Warning("Both oven temperature readings are invalid")
-			response["oven"] = types.InvalidTemperatureReading
-			selectedOvenTemp = "invalid"
+			response["kiln"] = types.InvalidTemperatureReading
+			selectedKilnTemp = "invalid"
+			api.updateKilnStatus(kilnSensorBothInvalid)
 		}
-		if response["material"] == types.InvalidTemperatureReading {
-			log.Warning("Material temperature reading is invalid")
-		}
+		api.updateMaterialStatus(response["material"] != types.InvalidTemperatureReading)
 
-		if allInvalid {
-			log.Warning("All temperature readings remain invalid after %d attempts", maxAttempts)
-		}
+		log.Debug("Temperature selection complete: kiln=%.1f°C (%s), material=%.1f°C",
+			response["kiln"], selectedKilnTemp, response["material"])
 
-		log.Debug("Temperature selection complete: oven=%.1f°C (%s), material=%.1f°C",
-			response["oven"], selectedOvenTemp, response["material"])
-
-		log.Debug("Returning temperature data: oven=%.1f°C, material=%.1f°C", response["oven"], response["material"])
+		log.Debug("Returning temperature data: kiln=%.1f°C, material=%.1f°C", response["kiln"], response["material"])
 		writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
 			Data: response,
 		})
