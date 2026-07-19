@@ -15,7 +15,9 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation } from "../store/services/controlunitApi";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation, useLazyGetRunQuery } from "../store/services/controlunitApi";
+import { generateRunReportPdf, NoStepDataError } from "../util/runReportPdf";
 import { ExecutionChart } from "./ExecutionChart";
 
 const formatTimestamp = (timestamp?: number): string => {
@@ -43,6 +45,8 @@ export const History: React.FC = () => {
     skip: !selectedProgram,
   });
   const [deleteExecution] = useDeleteExecutionMutation();
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [fetchRun] = useLazyGetRunQuery();
 
   const handleDownloadCsv = () => {
     if (!selectedProgram || !logData) return;
@@ -53,6 +57,30 @@ export const History: React.FC = () => {
     link.download = `${selectedProgram}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selectedProgram || !logData) return;
+    setIsGeneratingPdf(true);
+    try {
+      // If this fails, executed stays undefined and the report is
+      // generated without the program appendix.
+      const { data: executed } = await fetchRun(selectedProgram);
+      const doc = generateRunReportPdf({
+        runName: selectedProgram,
+        csv: logData,
+        executed,
+      });
+      doc.save(`${selectedProgram}.pdf`);
+    } catch (error) {
+      if (error instanceof NoStepDataError) {
+        window.alert(error.message);
+      } else {
+        window.alert("Failed to generate PDF report");
+      }
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleDelete = async (name: string, event: React.MouseEvent) => {
@@ -175,9 +203,18 @@ export const History: React.FC = () => {
             isLoading={isLoadingLog}
             headerAction={
               logData ? (
-                <IconButton aria-label="download csv" onClick={handleDownloadCsv}>
-                  <FileDownloadIcon />
-                </IconButton>
+                <Box>
+                  <IconButton aria-label="download csv" onClick={handleDownloadCsv}>
+                    <FileDownloadIcon />
+                  </IconButton>
+                  <IconButton
+                    aria-label="download pdf report"
+                    onClick={handleDownloadPdf}
+                    disabled={isGeneratingPdf}
+                  >
+                    {isGeneratingPdf ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+                  </IconButton>
+                </Box>
               ) : undefined
             }
           />
