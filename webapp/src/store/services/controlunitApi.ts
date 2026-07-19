@@ -89,6 +89,10 @@ export const controlunitApi = createApi({
         responseHandler: (response) => response.text(),
       }),
     }),
+    getRun: builder.query<ExecutedProgram, string>({
+      query: (name) => `/engine/history/${encodeURIComponent(name)}`,
+      transformResponse: (response: { data: ExecutedProgram }) => response.data,
+    }),
     deleteExecution: builder.mutation<void, string>({
       query: (name) => ({
         url: `/engine/history/${encodeURIComponent(name)}`,
@@ -106,5 +110,6 @@ export const {
   useStopRunningProgramMutation,
   useGetExecutionHistoryQuery,
   useGetExecutionLogQuery,
+  useLazyGetRunQuery,
   useDeleteExecutionMutation,
 } = controlunitApi;
