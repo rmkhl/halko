@@ -18,7 +18,7 @@ func (api *API) getStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	details := make(map[string]interface{})
-	details["arduino_connected"] = isConnected
+	details["sensor_connected"] = isConnected
 
 	response := types.ServiceStatusResponse{
 		Status:  status,

@@ -11,7 +11,7 @@ func (r *Router) getStatus(w http.ResponseWriter, req *http.Request) {
 	log.Trace("Processing status check request from %s", req.RemoteAddr)
 
 	details := make(map[string]interface{})
-	details["arduino_connected"] = true
+	details["sensor_connected"] = true
 
 	response := types.ServiceStatusResponse{
 		Status:  types.ServiceStatusHealthy,

@@ -72,10 +72,10 @@ export const System: React.FC = () => {
           <>
             <ModuleStatusCard name="Shelly" isConnected={hardwareStatus.shelly.reachable} />
             <ModuleStatusCard
-              name="Arduino"
+              name="ESP32"
               isConnected={
-                systemStatus.services.sensorunit.details?.arduino_connected === true ||
-                systemStatus.services.sensorunit.details?.arduino_connected === "true"
+                systemStatus.services.sensorunit.details?.sensor_connected === true ||
+                systemStatus.services.sensorunit.details?.sensor_connected === "true"
               }
             />
           </>
