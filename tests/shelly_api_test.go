@@ -83,7 +83,7 @@ func TestShellyAPI(t *testing.T) {
 	}()
 
 	// Wait for the Shelly server to accept requests
-	statusURL := fmt.Sprintf("%s/rpc/Switch.GetStatus?id=0", baseURL)
+	statusURL := baseURL + "/rpc/Switch.GetStatus?id=0"
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		resp, err := http.Get(statusURL)
