@@ -214,6 +214,32 @@ func TestGetPortMethod(t *testing.T) {
 	}
 }
 
+func TestDBusUnitConfigOptional(t *testing.T) {
+	// testConfigData has no dbusunit section; config must still load and validate
+	configPath := createTestConfigFile(t)
+	config, err := types.LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config without dbusunit section: %v", err)
+	}
+	if config.DBusUnit != nil {
+		t.Error("Expected DBusUnit to be nil when the dbusunit section is missing")
+	}
+}
+
+func TestDBusUnitConfigParsing(t *testing.T) {
+	data := `{"dbusunit": {"system_bus_socket": "/run/host/run/dbus/system_bus_socket"}}`
+	var config types.HalkoConfig
+	if err := json.Unmarshal([]byte(data), &config); err != nil {
+		t.Fatalf("Failed to unmarshal dbusunit section: %v", err)
+	}
+	if config.DBusUnit == nil {
+		t.Fatal("Expected DBusUnit to be set when the dbusunit section is present")
+	}
+	if config.DBusUnit.SystemBusSocket != "/run/host/run/dbus/system_bus_socket" {
+		t.Errorf("Expected system_bus_socket /run/host/run/dbus/system_bus_socket, got %s", config.DBusUnit.SystemBusSocket)
+	}
+}
+
 func TestJSONMarshaling(t *testing.T) {
 	configPath := createTestConfigFile(t)
 

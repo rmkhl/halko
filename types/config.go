@@ -48,6 +48,10 @@ type (
 		BaudRate     int    `json:"baud_rate"`
 	}
 
+	DBusUnitConfig struct {
+		SystemBusSocket string `json:"system_bus_socket"`
+	}
+
 	StorageConfig struct {
 		BasePath string `json:"base_path"`
 	}
@@ -90,6 +94,7 @@ type (
 		ControlUnitConfig *ControlUnitConfig `json:"controlunit"`
 		PowerUnit         *PowerUnit         `json:"power_unit"`
 		SensorUnit        *SensorUnitConfig  `json:"sensorunit"`
+		DBusUnit          *DBusUnitConfig    `json:"dbusunit"`
 		APIEndpoints      *APIEndpoints      `json:"api_endpoints"`
 	}
 )
