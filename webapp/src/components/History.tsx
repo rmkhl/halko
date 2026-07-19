@@ -14,6 +14,7 @@ import {
   Divider,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation } from "../store/services/controlunitApi";
 import { ExecutionChart } from "./ExecutionChart";
 
@@ -42,6 +43,17 @@ export const History: React.FC = () => {
     skip: !selectedProgram,
   });
   const [deleteExecution] = useDeleteExecutionMutation();
+
+  const handleDownloadCsv = () => {
+    if (!selectedProgram || !logData) return;
+    const blob = new Blob([logData], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedProgram}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleDelete = async (name: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -161,6 +173,13 @@ export const History: React.FC = () => {
             csvData={logData}
             title={`${selectedProgram.split("@")[0]} - Execution Chart`}
             isLoading={isLoadingLog}
+            headerAction={
+              logData ? (
+                <IconButton aria-label="download csv" onClick={handleDownloadCsv}>
+                  <FileDownloadIcon />
+                </IconButton>
+              ) : undefined
+            }
           />
         ) : (
           <Paper

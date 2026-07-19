@@ -30,6 +30,7 @@ interface ExecutionChartProps {
   isLoading?: boolean;
   isLive?: boolean;
   temperatureRange?: { min: number; max: number };
+  headerAction?: React.ReactNode;
 }
 
 // Static CSV data from ,run.csv (used as fallback)
@@ -128,7 +129,8 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
   title = "Program Execution Data",
   isLoading = false,
   isLive = false,
-  temperatureRange
+  temperatureRange,
+  headerAction
 }) => {
   const dataPoints = parseCSV(csvData || defaultCsvData);
 
@@ -262,9 +264,12 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         marginTop: 3,
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h6" gutterBottom>
+          {title}
+        </Typography>
+        {headerAction}
+      </Box>
       <Box sx={{ height: 500, width: "100%" }}>
         <Line options={options} data={chartData} />
       </Box>
