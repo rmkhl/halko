@@ -81,6 +81,23 @@ See [RASPBERRY_PI.md](../RASPBERRY_PI.md) for detailed Raspberry Pi network conf
 
 Storage location for programs and execution logs. This directory is created by `make install`.
 
+#### 5. D-Bus Socket (`dbusunit.system_bus_socket`)
+
+**Default:** `"/var/run/dbus/system_bus_socket"`
+
+Path to the D-Bus system bus socket used by the dbusunit service to talk to
+systemd. The section is optional — when omitted, the standard system bus
+location is used.
+
+Override it when the socket is not at the standard path, e.g. when running
+inside a container (distrobox/toolbox) where the host bus is exposed at:
+
+```json
+"dbusunit": {
+  "system_bus_socket": "/run/host/run/dbus/system_bus_socket"
+}
+```
+
 ### Example Production Configurations
 
 **Standard Linux server:**
