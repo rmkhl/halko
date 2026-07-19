@@ -111,8 +111,8 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     if (isNew || isRename) {
       // POST to /programs (no id) - destructure to remove id field
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id: _id, ...rest } = { ...normalized } as ProgramWithOptionalId;
-      saveData({ ...rest, isNew: true } as T);
+      const { id: _id, ...rest } = { ...normalized } as unknown as ProgramWithOptionalId;
+      saveData({ ...rest, isNew: true } as unknown as T);
     } else {
       // POST to /programs/{name}
       saveData({ id: name, ...normalized, isNew: false });

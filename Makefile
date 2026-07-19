@@ -548,7 +548,7 @@ lint-webapp:
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
 	fi; \
-	cd webapp && npm run lint
+	cd webapp && npm run lint && npm run typecheck
 
 .PHONY: tmux-debug-run tmux-debug-stop
 tmux-debug-run: all

@@ -12,6 +12,9 @@
  * Production: "/api/v1" (for nginx proxy)
  */
 
+// Parcel statically replaces process.env.* at build time; declare it for tsc
+declare const process: { env: Record<string, string | undefined> };
+
 const API_PREFIX = process.env.API_PREFIX || '';
 
 interface ApiEndpoints {

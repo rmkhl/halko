@@ -36,8 +36,8 @@ make fmt-changed      # gofmt/goimports on changed files only
 make go-tidy          # go mod tidy on all modules
 
 # Webapp
-make webapp-build     # production build
-make webapp-dev       # dev server on :1234 with hot reload
+make build-webapp     # production build
+make run-webapp       # dev server on :1234 with hot reload
 
 # Development environment
 make tmux-debug-run   # all services + simulator in tmux

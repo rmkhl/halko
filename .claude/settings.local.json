@@ -4,7 +4,8 @@
       "Bash(xargs cat)",
       "Bash(git ls-tree *)",
       "Read(//home/mte/.claude/**)",
-      "Bash(make lint-golang *)"
+      "Bash(make lint-golang *)",
+      "Bash(make lint-webapp *)"
     ]
   }
 }
