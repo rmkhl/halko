@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -13,17 +13,23 @@ import (
 )
 
 func TestShellyAPI(t *testing.T) {
+	// The simulator reads the Shelly port from power_unit.shelly_address
+	// in the halko configuration (8088 in testConfigData).
 	port := "8088"
-	if envPort := os.Getenv("TEST_PORT"); envPort != "" {
-		port = envPort
-	}
-
 	baseURL := "http://localhost:" + port
 
-	simulatorPath := "../simulator/main.go"
+	configPath := createTestConfigFile(t)
+
+	// Build the simulator and run the binary directly: signals must reach the
+	// simulator process itself so Wait() only returns once it has fully shut
+	// down and released its ports (go run exits before its child does).
+	simBinary := filepath.Join(t.TempDir(), "simulator")
+	if out, err := exec.Command("go", "build", "-o", simBinary, "../simulator").CombinedOutput(); err != nil {
+		t.Fatalf("Error building simulator: %v\n%s", err, out)
+	}
 
 	t.Log("Starting simulator...")
-	cmd := exec.Command("go", "run", simulatorPath, "-l", port)
+	cmd := exec.Command(simBinary, "-c", configPath, "-s", "../simulator/simulator.conf")
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -58,47 +64,39 @@ func TestShellyAPI(t *testing.T) {
 		t.Log("Simulator terminated")
 	}()
 
-	// Create a channel to indicate when the simulator is ready
-	ready := make(chan struct{})
-
-	// Monitor simulator output in a goroutine
+	// Stream simulator output to the test log
 	go func() {
-		defer close(ready)
-
-		// Combine stdout and stderr into a single reader
 		combined := io.MultiReader(stdout, stderr)
 		buf := make([]byte, 1024)
-
 		for {
 			n, err := combined.Read(buf)
+			if n > 0 {
+				t.Log(strings.TrimRight(string(buf[:n]), "\n"))
+			}
 			if err != nil {
 				if err != io.EOF {
 					t.Logf("Error reading simulator output: %v", err)
 				}
 				return
 			}
-
-			// Print simulator output
-			output := string(buf[:n])
-			t.Log(output)
-
-			// If we see the "Server running" message, signal that the simulator is ready
-			if strings.Contains(output, "Server running") {
-				ready <- struct{}{}
-			}
 		}
 	}()
 
-	// Wait for the simulator to be ready or timeout
-	select {
-	case <-ready:
-		t.Log("Simulator is ready")
-	case <-time.After(5 * time.Second):
-		t.Log("Proceeding with tests (timeout waiting for ready message)")
+	// Wait for the Shelly server to accept requests
+	statusURL := fmt.Sprintf("%s/rpc/Switch.GetStatus?id=0", baseURL)
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		resp, err := http.Get(statusURL)
+		if err == nil {
+			resp.Body.Close()
+			t.Log("Simulator is ready")
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Simulator did not become ready in time: %v", err)
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
-
-	// Wait a bit to ensure the server is actually ready
-	time.Sleep(1 * time.Second)
 
 	// Test cases
 	t.Run("ShellyAPIOperations", func(t *testing.T) {
