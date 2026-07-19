@@ -200,7 +200,7 @@ halkoctl --verbose temperatures
 
 ### display
 
-Sends a text message to the sensor unit LCD display.
+Sends a text message to the sensor unit OLED display.
 
 ```bash
 halkoctl display <message> [options]
@@ -208,7 +208,7 @@ halkoctl display <message> [options]
 
 #### Display Arguments
 
-- `message` - Text message to display on the sensor unit LCD (required)
+- `message` - Text message to display on the sensor unit OLED (required)
 
 #### Display Options
 

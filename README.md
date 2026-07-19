@@ -11,16 +11,23 @@ The system is built with a microservices architecture with these main components
 - **ControlUnit**: Runs drying programs and controls the kiln.
 - **PowerUnit**: Interfaces with Shelly devices to control power.
 - **SensorUnit**: Reads temperature data from physical sensors and provides an API.
+- **DBusUnit**: Systemd D-Bus integration for VPN and host power control.
 - **Simulator**: Provides a simulated environment for testing.
 - **WebApp**: User interface for controlling and monitoring the system.
+- **halkoctl**: Command-line tool for managing the system.
+
+For the project's history and credits, see [HISTORY.md](HISTORY.md).
 
 ## Building the Project
 
 ### Prerequisites
 
-- Go 1.23 or higher
-- Node.js and npm (for the webapp)
+- Go 1.26 or higher
+- Node.js 18+ and npm (for the webapp; if not present, the Makefile installs a
+  local copy under `.nodejs/` automatically)
 - golangci-lint (for linting)
+- Arduino CLI (only for building/flashing the ESP32 firmware; installed by
+  `make prepare-esp32`)
 
 ### Build Commands
 
@@ -36,11 +43,17 @@ make build
 # Remove all built binaries
 make clean
 
-# Run linter on all modules
+# Run all test suites
+make test
+
+# Run linters (Go, markdown, webapp)
 make lint
 
 # Update Go module dependencies
 make update-modules
+
+# Run go mod tidy on all modules
+make go-tidy
 
 # Install binaries to /opt/halko and config to /etc/opt
 make install
@@ -55,11 +68,15 @@ make install-webapp
 make fmt-changed
 
 # WebApp development and deployment
-make webapp-install-node # Install Node.js 18 using nvm (if needed)
-make webapp-install      # Install webapp dependencies
-make webapp-dev          # Start development server
-make webapp-build        # Build for production
-make webapp-clean        # Clean webapp artifacts
+make run-webapp          # Start development server on :1234 with hot reload
+make build-webapp        # Build production bundle to webapp/dist/
+make clean-webapp        # Clean webapp artifacts
+
+# ESP32 firmware
+make prepare-esp32       # Install Arduino CLI, ESP32 core, and libraries
+make build-esp32         # Compile firmware
+make upload-esp32        # Flash to device
+make monitor-esp32       # Serial monitor
 ```
 
 ## Project Structure
@@ -99,14 +116,15 @@ control operations.
 
 The SensorUnit component includes:
 
-- Arduino firmware (`sensorunit/arduino/sensorunit/sensorunit.ino`) for a
-  physical unit that reads from MAX6675 thermocouples and can display status
-  on an LCD.
-- A Go service (`sensorunit/main.go`) that communicates with the Arduino via
+- ESP32 firmware (`sensorunit/esp32/sensorunit/sensorunit.ino`) for a
+  physical unit that reads from MAX31855 thermocouples and displays status
+  on an I2C OLED display.
+- A Go service (`sensorunit/main.go`) that communicates with the ESP32 via
   USB serial and exposes a REST API for temperature and status.
 
 For detailed information about hardware setup, serial communication, and
-configuration, see [sensorunit/README.md](sensorunit/README.md).
+configuration, see [sensorunit/README.md](sensorunit/README.md) and
+[sensorunit/esp32/README.md](sensorunit/esp32/README.md).
 
 #### `/simulator`
 
@@ -118,6 +136,20 @@ SensorUnit and parts of the PowerUnit (Shelly devices).
 The simulator uses physics-based simulation engines (simple, differential, thermodynamic)
 configured via `simulator.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
 configuration options and physics engine descriptions.
+
+#### `/dbusunit`
+
+The DBusUnit provides systemd D-Bus integration for the host system. It
+exposes a REST API for listing and controlling VPN connections (systemd
+units) and for shutting down or rebooting the host. It runs as root under
+its own systemd unit (`halko-dbusunit.service`) because it needs access to
+the system D-Bus.
+
+#### `/halkoctl`
+
+A command-line tool for managing the system: sending programs, querying
+status and temperatures, and updating the sensor unit display. See
+[halkoctl/README.md](halkoctl/README.md).
 
 #### `/webapp`
 
@@ -193,6 +225,9 @@ example configuration:
     "serial_device": "/dev/ttyUSB0",
     "baud_rate": 9600
   },
+  "dbusunit": {
+    "system_bus_socket": "/var/run/dbus/system_bus_socket"
+  },
   "api_endpoints": {
     "controlunit": {
       "url": "http://localhost:8090",
@@ -210,6 +245,12 @@ example configuration:
       "url": "http://localhost:8092",
       "status": "/status",
       "power": "/power"
+    },
+    "dbusunit": {
+      "url": "http://localhost:8094",
+      "vpn": "/vpn",
+      "power": "/power",
+      "status": "/status"
     }
   }
 }
@@ -266,6 +307,7 @@ The system is designed for bare-metal production deployment with systemd service
 make install
 
 # Install and enable systemd services for controlunit, powerunit, sensorunit
+# (as halko@<name>) and dbusunit (as halko-dbusunit, running as root)
 make systemd-units
 ```
 
@@ -289,6 +331,9 @@ sudo systemctl status halko@powerunit
 
 # View logs
 sudo journalctl -u halko@controlunit -f
+
+# The dbusunit uses its own (non-templated) unit
+sudo systemctl status halko-dbusunit
 ```
 
 #### 2. Install WebApp
@@ -305,7 +350,9 @@ sudo systemctl reload nginx
 
 Access the webapp at `http://your-server-ip/`
 
-The webapp proxies API requests to localhost backend services (ports 8090, 8092, 8093).
+The webapp proxies API requests to localhost backend services (ports 8090,
+8092, 8093, 8094). The nginx configuration is generated from `halko.cfg` by
+`halkoctl nginx` during `make build-webapp`.
 
 #### Network Interface Configuration
 
@@ -372,7 +419,7 @@ Run `./scripts/monitor-memory.py --help` for all options.
 For rapid development and debugging, use the tmux environment to run all services locally:
 
 ```bash
-# Start all services in tmux (simulator, powerunit, controlunit, webapp)
+# Start all services in tmux (simulator, powerunit, controlunit, dbusunit, webapp)
 make tmux-debug-run
 
 # With custom log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
@@ -396,6 +443,7 @@ The tmux session includes separate windows for:
 - **simulator** - Hardware emulation
 - **powerunit** - Power control service
 - **controlunit** - Main control logic
+- **dbusunit** - Systemd D-Bus integration (runs with sudo)
 - **webapp** - Development server with hot reload
 - **shell** - Command line for halkoctl and testing
 

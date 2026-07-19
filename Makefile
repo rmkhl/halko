@@ -573,7 +573,7 @@ help:
 	@echo "  build-esp32                Compile ESP32 sensorunit firmware to firmware-esp32/."
 	@echo "  upload-esp32               Upload ESP32 firmware (default: /dev/ttyUSB0)."
 	@echo "                               Override port: make upload-esp32 PORT=/dev/ttyUSB1"
-	@echo "  monitor-esp32              Connect to ESP32 serial port (115200 baud)."
+	@echo "  monitor-esp32              Connect to ESP32 serial port (9600 baud)."
 	@echo "                               Override port: make monitor-esp32 PORT=/dev/ttyUSB1"
 	@echo "  clean-esp32                Remove ESP32 firmware build artifacts."
 	@echo "  esp32-help                 Show ESP32 development usage information."

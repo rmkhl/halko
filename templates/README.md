@@ -41,7 +41,7 @@ For Raspberry Pi deployments with dual network interfaces (see [RASPBERRY_PI.md]
 
 **Default:** `"/dev/ttyUSB0"`
 
-Path to your Arduino device for thermocouple readings.
+Path to your ESP32 sensor unit device for thermocouple readings.
 
 To find connected USB serial devices:
 
@@ -51,8 +51,8 @@ ls -l /dev/ttyUSB* /dev/ttyACM*
 
 Common paths:
 
-- `/dev/ttyUSB0` - First USB serial adapter
-- `/dev/ttyACM0` - Arduino using native USB
+- `/dev/ttyUSB0` - First USB serial adapter (typical for the ESP32's CP2102)
+- `/dev/ttyACM0` - Boards using native USB
 - `/dev/ttyUSB1` - Second USB device
 
 #### 3. Shelly Address (`power_unit.shelly_address`)
@@ -117,7 +117,7 @@ inside a container (distrobox/toolbox) where the host bus is exposed at:
     "power_mapping": { ... }
   },
   "sensorunit": {
-    "serial_device": "/dev/ttyUSB0",  // ← Verify your Arduino path
+    "serial_device": "/dev/ttyUSB0",  // ← Verify your sensor unit path
     "baud_rate": 9600
   },
   "api_endpoints": { ... }
@@ -152,13 +152,20 @@ See [RASPBERRY_PI.md](../RASPBERRY_PI.md) for detailed Raspberry Pi deployment i
 
 ## halko-daemon.service
 
-Systemd service template for all Halko services. Used by `make systemd-units` to create:
+Systemd service template for the regular Halko services. Used by `make systemd-units` to create:
 
 - `halko@controlunit.service`
 - `halko@powerunit.service`
 - `halko@sensorunit.service`
 
 The template uses systemd's instance unit pattern (`@`) to parameterize the service name.
+
+## halko-dbusunit.service
+
+Dedicated (non-templated) unit for the dbusunit service, installed by
+`make systemd-units` as `halko-dbusunit.service`. Unlike the other services
+it runs as root, because it needs access to the system D-Bus for VPN and
+host power control.
 
 ## Post-Installation Steps
 
@@ -178,6 +185,7 @@ After running `make install` and `make systemd-units`:
    sudo systemctl status halko@controlunit
    sudo systemctl status halko@powerunit
    sudo systemctl status halko@sensorunit
+   sudo systemctl status halko-dbusunit
    ```
 
 3. **Check logs for configuration errors:**

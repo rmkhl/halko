@@ -41,12 +41,15 @@ All services implement a `/status` endpoint that returns health information usin
 
 - **ControlUnit**: `program_running` (bool), `current_step` (int), `started_at` (string)
 - **PowerUnit**: `controller_initialized` (bool)
-- **Storage**: `accessible` (bool), `error` (string if not accessible)
-- **SensorUnit**: `arduino_connected` (bool)
+- **SensorUnit**: `sensor_connected` (bool)
+- **DBusUnit**: `dbus_connected` (bool)
+
+All endpoint paths below are the defaults from `halko.cfg`
+(`api_endpoints` section); they are configurable.
 
 ## 1. SensorUnit API
 
-Base Path: `/sensors`
+Default Port: `8093` (configured in `api_endpoints.sensorunit.url`)
 
 ### Temperature Endpoints
 
@@ -84,7 +87,7 @@ Checks the connection status of the sensor unit. Follows the standard status end
     "status": "healthy",
     "service": "sensorunit",
     "details": {
-      "arduino_connected": true
+      "sensor_connected": true
     }
   }
 }
@@ -92,12 +95,12 @@ Checks the connection status of the sensor unit. Follows the standard status end
 
 **Details:**
 
-- `arduino_connected`: Boolean indicating if the Arduino device is connected via USB serial
-- `disconnected`: The sensor unit is not connected or not responding
+- `sensor_connected`: Boolean indicating if the sensor hardware (ESP32) is
+  connected via USB serial; when false, the status is `unavailable`
 
 #### POST `/display`
 
-Updates the text displayed on the sensor unit's LCD.
+Updates the status text shown on the sensor unit's OLED display.
 
 **Request Format:**
 
@@ -119,7 +122,8 @@ Updates the text displayed on the sensor unit's LCD.
 
 ## 2. PowerUnit API
 
-Base Path: `/powers`
+Base Path: `/power`  
+Default Port: `8092` (configured in `api_endpoints.powerunit.url`)
 
 ### Status Endpoints
 
@@ -147,7 +151,7 @@ Gets the health status of the PowerUnit service. Follows the standard status end
 
 ### Power Control Endpoints
 
-### GET `/`
+### GET `/power`
 
 Gets the status of all power channels.
 
@@ -169,7 +173,32 @@ Gets the status of all power channels.
 }
 ```
 
-### GET `/:power`
+### POST `/power`
+
+Sets all power channels in one request. Channels not included in the
+request are set to 0%.
+
+**Request Format:**
+
+```json
+{
+  "heater": {"percent": 75},
+  "fan": {"percent": 50},
+  "humidifier": {"percent": 0}
+}
+```
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "message": "completed"
+  }
+}
+```
+
+### GET `/power/{power}`
 
 Gets the status of a specific power channel.
 
@@ -188,7 +217,7 @@ Gets the status of a specific power channel.
 }
 ```
 
-### POST `/:power` (also supports PUT and PATCH)
+### POST `/power/{power}` (also supports PUT and PATCH)
 
 Operates a specific power channel.
 
@@ -225,6 +254,7 @@ The ControlUnit serves both execution management and program storage endpoints:
 - `/engine/*` - Program execution, history, and live monitoring
 - `/programs/*` - Stored program template management (CRUD operations)
 - `/status` - Service health status
+- `/system/*` - Aggregated system and hardware status
 
 **Note:** There is no separate "storage" service - all storage functionality is integrated into the ControlUnit.
 
@@ -255,6 +285,51 @@ Gets the health status of the ControlUnit service. Follows the standard status e
 - `program_running`: Boolean indicating if a program is currently executing
 - `current_step`: Current step number in the program (only present if program is running)
 - `started_at`: ISO 8601 timestamp of program start (only present if program is running)
+
+#### GET `/system/status`
+
+Aggregated status of all services plus host system information. The
+ControlUnit queries the `/status` endpoint of each service (3-second
+timeout) and reads memory, disk, and uptime information from the host.
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "services": {
+      "controlunit": { /* standard status response */ },
+      "powerunit": { /* standard status response */ },
+      "sensorunit": { /* standard status response */ }
+    },
+    "system": {
+      "memory_used_mb": 210,
+      "memory_total_mb": 3792,
+      "swap_used_mb": 0,
+      "swap_total_mb": 0,
+      "disk_space_mb": 12040,
+      "uptime_seconds": 86400
+    }
+  }
+}
+```
+
+#### GET `/system/hardware`
+
+Hardware reachability status. Currently reports whether the Shelly device
+is reachable (probed via the PowerUnit).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "shelly": {
+      "reachable": true
+    }
+  }
+}
+```
 
 ### Program Execution Endpoints
 
@@ -410,7 +485,7 @@ When a program is running:
 - `current_step`: Name of the currently executing step
 - `current_step_started_at`: Unix timestamp when current step began
 - `temperatures.material`: Current material (wood) temperature in °C
-- `temperatures.oven`: Current kiln temperature in °C
+- `temperatures.kiln`: Current kiln temperature in °C
 - `power_status.heater`: Heater power level (0-100%)
 - `power_status.fan`: Fan power level (0-100%)
 - `power_status.humidifier`: Humidifier power level (0-100%)
@@ -740,13 +815,115 @@ Deletes a stored program template.
 - Status 200 OK on success
 - Status 404 Not Found if program doesn't exist
 
-## 4. Simulator API
+## 4. DBusUnit API
+
+Default Port: `8094` (configured in `api_endpoints.dbusunit.url`)
+
+The DBusUnit provides VPN and host power management via the systemd D-Bus
+interface. It runs as root under its own systemd unit
+(`halko-dbusunit.service`).
+
+### Status Endpoint
+
+#### GET `/status` (DBusUnit)
+
+Follows the standard status endpoint format.
+
+```json
+{
+  "data": {
+    "status": "healthy",
+    "service": "dbusunit",
+    "details": {
+      "dbus_connected": true
+    }
+  }
+}
+```
+
+### VPN Endpoints
+
+#### GET `/vpn`
+
+Lists known VPN connections (OpenVPN and WireGuard systemd units).
+
+**Response Format:**
+
+```json
+{
+  "data": [
+    {
+      "name": "office",
+      "status": "active",
+      "enabled": true,
+      "tunnel_ip": "10.8.0.2"
+    }
+  ]
+}
+```
+
+**Fields:**
+
+- `name`: VPN connection name
+- `status`: `active`, `inactive`, or `failed`
+- `enabled`: Whether the unit is enabled at boot
+- `tunnel_ip`: Tunnel IP address (only present when active)
+
+#### GET `/vpn/{name}`
+
+Gets the status of a specific VPN connection. Returns a single object in
+the same format as the list entries above.
+
+#### POST `/vpn/{name}/start`
+
+Starts a VPN connection.
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "message": "VPN started successfully",
+    "name": "office"
+  }
+}
+```
+
+#### POST `/vpn/{name}/stop`
+
+Stops a VPN connection. Response format matches `/vpn/{name}/start`.
+
+### Power Management Endpoints
+
+#### POST `/power/shutdown`
+
+Initiates a host system shutdown. An optional JSON body
+`{"delay": <seconds>}` is accepted (the delay is currently unused).
+
+**Response Format:**
+
+```json
+{
+  "data": {
+    "message": "System shutdown initiated"
+  }
+}
+```
+
+#### POST `/power/reboot`
+
+Initiates a host system reboot. Request and response formats match
+`/power/shutdown`.
+
+## 5. Simulator API
 
 The simulator mimics endpoints from the SensorUnit and Shelly devices.
 
 ### Simulated SensorUnit API
 
-Base Path: `/sensors`
+Serves the same endpoints as the real SensorUnit (`/temperatures`,
+`/status`, `/display`), on the port configured in
+`api_endpoints.sensorunit.url` (default `8093`).
 
 #### Simulated GET `/temperatures`
 
@@ -765,21 +942,26 @@ Gets readings from all simulated temperature sensors.
 
 #### Simulated GET `/status`
 
-Gets the simulated connection status.
+Gets the simulated connection status. Follows the standard status endpoint
+format; the simulated sensor is always healthy.
 
 **Response Format:**
 
 ```json
 {
   "data": {
-    "status": "connected"
+    "status": "healthy",
+    "service": "sensorunit",
+    "details": {
+      "sensor_connected": true
+    }
   }
 }
 ```
 
 #### Simulated POST `/display`
 
-Logs a display message (simulates updating an LCD).
+Logs a display message (simulates updating the OLED display).
 
 **Request Format:**
 

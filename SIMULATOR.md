@@ -7,7 +7,7 @@ The Halko Simulator emulates the physical behavior of a wood drying kiln for dev
 The simulator consists of two main components:
 
 1. **Shelly Device Emulator** (port 8088) - Emulates Shelly smart switches for power control
-2. **SensorUnit Emulator** (port 8093) - Emulates temperature sensors and LCD display
+2. **SensorUnit Emulator** (port 8093) - Emulates temperature sensors and the status display
 
 The simulator uses physics-based models to calculate how temperatures change over time based on power settings, making it suitable for testing control algorithms and drying programs.
 
@@ -35,8 +35,9 @@ The simulator searches for `simulator.conf` in:
 1. Path specified with `-s` flag
 2. `SIMULATOR_CONFIG` environment variable
 3. `./simulator.conf` (current directory)
-4. `~/.simulator.conf` (user home)
-5. `/etc/opt/simulator.conf` (system-wide)
+4. `~/.simulator.conf` or `~/.config/simulator.conf` (user home)
+5. `/etc/halko/simulator.conf` or `/etc/opt/halko/simulator.conf` (system-wide)
+6. Next to the simulator executable
 
 ## Simulator Configuration Structure
 
@@ -282,9 +283,7 @@ Emulates temperature sensor endpoints:
 {
   "data": {
     "kiln": 45.2,
-    "wood": 42.5,
-    "ovenPrimary": 45.2,
-    "ovenSecondary": 44.8
+    "material": 42.5
   }
 }
 ```

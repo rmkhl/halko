@@ -128,7 +128,7 @@ The `runtime` field uses Go's duration string format:
 
 1. **First step** must be a heating step
 2. **Last step** must be a cooling step
-3. **Minimum 2 steps** required
+3. **Minimum 3 steps** required (e.g., heating, acclimate, cooling)
 
 ### Runtime Requirements
 
@@ -140,7 +140,8 @@ The `runtime` field uses Go's duration string format:
 
 - **Heating steps**: Target temperature must be higher than previous step
 - **Acclimate steps**: Target temperature must be greater than or equal to
-  previous step
+  previous step; when directly following a heating step, it must equal the
+  heating step's target temperature
 - **Cooling steps**: Target temperature must be lower than previous step
 - **Maximum temperature**: 200°C limit for all steps
 
