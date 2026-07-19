@@ -248,7 +248,7 @@ func (p *Program) Validate() error {
 
 func (p *Program) validateStepOrderAndTemperatureProgression() error {
 	if len(p.ProgramSteps) <= 2 {
-		return errors.New("program must have at least two step")
+		return errors.New("program must have at least three steps")
 	}
 
 	if p.ProgramSteps[0].StepType != StepTypeHeating {
