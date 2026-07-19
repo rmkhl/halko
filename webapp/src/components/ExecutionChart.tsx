@@ -12,6 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { Box, Paper, Typography, CircularProgress } from "@mui/material";
+import { parseExecutionLog } from "../util/executionLog";
 
 // Register Chart.js components
 ChartJS.register(
@@ -80,50 +81,6 @@ const defaultCsvData = `time,step,steptime,material,kiln,heater,fan,humidifier
 2328,Cooling Phase,1200,20.600014,20.593916,0,100,0
 2376,Completed,0,20.000000,20.000000,0,100,0`;
 
-interface DataPoint {
-  time: number;
-  step: string;
-  steptime: number;
-  material: number;
-  kiln: number;
-}
-
-const parseCSV = (csv: string): DataPoint[] => {
-  const lines = csv.trim().split("\n").filter(line => line.trim().length > 0);
-  const data: DataPoint[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const values = line.split(",");
-
-    // Skip lines that don't have enough values
-    if (values.length < 8) {
-      continue;
-    }
-
-    const time = parseFloat(values[0]);
-    const material = parseFloat(values[3]);
-    const kiln = parseFloat(values[4]);
-
-    // Skip lines with invalid numeric values
-    if (isNaN(time) || isNaN(material) || isNaN(kiln)) {
-      continue;
-    }
-
-    data.push({
-      time,
-      step: values[1],
-      steptime: parseFloat(values[2]),
-      material,
-      kiln,
-    });
-  }
-
-  return data;
-};
-
 export const ExecutionChart: React.FC<ExecutionChartProps> = ({
   csvData,
   title = "Program Execution Data",
@@ -132,7 +89,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
   temperatureRange,
   headerAction
 }) => {
-  const dataPoints = parseCSV(csvData || defaultCsvData);
+  const dataPoints = parseExecutionLog(csvData || defaultCsvData);
 
   if (isLoading) {
     return (
