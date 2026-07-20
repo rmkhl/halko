@@ -76,6 +76,7 @@ export const History: React.FC = () => {
       if (error instanceof NoStepDataError) {
         window.alert(error.message);
       } else {
+        console.error(error);
         window.alert("Failed to generate PDF report");
       }
     } finally {

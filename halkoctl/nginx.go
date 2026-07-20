@@ -122,7 +122,7 @@ server {
 
     # Serve static web application files
     location / {
-        root /usr/share/nginx/html;
+        root /var/www/halko;
         try_files $uri $uri/ /index.html;
     }
 
@@ -228,7 +228,7 @@ server {
     # Error pages
     error_page 502 503 504 /50x.html;
     location = /50x.html {
-        root /usr/share/nginx/html;
+        root /var/www/halko;
     }
 }
 `, listenPort, controlunitHost, controlunitPort, controlunitHost, controlunitPort, sensorHost, sensorPort, powerHost, powerPort, dbusHost, dbusPort)
