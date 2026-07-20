@@ -2,10 +2,27 @@
 // (stats + temperature chart), and the executed program as an appendix.
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Chart } from "chart.js/auto";
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import { ExecutedProgram } from "../store/services/controlunitApi";
 import { PowerSettings } from "../types/api";
 import { LogRow, StepSegment, parseExecutionLog, segmentBySteps } from "./executionLog";
+
+// Registered separately from ExecutionChart.tsx's identical call (Chart.js
+// registration is idempotent) rather than importing "chart.js/auto": that
+// convenience entry point is a thin re-export wrapper around this same
+// "chart.js" module, and Parcel's production scope-hoisting/tree-shaking
+// drops the wrapper's own module while leaving references to its exports
+// object behind — a ReferenceError that only appears in production builds.
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 export class NoStepDataError extends Error {
   constructor() {
