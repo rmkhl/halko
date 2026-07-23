@@ -9,6 +9,7 @@
 //
 // Commands (identical to Arduino version):
 // - "show <text>" - Set the status line text
+// - "addr <text>" - Set the IP address line text
 // - "read" - Read the current temperature values
 // - "helo" - Respond with "helo" (initial handshake)
 //
@@ -70,6 +71,8 @@ const char * const sensorName[3] = {"KilnPrimary", "KilnSecondary", "Wood"};
 float temperature[3] = {0.0, 0.0, 0.0};
 bool is_valid[3] = {false, false, false};
 uint8_t last_fault[3] = {0, 0, 0};
+char addr_text[32] = "";
+uint16_t fault_total[3] = {0, 0, 0};
 
 // One SPI transaction returns the whole 32-bit MAX31855 frame, so the
 // temperature and the fault bits always come from the same conversion.
@@ -103,6 +106,10 @@ float parseFrame(int idx, uint32_t raw)
     uint8_t faults = raw & 0x7;
     if (faults != 0)
     {
+        if (fault_total[idx] < 0xFFFF)
+        {
+            fault_total[idx]++;
+        }
         last_fault[idx] = faults;
         return NAN;
     }
@@ -203,6 +210,38 @@ void displayTemperatures()
     }
     blink = !blink;
 
+    // Row 4: IP address (from "addr" command) at y=40
+    if (strlen(addr_text) > 0) {
+        display.setCursor(0, 40);
+        display.print(addr_text);
+    }
+
+    // Rows 5+6: per-sensor self-diagnostics, columns aligned under the temps.
+    // F = cumulative fault count since boot, L = last fault type.
+    const int diagX[3] = {12, 54, 96};
+
+    display.setCursor(0, 48);
+    display.print("F");
+    for (int i = 0; i < 3; i++) {
+        display.setCursor(diagX[i], 48);
+        display.print(fault_total[i] > 9999 ? 9999 : fault_total[i]);
+    }
+
+    display.setCursor(0, 56);
+    display.print("L");
+    for (int i = 0; i < 3; i++) {
+        display.setCursor(diagX[i], 56);
+        if (last_fault[i] & FAULT_GND) {
+            display.print("GND");
+        } else if (last_fault[i] & FAULT_OPEN) {
+            display.print("OPN");
+        } else if (last_fault[i] & FAULT_VCC) {
+            display.print("VCC");
+        } else {
+            display.print("--");
+        }
+    }
+
     display.display();
 }
 
@@ -245,6 +284,14 @@ void processSerial()
             const char *text = buffer + 5;  // Skip "show "
             strncpy(status_text, text, sizeof(status_text) - 1);
             status_text[sizeof(status_text) - 1] = '\0';
+            displayTemperatures();
+        }
+        else if (strcmp(command, "addr") == 0)
+        {
+            // Extract text after "addr "
+            const char *text = buffer + 5;  // Skip "addr "
+            strncpy(addr_text, text, sizeof(addr_text) - 1);
+            addr_text[sizeof(addr_text) - 1] = '\0';
             displayTemperatures();
         }
         else if (strcmp(command, "read") == 0)
@@ -326,7 +373,7 @@ void setup()
     displayTemperatures();
 
     Serial.println("Initialization complete");
-    Serial.println("Commands: helo; read; show TEXT;");
+    Serial.println("Commands: helo; read; show TEXT; addr TEXT;");
 }
 
 void loop()
