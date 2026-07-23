@@ -19,6 +19,7 @@ const (
 	HeloCommand  = "helo;"
 	ReadCommand  = "read;"
 	ShowCommand  = "show"
+	AddrCommand  = "addr"
 	HeloResponse = "helo"
 )
 
@@ -289,6 +290,25 @@ func (s *SensorUnit) SetStatusText(text string) error {
 	return err
 }
 
+func (s *SensorUnit) SetAddressText(text string) error {
+	log.Debug("Updating OLED address line: %q", text)
+	if err := s.Connect(); err != nil {
+		log.Error("Failed to connect for address line update: %v", err)
+		return err
+	}
+
+	if len(text) > 21 {
+		text = text[:21]
+	}
+
+	command := fmt.Sprintf("%s %s;", AddrCommand, text)
+	_, err := s.sendCommand(command)
+	if err != nil {
+		log.Error("Failed to set OLED address line: %v", err)
+	}
+	return err
+}
+
 func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 	log.Debug("Sending serial command: %q", cmd)
 	s.mutex.Lock()
@@ -309,8 +329,8 @@ func (s *SensorUnit) sendCommand(cmd string) (string, error) {
 		return "", fmt.Errorf("failed to send command: %w", err)
 	}
 
-	// Special handling for show command - it does not return a response
-	if strings.HasPrefix(cmd, ShowCommand) {
+	// Special handling for show/addr commands - they do not return a response
+	if strings.HasPrefix(cmd, ShowCommand) || strings.HasPrefix(cmd, AddrCommand) {
 		return "", nil
 	}
 	scanner := bufio.NewScanner(s.port)

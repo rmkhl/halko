@@ -27,6 +27,15 @@ func (api *API) setDisplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if payload.Address != "" {
+		err = api.sensorUnit.SetAddressText(payload.Address)
+		if err != nil {
+			log.Error("Failed to set address line on sensor unit: %v", err)
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	writeJSON(w, http.StatusOK, types.APIResponse[types.StatusResponse]{
 		Data: types.StatusResponse{
 			Status: types.SensorStatusOK,
