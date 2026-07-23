@@ -17,7 +17,6 @@
 // Display: 0.96" or 1.3" I2C OLED (SSD1306 or SH1106)
 //
 // Libraries required:
-// - Adafruit MAX31855 library
 // - Adafruit SSD1306 library
 // - Adafruit GFX library
 // - Wire (built-in for ESP32)
@@ -32,7 +31,6 @@
 // - SCL: GPIO22
 //
 
-#include <Adafruit_MAX31855.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
@@ -60,17 +58,59 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define KILN_SECONDARY 1
 #define WOOD           2
 
-// Initialize MAX31855 sensors using hardware SPI
-Adafruit_MAX31855 sensor[3] = {
-    Adafruit_MAX31855(KILN_PRIMARY_CS),
-    Adafruit_MAX31855(KILN_SECONDARY_CS),
-    Adafruit_MAX31855(WOOD_CS)
-};
+const int cs_pin[3] = {KILN_PRIMARY_CS, KILN_SECONDARY_CS, WOOD_CS};
+
+// MAX31855 fault bits (D2..D0 of the data frame)
+#define FAULT_OPEN 0x1  // thermocouple circuit broken
+#define FAULT_GND  0x2  // thermocouple shorted/leaking to ground
+#define FAULT_VCC  0x4  // thermocouple shorted to supply
 
 const char * const sensorName[3] = {"KilnPrimary", "KilnSecondary", "Wood"};
 
 float temperature[3] = {0.0, 0.0, 0.0};
 bool is_valid[3] = {false, false, false};
+uint8_t last_fault[3] = {0, 0, 0};
+
+// One SPI transaction returns the whole 32-bit MAX31855 frame, so the
+// temperature and the fault bits always come from the same conversion.
+uint32_t readRawFrame(int pin)
+{
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+    digitalWrite(pin, LOW);
+    uint32_t raw = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        raw = (raw << 8) | SPI.transfer(0);
+    }
+    digitalWrite(pin, HIGH);
+    SPI.endTransaction();
+    return raw;
+}
+
+// Returns the thermocouple temperature, or NAN on fault after recording
+// which fault type fired so the display can show it.
+float parseFrame(int idx, uint32_t raw)
+{
+    // An all-zero frame cannot come from a working chip (the internal
+    // temperature bits are never all zero); it means the module is not
+    // answering at all. No fault type in that case, just NaN.
+    if (raw == 0)
+    {
+        last_fault[idx] = 0;
+        return NAN;
+    }
+
+    uint8_t faults = raw & 0x7;
+    if (faults != 0)
+    {
+        last_fault[idx] = faults;
+        return NAN;
+    }
+
+    // D[31:18] is the 14-bit signed thermocouple value, 0.25 °C per LSB
+    int32_t v = (int32_t)raw >> 18;
+    return v * 0.25f;
+}
 
 // Status and timing
 char status_text[32] = "";
@@ -127,6 +167,12 @@ void displayTemperatures()
         display.setCursor(colX[i], 0);
         if (is_valid[i]) {
             display.print(lroundf(temperature[i]));
+        } else if (last_fault[i] & FAULT_GND) {
+            display.print("GND");
+        } else if (last_fault[i] & FAULT_OPEN) {
+            display.print("OPN");
+        } else if (last_fault[i] & FAULT_VCC) {
+            display.print("VCC");
         } else {
             display.print("NaN");
         }
@@ -264,8 +310,13 @@ void setup()
         display.display();
     }
 
-    // Initialize SPI
+    // Initialize SPI and the MAX31855 chip selects (idle high)
     SPI.begin();
+    for (int i = 0; i < 3; i++)
+    {
+        pinMode(cs_pin[i], OUTPUT);
+        digitalWrite(cs_pin[i], HIGH);
+    }
 
     // Wait for sensors to stabilize
     delay(500);
@@ -293,8 +344,7 @@ void loop()
     // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
-        // readCelsius() returns NaN on any fault, no separate readError() needed
-        double sensor_temperature = sensor[current_sensor].readCelsius();
+        float sensor_temperature = parseFrame(current_sensor, readRawFrame(cs_pin[current_sensor]));
 
         if (isnan(sensor_temperature))
         {
