@@ -509,8 +509,15 @@ clean-webapp:
 	@rm -rf webapp/dist webapp/node_modules webapp/.parcel-cache
 	@echo "✓ Webapp cleaned"
 
+webapp/node_modules:
+	@echo "Installing webapp dependencies..."
+	@if [ -f .nodejs/bin/node ]; then \
+		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
+	fi; \
+	cd webapp && npm install
+
 .PHONY: run-webapp
-run-webapp: $(BINDIR)/halkoctl
+run-webapp: $(BINDIR)/halkoctl webapp/node_modules
 	@echo "Starting webapp development server..."
 	@if [ -f .nodejs/bin/node ]; then \
 		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
