@@ -1,6 +1,14 @@
 MODULES = controlunit powerunit simulator sensorunit halkoctl dbusunit
 BINDIR = bin
 
+# Workspace-local Node.js — all node/npm invocations use this installation
+# regardless of what is installed on the system.
+NODEJS_VERSION = 18.20.5
+NODEJS_DIR = $(CURDIR)/.nodejs
+NODE = $(NODEJS_DIR)/bin/node
+NPM = $(NODEJS_DIR)/bin/npm
+export PATH := $(NODEJS_DIR)/bin:$(PATH)
+
 # Build flags - use OPTIMIZED=yes for memory-constrained environments (Raspberry Pi)
 # Standard flags (default): Full debugging symbols, faster execution
 GOFLAGS_STANDARD =
@@ -41,8 +49,28 @@ distclean: clean clean-webapp clean-esp32
 	@echo "✓ Removed local Arduino CLI installation"
 	@echo "✓ Removed ESP32 firmware build artifacts"
 
+$(NODE):
+	@echo "Installing Node.js $(NODEJS_VERSION) locally in .nodejs/..."
+	@mkdir -p $(NODEJS_DIR)
+	@ARCH=$$(uname -m); \
+	OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+	case "$$ARCH" in \
+		x86_64) NODE_ARCH="x64" ;; \
+		aarch64|arm64) NODE_ARCH="arm64" ;; \
+		*) echo "Error: Unsupported architecture: $$ARCH"; exit 1 ;; \
+	esac; \
+	NODE_DIST="node-v$(NODEJS_VERSION)-$$OS-$$NODE_ARCH"; \
+	echo "Downloading Node.js $(NODEJS_VERSION) for $$OS-$$NODE_ARCH..."; \
+	curl -fsSL "https://nodejs.org/dist/v$(NODEJS_VERSION)/$$NODE_DIST.tar.gz" -o $(NODEJS_DIR)/node.tar.gz; \
+	tar -xzf $(NODEJS_DIR)/node.tar.gz -C $(NODEJS_DIR) --strip-components=1; \
+	rm $(NODEJS_DIR)/node.tar.gz
+	@echo "✓ Node.js installed to .nodejs/"
+
+.PHONY: node-env
+node-env: $(NODE)
+
 .PHONY: prepare
-prepare:
+prepare: $(NODE)
 	@echo "Checking for required tools..."
 	@if ! command -v go > /dev/null; then \
 		echo "Error: 'go' command is not available. Please install Go before continuing."; \
@@ -79,51 +107,11 @@ prepare:
 		fi; \
 	done
 	@echo "Updated go.work file to include all modules."
-	@echo "Checking for Node.js..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	if ! command -v node > /dev/null; then \
-		echo "Node.js not found. Installing Node.js 18 locally in .nodejs/..."; \
-		mkdir -p .nodejs; \
-		ARCH=$$(uname -m); \
-		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
-		if [ "$$ARCH" = "x86_64" ]; then \
-			NODE_ARCH="x64"; \
-		elif [ "$$ARCH" = "aarch64" ] || [ "$$ARCH" = "arm64" ]; then \
-			NODE_ARCH="arm64"; \
-		else \
-			echo "Error: Unsupported architecture: $$ARCH"; \
-			exit 1; \
-		fi; \
-		NODE_VERSION="18.20.5"; \
-		NODE_DIST="node-v$${NODE_VERSION}-$${OS}-$${NODE_ARCH}"; \
-		echo "Downloading Node.js $${NODE_VERSION} for $${OS}-$${NODE_ARCH}..."; \
-		curl -fsSL "https://nodejs.org/dist/v$${NODE_VERSION}/$${NODE_DIST}.tar.gz" -o .nodejs/node.tar.gz; \
-		echo "Extracting Node.js..."; \
-		tar -xzf .nodejs/node.tar.gz -C .nodejs --strip-components=1; \
-		rm .nodejs/node.tar.gz; \
-		echo "✓ Node.js installed to .nodejs/"; \
-	else \
-		NODE_VERSION=$$(node -v | sed 's/v//'); \
-		NODE_MAJOR=$$(echo $$NODE_VERSION | cut -d. -f1); \
-		if [ $$NODE_MAJOR -lt 18 ]; then \
-			echo "Warning: Node.js $$NODE_VERSION detected. Node.js 18+ is recommended."; \
-		else \
-			echo "✓ Node.js $$(node -v) is installed"; \
-		fi; \
-	fi
 	@echo "Installing root dependencies (markdownlint-cli2)..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	npm install
+	@$(NPM) install
 	@echo "✓ Root dependencies installed"
 	@echo "Installing webapp dependencies (including ESLint)..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install
+	@cd webapp && $(NPM) install
 	@echo "✓ Webapp dependencies installed"
 
 # Arduino workspace-local paths
@@ -366,13 +354,10 @@ lint-golang:
 	done
 
 .PHONY: lint-markdown
-lint-markdown:
+lint-markdown: $(NODE)
 	@echo "Linting markdown files..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	if [ -f node_modules/.bin/markdownlint-cli2 ]; then \
-		npm run lint:markdown || true; \
+	@if [ -f node_modules/.bin/markdownlint-cli2 ]; then \
+		$(NPM) run lint:markdown || true; \
 	else \
 		echo "Warning: markdownlint-cli2 is not installed. Run 'make prepare' first."; \
 	fi
@@ -509,26 +494,21 @@ clean-webapp:
 	@rm -rf webapp/dist webapp/node_modules webapp/.parcel-cache
 	@echo "✓ Webapp cleaned"
 
+webapp/node_modules: $(NODE)
+	@echo "Installing webapp dependencies..."
+	@cd webapp && $(NPM) install
+
 .PHONY: run-webapp
-run-webapp: $(BINDIR)/halkoctl
+run-webapp: $(BINDIR)/halkoctl webapp/node_modules
 	@echo "Starting webapp development server..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm start
+	@cd webapp && $(NPM) start
 
 .PHONY: build-webapp
-build-webapp: clean-webapp $(BINDIR)/halkoctl
+build-webapp: clean-webapp $(NODE) $(BINDIR)/halkoctl
 	@echo "Building webapp for production (host installation)..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm install
+	@cd webapp && $(NPM) install
 	@echo "Building production bundle..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm run build
+	@cd webapp && $(NPM) run build
 	@echo "✓ Webapp built successfully to webapp/dist/"
 	@echo "Generating nginx configuration for host installation..."
 	@if [ -f /etc/opt/halko.cfg ]; then \
@@ -543,12 +523,9 @@ build-webapp: clean-webapp $(BINDIR)/halkoctl
 	@echo "  To serve: Copy webapp/dist/* to your web server root and nginx-host.conf to nginx sites"
 
 .PHONY: lint-webapp
-lint-webapp:
+lint-webapp: $(NODE) webapp/node_modules
 	@echo "Linting webapp..."
-	@if [ -f .nodejs/bin/node ]; then \
-		export PATH="$$(pwd)/.nodejs/bin:$$PATH"; \
-	fi; \
-	cd webapp && npm run lint && npm run typecheck
+	@cd webapp && $(NPM) run lint && $(NPM) run typecheck
 
 .PHONY: tmux-debug-run tmux-debug-stop
 tmux-debug-run: all
