@@ -24,7 +24,6 @@ type (
 		executorIP       string
 		displayMessage   string
 		displayMutex     sync.RWMutex
-		alternate        bool // Toggle between IP and message
 	}
 )
 
@@ -74,7 +73,7 @@ func (hm *Manager) Stop() error {
 	return nil
 }
 
-// SetDisplayMessage sets a custom message to be displayed, alternating with the IP address
+// SetDisplayMessage sets a custom message for the display's status line
 func (hm *Manager) SetDisplayMessage(message string) {
 	hm.displayMutex.Lock()
 	defer hm.displayMutex.Unlock()
@@ -105,6 +104,17 @@ func (hm *Manager) run() {
 	}
 }
 
+// buildDisplayRequest builds the per-beat display update: the status
+// message (defaulting to "idle") plus the executor IP for the display's
+// dedicated address line. An empty IP (interface not up yet) leaves the
+// address unset so the sensorunit skips the addr command.
+func buildDisplayRequest(message, ip string) types.DisplayRequest {
+	if message == "" {
+		message = "idle"
+	}
+	return types.DisplayRequest{Message: message, Address: ip}
+}
+
 func (hm *Manager) sendHeartbeat() error {
 	if hm.executorIP == "" {
 		if ip, err := GetNetworkInterfaceIPv4(hm.networkInterface); err == nil {
@@ -116,23 +126,7 @@ func (hm *Manager) sendHeartbeat() error {
 	customMessage := hm.displayMessage
 	hm.displayMutex.RUnlock()
 
-	var message string
-	if customMessage == "" {
-		// No custom message, always send IP
-		message = hm.executorIP
-	} else {
-		// Alternate between IP and custom message
-		if hm.alternate {
-			message = customMessage
-		} else {
-			message = hm.executorIP
-		}
-		hm.alternate = !hm.alternate
-	}
-
-	payload := types.DisplayRequest{
-		Message: message,
-	}
+	payload := buildDisplayRequest(customMessage, hm.executorIP)
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
