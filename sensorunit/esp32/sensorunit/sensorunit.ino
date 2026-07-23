@@ -82,13 +82,35 @@ unsigned long previousMillis = 0;
 #define INTERVAL 500
 #define MAX_COMMAND_LENGTH 32
 
-// Moving average for temperature readings
-float measurement[3][4] = {
-  {0.0, 0.0, 0.0, 0.0},
-  {0.0, 0.0, 0.0, 0.0},
-  {0.0, 0.0, 0.0, 0.0}
-};
-int n_measure = 0;
+// Median filter for temperature readings: a single noise spike is rejected
+// outright instead of being smeared over the whole window as with a mean.
+#define SAMPLE_COUNT 5
+// Consecutive failed reads before a sensor is reported invalid. Transient
+// fault-bit glitches (e.g. from lead noise) keep the last good value.
+#define FAULT_LIMIT 4
+
+float measurement[3][SAMPLE_COUNT];
+int sample_index[3] = {0, 0, 0};
+bool seeded[3] = {false, false, false};
+int fault_count[3] = {0, 0, 0};
+
+float medianOfSamples(const float *samples)
+{
+    float sorted[SAMPLE_COUNT];
+    memcpy(sorted, samples, sizeof(sorted));
+    for (int i = 1; i < SAMPLE_COUNT; i++)
+    {
+        float value = sorted[i];
+        int j = i - 1;
+        while (j >= 0 && sorted[j] > value)
+        {
+            sorted[j + 1] = sorted[j];
+            j--;
+        }
+        sorted[j + 1] = value;
+    }
+    return sorted[SAMPLE_COUNT / 2];
+}
 
 void displayTemperatures()
 {
@@ -104,7 +126,7 @@ void displayTemperatures()
     for (int i = 0; i < 3; i++) {
         display.setCursor(colX[i], 0);
         if (is_valid[i]) {
-            display.print((int)temperature[i]);
+            display.print(lroundf(temperature[i]));
         } else {
             display.print("NaN");
         }
@@ -271,23 +293,42 @@ void loop()
     // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
+        // readCelsius() returns NaN on any fault, no separate readError() needed
         double sensor_temperature = sensor[current_sensor].readCelsius();
-        uint8_t fault = sensor[current_sensor].readError();
 
-        if (isnan(sensor_temperature) || fault != 0)
+        if (isnan(sensor_temperature))
         {
-            is_valid[current_sensor] = false;
+            if (fault_count[current_sensor] < FAULT_LIMIT)
+            {
+                fault_count[current_sensor]++;
+            }
+            if (fault_count[current_sensor] >= FAULT_LIMIT)
+            {
+                is_valid[current_sensor] = false;
+                // Samples go stale during a real outage; re-seed on recovery
+                seeded[current_sensor] = false;
+            }
         }
         else
         {
-            is_valid[current_sensor] = true;
-            measurement[current_sensor][n_measure] = sensor_temperature;
-            temperature[current_sensor] = 0.0;
-            for (int j = 0; j < 4; j++)
+            fault_count[current_sensor] = 0;
+            if (!seeded[current_sensor])
             {
-                temperature[current_sensor] += measurement[current_sensor][j];
+                // Fill the whole window so the reported value is correct
+                // immediately instead of ramping up from empty slots
+                for (int j = 0; j < SAMPLE_COUNT; j++)
+                {
+                    measurement[current_sensor][j] = sensor_temperature;
+                }
+                seeded[current_sensor] = true;
             }
-            temperature[current_sensor] = temperature[current_sensor] / 4.0;
+            else
+            {
+                measurement[current_sensor][sample_index[current_sensor]] = sensor_temperature;
+                sample_index[current_sensor] = (sample_index[current_sensor] + 1) % SAMPLE_COUNT;
+            }
+            is_valid[current_sensor] = true;
+            temperature[current_sensor] = medianOfSamples(measurement[current_sensor]);
         }
 
         // Sensor counter drives display refresh timing
@@ -295,7 +336,6 @@ void loop()
 
         if (current_sensor == 0)
         {
-            n_measure = (n_measure + 1) % 4;
             displayTemperatures();
         }
 
