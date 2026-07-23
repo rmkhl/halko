@@ -44,6 +44,7 @@ type StatusRequest struct {
 // DisplayRequest defines the structure for a display update request body
 type DisplayRequest struct {
 	Message string `json:"message"`
+	Address string `json:"address,omitempty"`
 }
 
 type (
