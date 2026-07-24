@@ -63,3 +63,40 @@ func TestHeatingDeltaHysteresis(t *testing.T) {
 		})
 	}
 }
+
+func TestAcclimateDeltaHoldsTarget(t *testing.T) {
+	tests := []struct {
+		name string
+		seq  []reading
+	}{
+		{
+			name: "never heats when material at or above target",
+			seq: []reading{
+				{kiln: 30, material: 60, want: 0}, // at target, kiln cold: no demand
+				{kiln: 30, material: 61, want: 0}, // above target: never heat
+			},
+		},
+		{
+			name: "heats below target and stops the moment target is reached",
+			seq: []reading{
+				{kiln: 62, material: 59, want: 100}, // demand, kiln inside envelope
+				{kiln: 62, material: 60, want: 0},   // material reached target, off immediately
+			},
+		},
+		{
+			name: "envelope breach cuts power mid-demand and re-arms at lower bound",
+			seq: []reading{
+				{kiln: 70, material: 55, want: 100}, // demand, inside envelope (55+20=75)
+				{kiln: 75, material: 55, want: 0},   // breach at 55+20: off despite demand
+				{kiln: 65, material: 55, want: 0},   // falling through band: still disarmed
+				{kiln: 60, material: 55, want: 100}, // reached 55+5: re-armed, demand present
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &acclimateDeltaController{target: 60, minDelta: 5, maxDelta: 20, envelopeOK: true}
+			runSequence(t, c, tt.seq)
+		})
+	}
+}

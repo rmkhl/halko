@@ -116,3 +116,28 @@ func (c *heatingDeltaController) Update(kilnTemperature, materialTemperature flo
 	}
 	return 0
 }
+
+// acclimateDeltaController holds the material at the step target while
+// keeping the kiln inside the delta safety envelope relative to the material.
+// Heating requires both demand (material below target, no hysteresis) and an
+// armed envelope (same hysteresis band as heating: disarm at
+// material+maxDelta, re-arm at material+minDelta).
+type acclimateDeltaController struct {
+	target     float32
+	minDelta   float32
+	maxDelta   float32
+	envelopeOK bool
+}
+
+func (c *acclimateDeltaController) Update(kilnTemperature, materialTemperature float32) uint8 {
+	switch {
+	case kilnTemperature >= materialTemperature+c.maxDelta:
+		c.envelopeOK = false
+	case kilnTemperature <= materialTemperature+c.minDelta:
+		c.envelopeOK = true
+	}
+	if c.envelopeOK && materialTemperature < c.target {
+		return 100
+	}
+	return 0
+}
