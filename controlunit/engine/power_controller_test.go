@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -132,4 +133,55 @@ func TestPidPowerControllerTracksItsOwnOutput(t *testing.T) {
 	if got := c.Update(200, 0); got != 0 {
 		t.Fatalf("second Update = %d, want 0", got)
 	}
+}
+
+func f32(v float32) *float32 { return &v }
+func u8(v uint8) *uint8      { return &v }
+
+func TestNewPowerControllerSelection(t *testing.T) {
+	deltaSettings := &types.PowerPidSettings{
+		Type:     types.PowerSettingTypeDelta,
+		MinDelta: f32(5),
+		MaxDelta: f32(20),
+	}
+
+	tests := []struct {
+		name     string
+		stepType types.StepType
+		target   float32
+		settings *types.PowerPidSettings
+		wantType any
+	}{
+		{"simple", types.StepTypeCooling, 0,
+			&types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(40)},
+			&simplePowerController{}},
+		{"heating delta", types.StepTypeHeating, 80, deltaSettings, &heatingDeltaController{}},
+		{"acclimate delta", types.StepTypeAcclimate, 80, deltaSettings, &acclimateDeltaController{}},
+		{"pid", types.StepTypeAcclimate, 80,
+			&types.PowerPidSettings{Type: types.PowerSettingTypePid, Pid: &types.PidSettings{Kp: 1}},
+			&pidPowerController{}},
+		// fail-safes: anything unresolvable heats at 0%
+		{"delta on cooling step", types.StepTypeCooling, 0, deltaSettings, &simplePowerController{}},
+		{"nil settings", types.StepTypeHeating, 80, nil, &simplePowerController{}},
+		{"no method resolved", types.StepTypeHeating, 80, &types.PowerPidSettings{}, &simplePowerController{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewPowerController(tt.stepType, tt.target, tt.settings)
+			if fmt.Sprintf("%T", got) != fmt.Sprintf("%T", tt.wantType) {
+				t.Fatalf("NewPowerController() = %T, want %T", got, tt.wantType)
+			}
+		})
+	}
+}
+
+func TestNewPowerControllerFailSafeReturnsZero(t *testing.T) {
+	c := NewPowerController(types.StepTypeHeating, 80, nil)
+	runSequence(t, c, []reading{{kiln: 0, material: 0, want: 0}})
+}
+
+func TestNewPowerControllerSimpleUsesConfiguredPower(t *testing.T) {
+	c := NewPowerController(types.StepTypeCooling, 0,
+		&types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(35)})
+	runSequence(t, c, []reading{{kiln: 10, material: 10, want: 35}})
 }

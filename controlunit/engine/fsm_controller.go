@@ -45,23 +45,23 @@ type (
 
 	heatUpStateHandler struct {
 		fsm             *programFSMController
-		fanPower        *PowerController
-		heaterPower     *PowerController
-		humidifierPower *PowerController
+		fanPower        PowerController
+		heaterPower     PowerController
+		humidifierPower PowerController
 	}
 
 	acclimateStateHandler struct {
 		fsm             *programFSMController
-		fanPower        *PowerController
-		heaterPower     *PowerController
-		humidifierPower *PowerController
+		fanPower        PowerController
+		heaterPower     PowerController
+		humidifierPower PowerController
 	}
 
 	coolDownStateHandler struct {
 		fsm             *programFSMController
-		fanPower        *PowerController
-		heaterPower     *PowerController
-		humidifierPower *PowerController
+		fanPower        PowerController
+		heaterPower     PowerController
+		humidifierPower PowerController
 	}
 
 	failedStateHandler struct {
@@ -206,23 +206,15 @@ func (h *heatUpStateHandler) executeState() fsmState {
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		log.Debug("FSM: heat_up - updating power (kiln: %.1f°C, material: %.1f°C)",
 			h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
-		heaterPower := h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
+		heaterPower := h.heaterPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuOven, heaterPower)
 		log.Trace("FSM: heat_up - heater power: %d%%", heaterPower)
 
-		fanPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil && h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
-			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-		}
-		fanResult := h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
+		fanResult := h.fanPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuFan, fanResult)
 		log.Trace("FSM: heat_up - fan power: %d%%", fanResult)
 
-		humidifierPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil && h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
-			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-		}
-		humidifierResult := h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
+		humidifierResult := h.humidifierPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
 		h.fsm.psuController.setPower(psuHumidifier, humidifierResult)
 		log.Trace("FSM: heat_up - humidifier power: %d%%", humidifierResult)
 
@@ -234,9 +226,10 @@ func (h *heatUpStateHandler) executeState() fsmState {
 
 func (h *heatUpStateHandler) enterState() {
 	log.Info("FSM: Entered heat_up state - target: %d°C", h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
+	step := &h.fsm.program.ProgramSteps[h.fsm.step]
+	h.fanPower = NewPowerController(step.StepType, 0, step.Fan)
+	h.heaterPower = NewPowerController(step.StepType, float32(step.TargetTemperature), step.Heater)
+	h.humidifierPower = NewPowerController(step.StepType, 0, step.Humidifier)
 }
 
 func (h *acclimateStateHandler) executeState() fsmState {
@@ -253,19 +246,9 @@ func (h *acclimateStateHandler) executeState() fsmState {
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		log.Debug("FSM: acclimate - updating power (kiln: %.1f°C, material: %.1f°C)",
 			h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
-		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
-
-		fanPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil && h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
-			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-		}
-		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
-
-		humidifierPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil && h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
-			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-		}
-		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
 
 		// Mark these temperature readings as processed
 		h.fsm.temperatures.updated = h.fsm.currentTemperatures.updated
@@ -277,9 +260,10 @@ func (h *acclimateStateHandler) enterState() {
 	log.Info("FSM: Entered acclimate state - target: %d°C, duration: %.0fs",
 		h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature,
 		h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds())
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
+	step := &h.fsm.program.ProgramSteps[h.fsm.step]
+	h.fanPower = NewPowerController(step.StepType, 0, step.Fan)
+	h.heaterPower = NewPowerController(step.StepType, float32(step.TargetTemperature), step.Heater)
+	h.humidifierPower = NewPowerController(step.StepType, 0, step.Humidifier)
 }
 
 func (h *coolDownStateHandler) executeState() fsmState {
@@ -304,19 +288,9 @@ func (h *coolDownStateHandler) executeState() fsmState {
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		log.Debug("FSM: cool_down - updating power (kiln: %.1f°C, material: %.1f°C)",
 			h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material)
-		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
-
-		fanPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Fan != nil && h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power != nil {
-			fanPower = *h.fsm.program.ProgramSteps[h.fsm.step].Fan.Power
-		}
-		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(fanPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
-
-		humidifierPower := uint8(0)
-		if h.fsm.program.ProgramSteps[h.fsm.step].Humidifier != nil && h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power != nil {
-			humidifierPower = *h.fsm.program.ProgramSteps[h.fsm.step].Humidifier.Power
-		}
-		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(humidifierPower, h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuOven, h.heaterPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuFan, h.fanPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
+		h.fsm.psuController.setPower(psuHumidifier, h.humidifierPower.Update(h.fsm.temperatures.reading.Kiln, h.fsm.temperatures.reading.Material))
 
 		// Mark these temperature readings as processed
 		h.fsm.temperatures.updated = h.fsm.currentTemperatures.updated
@@ -326,9 +300,10 @@ func (h *coolDownStateHandler) executeState() fsmState {
 
 func (h *coolDownStateHandler) enterState() {
 	log.Info("FSM: Entered cool_down state - target: %d°C", h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
-	h.fanPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Fan)
-	h.heaterPower = NewPowerController(float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature), h.fsm.program.ProgramSteps[h.fsm.step].Heater)
-	h.humidifierPower = NewPowerController(0, h.fsm.program.ProgramSteps[h.fsm.step].Humidifier)
+	step := &h.fsm.program.ProgramSteps[h.fsm.step]
+	h.fanPower = NewPowerController(step.StepType, 0, step.Fan)
+	h.heaterPower = NewPowerController(step.StepType, float32(step.TargetTemperature), step.Heater)
+	h.humidifierPower = NewPowerController(step.StepType, 0, step.Humidifier)
 }
 
 func (h *failedStateHandler) executeState() fsmState {

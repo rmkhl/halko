@@ -1,4 +1,4 @@
-// Implements simple, delta and PID based power controller.
+// Implements simple, per-phase delta, and PID based power controllers.
 package engine
 
 import (
@@ -21,10 +21,11 @@ type (
 		State  PidControllerState
 	}
 
-	PowerController struct {
-		PidController     *PidController
-		TargetTemperature float32
-		Settings          *types.PowerPidSettings
+	// PowerController decides the power percentage from the latest temperature
+	// readings. Implementations own whatever state they need; the returned value
+	// is re-commanded to the power unit on every reading.
+	PowerController interface {
+		Update(kilnTemperature, materialTemperature float32) uint8
 	}
 )
 
@@ -50,47 +51,43 @@ func (c *PidController) Update(reference float32, actual float32) float32 {
 		c.Config.Kd*c.State.CurrentErrorDerivative
 }
 
-// New power controller with the given configuration and settings.
-func NewPowerController(targetTemperature float32, settings *types.PowerPidSettings) *PowerController {
-	controller := &PowerController{
-		TargetTemperature: targetTemperature,
-		Settings:          settings,
+// NewPowerController selects the controller implementation for a program
+// step. Unresolvable settings yield a 0% simple controller so the heater
+// stays off (fail-safe).
+func NewPowerController(stepType types.StepType, targetTemperature float32, settings *types.PowerPidSettings) PowerController {
+	failSafe := &simplePowerController{power: 0}
+	if settings == nil {
+		return failSafe
 	}
 
-	if settings.Type == types.PowerSettingTypePid {
-		controller.PidController = NewPidController(settings.Pid)
-	}
-
-	return controller
-}
-
-// Update the power controller with the current temperature and power.
-// Returns the new power percentage to use.
-func (c *PowerController) Update(power uint8, owenTemperature float32, woodTemperature float32) uint8 {
-	switch c.Settings.Type {
+	switch settings.Type {
 	case types.PowerSettingTypeSimple:
-		return *c.Settings.Power
+		if settings.Power == nil {
+			return failSafe
+		}
+		return &simplePowerController{power: *settings.Power}
 
 	case types.PowerSettingTypeDelta:
-		targetTemperature := c.TargetTemperature
-
-		maxOvenTemp := woodTemperature + *c.Settings.MaxDelta
-		targetTemperature = min(targetTemperature, maxOvenTemp)
-
-		minOvenTemp := woodTemperature + *c.Settings.MinDelta
-		targetTemperature = max(targetTemperature, minOvenTemp)
-
-		if owenTemperature < targetTemperature {
-			return 100
+		if settings.MinDelta == nil || settings.MaxDelta == nil {
+			return failSafe
 		}
-		return 0
+		switch stepType {
+		case types.StepTypeHeating:
+			return &heatingDeltaController{minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, heaterOn: true}
+		case types.StepTypeAcclimate:
+			return &acclimateDeltaController{target: targetTemperature, minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, envelopeOK: true}
+		default:
+			return failSafe
+		}
 
 	case types.PowerSettingTypePid:
-		powerDelta := c.PidController.Update(c.TargetTemperature, owenTemperature)
-		return uint8(min(100, max(int(float32(power)+powerDelta), 0)))
+		if settings.Pid == nil {
+			return failSafe
+		}
+		return &pidPowerController{pid: NewPidController(settings.Pid), target: targetTemperature}
 
 	default:
-		return 0 // Safeguard, this should not happen, but lets turn everything off
+		return failSafe
 	}
 }
 
