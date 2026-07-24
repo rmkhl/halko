@@ -2,6 +2,9 @@ package engine
 
 import (
 	"testing"
+	"time"
+
+	"github.com/rmkhl/halko/types"
 )
 
 type reading struct {
@@ -98,5 +101,35 @@ func TestAcclimateDeltaHoldsTarget(t *testing.T) {
 			c := &acclimateDeltaController{target: 60, minDelta: 5, maxDelta: 20, envelopeOK: true}
 			runSequence(t, c, tt.seq)
 		})
+	}
+}
+
+func TestSimplePowerControllerReturnsFixedPower(t *testing.T) {
+	c := &simplePowerController{power: 40}
+	runSequence(t, c, []reading{
+		{kiln: 10, material: 10, want: 40},
+		{kiln: 90, material: 20, want: 40},
+	})
+}
+
+func TestPidPowerControllerTracksItsOwnOutput(t *testing.T) {
+	c := &pidPowerController{
+		pid:    NewPidController(&types.PidSettings{Kp: 10}),
+		target: 100,
+	}
+	// Backdate the PID state so Update sees a 1-second sample interval
+	// (the first PidController.Update call otherwise just initializes state).
+	c.pid.State.PreviousUpdate = time.Now().Unix() - 1
+
+	// error = 100-90 = 10, Kp*10 = +100 applied to lastPower 0, clamped to 100
+	if got := c.Update(90, 0); got != 100 {
+		t.Fatalf("first Update = %d, want 100", got)
+	}
+
+	c.pid.State.PreviousUpdate = time.Now().Unix() - 1
+	// error = 100-200 = -100, Kp*-100 = -1000 applied to lastPower 100, clamped to 0.
+	// This fails if the implementation uses anything but its own last output as base.
+	if got := c.Update(200, 0); got != 0 {
+		t.Fatalf("second Update = %d, want 0", got)
 	}
 }

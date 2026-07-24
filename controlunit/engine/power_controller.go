@@ -141,3 +141,26 @@ func (c *acclimateDeltaController) Update(kilnTemperature, materialTemperature f
 	}
 	return 0
 }
+
+// simplePowerController always returns its configured power.
+type simplePowerController struct {
+	power uint8
+}
+
+func (c *simplePowerController) Update(_, _ float32) uint8 {
+	return c.power
+}
+
+// pidPowerController adjusts its own previous output by the PID delta,
+// clamped to 0-100. PID error is computed on kiln temperature vs target.
+type pidPowerController struct {
+	pid       *PidController
+	target    float32
+	lastPower uint8
+}
+
+func (c *pidPowerController) Update(kilnTemperature, _ float32) uint8 {
+	powerDelta := c.pid.Update(c.target, kilnTemperature)
+	c.lastPower = uint8(min(100, max(int(float32(c.lastPower)+powerDelta), 0)))
+	return c.lastPower
+}
