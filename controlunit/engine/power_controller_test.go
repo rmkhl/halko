@@ -1,0 +1,65 @@
+package engine
+
+import (
+	"testing"
+)
+
+type reading struct {
+	kiln     float32
+	material float32
+	want     uint8
+}
+
+// updater is satisfied by every power controller implementation.
+type updater interface {
+	Update(kilnTemperature, materialTemperature float32) uint8
+}
+
+func runSequence(t *testing.T, c updater, seq []reading) {
+	t.Helper()
+	for i, r := range seq {
+		if got := c.Update(r.kiln, r.material); got != r.want {
+			t.Fatalf("step %d: Update(kiln=%v, material=%v) = %d, want %d", i, r.kiln, r.material, got, r.want)
+		}
+	}
+}
+
+func TestHeatingDeltaHysteresis(t *testing.T) {
+	tests := []struct {
+		name string
+		seq  []reading
+	}{
+		{
+			name: "starts heating and cuts off at upper bound",
+			seq: []reading{
+				{kiln: 20, material: 20, want: 100}, // below band, heat
+				{kiln: 39, material: 20, want: 100}, // inside band while rising, keep heating
+				{kiln: 40, material: 20, want: 0},   // reached material+maxDelta, off
+			},
+		},
+		{
+			name: "stays off inside band until lower bound reached",
+			seq: []reading{
+				{kiln: 41, material: 20, want: 0},   // above band, off
+				{kiln: 30, material: 20, want: 0},   // falling through band, stay off (hysteresis)
+				{kiln: 26, material: 20, want: 0},   // still above material+minDelta, stay off
+				{kiln: 25, material: 20, want: 100}, // reached material+minDelta, back on
+				{kiln: 30, material: 20, want: 100}, // rising through band, keep heating
+			},
+		},
+		{
+			name: "band follows the material temperature",
+			seq: []reading{
+				{kiln: 50, material: 40, want: 100}, // inside band [45,60], initial state on
+				{kiln: 60, material: 40, want: 0},   // reached 40+20, off
+				{kiln: 60, material: 55, want: 100}, // material caught up: 55+5=60, on again
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &heatingDeltaController{minDelta: 5, maxDelta: 20, heaterOn: true}
+			runSequence(t, c, tt.seq)
+		})
+	}
+}

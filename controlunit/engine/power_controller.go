@@ -93,3 +93,26 @@ func (c *PowerController) Update(power uint8, owenTemperature float32, woodTempe
 		return 0 // Safeguard, this should not happen, but lets turn everything off
 	}
 }
+
+// heatingDeltaController keeps the kiln inside the band
+// [material+minDelta, material+maxDelta] with hysteresis: the heater turns
+// off at the upper bound, back on at the lower bound, and holds its previous
+// state inside the band.
+type heatingDeltaController struct {
+	minDelta float32
+	maxDelta float32
+	heaterOn bool
+}
+
+func (c *heatingDeltaController) Update(kilnTemperature, materialTemperature float32) uint8 {
+	switch {
+	case kilnTemperature >= materialTemperature+c.maxDelta:
+		c.heaterOn = false
+	case kilnTemperature <= materialTemperature+c.minDelta:
+		c.heaterOn = true
+	}
+	if c.heaterOn {
+		return 100
+	}
+	return 0
+}
