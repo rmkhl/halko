@@ -105,6 +105,18 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	return &runner, nil
 }
 
+// requestSensorRead asks a sensor reader for a fresh sample. It reports
+// whether the request was taken; a reader that is still serving the previous
+// request is left alone instead of blocking the caller.
+func requestSensorRead(commands chan<- string) bool {
+	select {
+	case commands <- sensorRead:
+		return true
+	default:
+		return false
+	}
+}
+
 func (runner *programRunner) Run() {
 	tickLength, err := time.ParseDuration(runner.halkoConfig.ControlUnitConfig.TickLength)
 	if err != nil {
@@ -118,15 +130,14 @@ func (runner *programRunner) Run() {
 	_ = runner.statusWriter.UpdateState(types.ProgramStateRunning)
 	// Note: fsmController.Start() was already called in Start() method
 	for runner.active && !runner.fsmController.Completed() {
-		now := time.Now().Unix()
 		select {
 		case <-ticker.C:
-			if now-runner.temperatureStatus.updated > 30 {
-				runner.temperatureSensorCommands <- sensorRead
-			}
-			if now-runner.psuStatus.updated > 30 {
-				runner.psuSensorCommands <- sensorRead
-			}
+			// Ask for a fresh sample every tick so the controllers act on
+			// readings no older than the control period. A reader still
+			// working on the previous request is skipped rather than waited
+			// for, keeping the run loop on schedule.
+			requestSensorRead(runner.temperatureSensorCommands)
+			requestSensorRead(runner.psuSensorCommands)
 			runner.fsmController.executeTick()
 		case psuState := <-runner.psuSensorResponses:
 			runner.psuStatus.updated = time.Now().Unix()
