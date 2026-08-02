@@ -1,4 +1,4 @@
-// Implements simple, delta and PID based power controller.
+// Implements simple, per-phase delta, and PID based power controllers.
 package engine
 
 import (
@@ -21,10 +21,11 @@ type (
 		State  PidControllerState
 	}
 
-	PowerController struct {
-		PidController     *PidController
-		TargetTemperature float32
-		Settings          *types.PowerPidSettings
+	// PowerController decides the power percentage from the latest temperature
+	// readings. Implementations own whatever state they need; the returned value
+	// is re-commanded to the power unit on every reading.
+	PowerController interface {
+		Update(kilnTemperature, materialTemperature float32) uint8
 	}
 )
 
@@ -50,46 +51,113 @@ func (c *PidController) Update(reference float32, actual float32) float32 {
 		c.Config.Kd*c.State.CurrentErrorDerivative
 }
 
-// New power controller with the given configuration and settings.
-func NewPowerController(targetTemperature float32, settings *types.PowerPidSettings) *PowerController {
-	controller := &PowerController{
-		TargetTemperature: targetTemperature,
-		Settings:          settings,
+// NewPowerController selects the controller implementation for a program
+// step. Unresolvable settings yield a 0% simple controller so the heater
+// stays off (fail-safe).
+func NewPowerController(stepType types.StepType, targetTemperature float32, settings *types.PowerPidSettings) PowerController {
+	failSafe := &simplePowerController{power: 0}
+	if settings == nil {
+		return failSafe
 	}
 
-	if settings.Type == types.PowerSettingTypePid {
-		controller.PidController = NewPidController(settings.Pid)
-	}
-
-	return controller
-}
-
-// Update the power controller with the current temperature and power.
-// Returns the new power percentage to use.
-func (c *PowerController) Update(power uint8, owenTemperature float32, woodTemperature float32) uint8 {
-	switch c.Settings.Type {
+	switch settings.Type {
 	case types.PowerSettingTypeSimple:
-		return *c.Settings.Power
+		if settings.Power == nil {
+			return failSafe
+		}
+		return &simplePowerController{power: *settings.Power}
 
 	case types.PowerSettingTypeDelta:
-		targetTemperature := c.TargetTemperature
-
-		maxOvenTemp := woodTemperature + *c.Settings.MaxDelta
-		targetTemperature = min(targetTemperature, maxOvenTemp)
-
-		minOvenTemp := woodTemperature + *c.Settings.MinDelta
-		targetTemperature = max(targetTemperature, minOvenTemp)
-
-		if owenTemperature < targetTemperature {
-			return 100
+		if settings.MinDelta == nil || settings.MaxDelta == nil {
+			return failSafe
 		}
-		return 0
+		switch stepType {
+		case types.StepTypeHeating:
+			return &heatingDeltaController{minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, heaterOn: true}
+		case types.StepTypeAcclimate:
+			return &acclimateDeltaController{target: targetTemperature, minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, envelopeOK: true}
+		default:
+			return failSafe
+		}
 
 	case types.PowerSettingTypePid:
-		powerDelta := c.PidController.Update(c.TargetTemperature, owenTemperature)
-		return uint8(min(100, max(int(float32(power)+powerDelta), 0)))
+		if settings.Pid == nil {
+			return failSafe
+		}
+		return &pidPowerController{pid: NewPidController(settings.Pid), target: targetTemperature}
 
 	default:
-		return 0 // Safeguard, this should not happen, but lets turn everything off
+		return failSafe
 	}
+}
+
+// heatingDeltaController keeps the kiln inside the band
+// [material+minDelta, material+maxDelta] with hysteresis: the heater turns
+// off at the upper bound, back on at the lower bound, and holds its previous
+// state inside the band.
+type heatingDeltaController struct {
+	minDelta float32
+	maxDelta float32
+	heaterOn bool
+}
+
+func (c *heatingDeltaController) Update(kilnTemperature, materialTemperature float32) uint8 {
+	switch {
+	case kilnTemperature >= materialTemperature+c.maxDelta:
+		c.heaterOn = false
+	case kilnTemperature <= materialTemperature+c.minDelta:
+		c.heaterOn = true
+	}
+	if c.heaterOn {
+		return 100
+	}
+	return 0
+}
+
+// acclimateDeltaController holds the material at the step target while
+// keeping the kiln inside the delta safety envelope relative to the material.
+// Heating requires both demand (material below target, no hysteresis) and an
+// armed envelope (same hysteresis band as heating: disarm at
+// material+maxDelta, re-arm at material+minDelta).
+type acclimateDeltaController struct {
+	target     float32
+	minDelta   float32
+	maxDelta   float32
+	envelopeOK bool
+}
+
+func (c *acclimateDeltaController) Update(kilnTemperature, materialTemperature float32) uint8 {
+	switch {
+	case kilnTemperature >= materialTemperature+c.maxDelta:
+		c.envelopeOK = false
+	case kilnTemperature <= materialTemperature+c.minDelta:
+		c.envelopeOK = true
+	}
+	if c.envelopeOK && materialTemperature < c.target {
+		return 100
+	}
+	return 0
+}
+
+// simplePowerController always returns its configured power.
+type simplePowerController struct {
+	power uint8
+}
+
+func (c *simplePowerController) Update(_, _ float32) uint8 {
+	return c.power
+}
+
+// pidPowerController adjusts its own previous output by the PID delta,
+// clamped to 0-100. PID error is computed on kiln temperature vs target.
+type pidPowerController struct {
+	pid       *PidController
+	target    float32
+	lastPower uint8
+}
+
+func (c *pidPowerController) Update(kilnTemperature, _ float32) uint8 {
+	powerDelta := c.pid.Update(c.target, kilnTemperature)
+	c.lastPower = uint8(min(100, max(int(float32(c.lastPower)+powerDelta), 0)))
+	return c.lastPower
 }
