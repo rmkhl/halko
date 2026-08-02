@@ -1,6 +1,11 @@
 package engine
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/rmkhl/halko/types"
@@ -122,5 +127,64 @@ func TestExecuteTickKeepsRunningWhileReadingsAreValid(t *testing.T) {
 
 	if fsm.state == fsmStateFailed {
 		t.Error("state = failed, want the program still running")
+	}
+}
+
+// TestExecuteTickFailsafeCutsAllPower drives the failsafe against a real
+// psuController backed by an httptest server, proving the failed state does
+// not just flip a status field but actually commands the heater, fan and
+// humidifier off. A gutted shutdown() body would pass every other test in
+// this file while leaving the kiln powered.
+func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
+	var mu sync.Mutex
+	commanded := map[string]uint8{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		psu := strings.TrimPrefix(r.URL.Path, "/")
+		var cmd PowerCommand
+		if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+			t.Errorf("decoding power command for %q: %v", psu, err)
+		}
+		mu.Lock()
+		commanded[psu] = cmd.Percent
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	psu := &psuController{client: server.Client(), powerControlURL: server.URL}
+
+	fsm := &programFSMController{
+		state:               fsmStateWaiting,
+		started:             1000,
+		psuController:       psu,
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+	}
+	fsm.stateHandlers = map[fsmState]fsmStateHandler{
+		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
+		fsmStateFailed:  &failedStateHandler{fsm: fsm},
+	}
+	// No valid reading has ever arrived and the threshold has passed.
+	fsm.currentTemperatures.updated = 1000 + maxInvalidTemperatureSeconds + 1
+
+	fsm.executeTickAt(fsm.started + maxInvalidTemperatureSeconds + 1)
+
+	if fsm.state != fsmStateFailed {
+		t.Fatalf("state = %q, want %q", fsm.state, fsmStateFailed)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	for _, psuName := range []string{psuOven, psuFan, psuHumidifier} {
+		percent, ok := commanded[psuName]
+		if !ok {
+			t.Errorf("psu %q was never commanded", psuName)
+			continue
+		}
+		if percent != 0 {
+			t.Errorf("psu %q commanded to %d%%, want 0%%", psuName, percent)
+		}
 	}
 }
