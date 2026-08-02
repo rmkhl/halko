@@ -77,11 +77,6 @@ type (
 		reading psuReadings
 	}
 
-	fsmTemperatures struct {
-		updated int64
-		reading temperatureReadings
-	}
-
 	programFSMController struct {
 		state   fsmState
 		started int64
