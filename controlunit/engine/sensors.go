@@ -87,7 +87,21 @@ func (controller *temperatureSensorReader) readTemperatures() (*temperatureReadi
 		return nil, err
 	}
 
-	return &temperatureReadings{Material: dataResponse.Data["material"], Kiln: dataResponse.Data["kiln"]}, nil
+	return &temperatureReadings{
+		Material: readingOrInvalid(dataResponse.Data, "material"),
+		Kiln:     readingOrInvalid(dataResponse.Data, "kiln"),
+	}, nil
+}
+
+// readingOrInvalid returns the named temperature, or the invalid sentinel
+// when the sensor unit did not report it at all. A missing key would
+// otherwise decode to a plausible looking 0 degrees.
+func readingOrInvalid(data map[string]float32, name string) float32 {
+	value, ok := data[name]
+	if !ok {
+		return types.InvalidTemperatureReading
+	}
+	return value
 }
 
 func newTemperatureSensorReader(url string, commands <-chan string, responses chan<- temperatureReadings) (*temperatureSensorReader, error) {

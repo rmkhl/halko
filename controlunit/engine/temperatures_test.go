@@ -83,3 +83,44 @@ func TestInvalidForReportsTheWorseSensor(t *testing.T) {
 		t.Errorf("seconds = %d, want 130", seconds)
 	}
 }
+
+func TestExecuteTickFailsProgramWhenSensorInvalidTooLong(t *testing.T) {
+	fsm := &programFSMController{
+		state:               fsmStateWaiting,
+		started:             1000,
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+	}
+	fsm.stateHandlers = map[fsmState]fsmStateHandler{
+		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
+		fsmStateFailed:  &failedStateHandler{fsm: fsm},
+	}
+	// No valid reading has ever arrived and the threshold has passed.
+	fsm.currentTemperatures.updated = 1000 + maxInvalidTemperatureSeconds + 1
+
+	fsm.executeTickAt(fsm.started + maxInvalidTemperatureSeconds + 1)
+
+	if fsm.state != fsmStateFailed {
+		t.Errorf("state = %q, want %q", fsm.state, fsmStateFailed)
+	}
+}
+
+func TestExecuteTickKeepsRunningWhileReadingsAreValid(t *testing.T) {
+	fsm := &programFSMController{
+		state:               fsmStateWaiting,
+		started:             1000,
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+	}
+	fsm.stateHandlers = map[fsmState]fsmStateHandler{
+		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
+		fsmStateFailed:  &failedStateHandler{fsm: fsm},
+	}
+	fsm.currentTemperatures.observe(temperatureReadings{Kiln: 100, Material: 50}, 1100)
+
+	fsm.executeTickAt(1150)
+
+	if fsm.state == fsmStateFailed {
+		t.Error("state = failed, want the program still running")
+	}
+}
