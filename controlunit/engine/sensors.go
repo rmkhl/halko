@@ -144,7 +144,7 @@ func (controller *psuSensorReader) readSensors() (*psuReadings, error) {
 		return nil, err
 	}
 
-	return &psuReadings{Fan: dataResponse.Data["fan"], Heater: dataResponse.Data["heater"], Humidifier: dataResponse.Data["heater"]}, nil
+	return &psuReadings{Fan: dataResponse.Data["fan"], Heater: dataResponse.Data["heater"], Humidifier: dataResponse.Data["humidifier"]}, nil
 }
 
 func newPSUSensorReader(url string, commands <-chan string, responses chan<- psuReadings) (*psuSensorReader, error) {
