@@ -43,6 +43,7 @@ make run-webapp       # dev server on :1234 with hot reload
 make tmux-debug-run   # all services + simulator in tmux
 LOGLEVEL=4 make tmux-debug-run  # verbose logging (0=ERROR … 4=TRACE)
 SIMULATOR=thermodynamic make tmux-debug-run
+make tmux-debug-fail-run  # same, but the simulator injects escalating sensor failures
 
 # ESP32
 make build-esp32      # compile firmware

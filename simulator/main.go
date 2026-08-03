@@ -151,6 +151,7 @@ func main() {
 	}
 	log.Info("Configured %d Shelly switch mappings from power_unit.power_mapping", len(shellyControls))
 
+	// Keys must stay in sync with sensorNames in simulator/faults/faults.go.
 	temperatureSensors := map[string]engine.TemperatureSensor{"kiln": heater, "material": wood}
 
 	ticker := time.NewTicker(tickDuration)

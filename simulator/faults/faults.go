@@ -30,6 +30,7 @@ const (
 
 // sensorNames are the readings the simulator's /temperatures endpoint
 // exposes. Failures are injected into these keys.
+// Must stay in sync with the temperatureSensors map in simulator/main.go.
 var sensorNames = []string{"kiln", "material"}
 
 // Injector rewrites temperature readings to types.InvalidTemperatureReading on

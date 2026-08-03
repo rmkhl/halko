@@ -43,7 +43,7 @@ func TestObserveArmsOnceKilnExceedsMaterial(t *testing.T) {
 
 	// Cooling drops the kiln back below the material; the clock must not
 	// restart, so a later arming attempt keeps the original timestamp.
-	i.Observe(30.0, 25.0, start.Add(time.Minute))
+	i.Observe(20.0, 25.0, start.Add(time.Minute))
 	if !i.armedAt.Equal(start) {
 		t.Fatalf("expected arm time to stay %v, got %v", start, i.armedAt)
 	}
