@@ -143,8 +143,9 @@ func (runner *programRunner) Run() {
 			runner.psuStatus.updated = time.Now().Unix()
 			runner.psuStatus.reading = psuState
 		case temperatures := <-runner.temperatureSensorResponses:
-			runner.temperatureStatus.updated = time.Now().Unix()
-			runner.temperatureStatus.reading = temperatures
+			now := time.Now().Unix()
+			runner.temperatureStatus.updated = now
+			runner.temperatureStatus.observe(temperatures, now)
 		}
 		runner.fsmController.UpdateStatus(runner.programStatus)
 

@@ -48,8 +48,9 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		log.Debug("Retrieved %d temperature readings from sensor unit (attempt %d/%d)", len(temperatures), attempt, maxAttempts)
 
 		response := make(types.TemperatureResponse)
-		var kilnPrimary float32
-		var kilnSecondary float32
+		// A reading the device did not report must not read as 0 degrees.
+		kilnPrimary := float32(types.InvalidTemperatureReading)
+		kilnSecondary := float32(types.InvalidTemperatureReading)
 
 		for _, temp := range temperatures {
 			switch temp.Name {

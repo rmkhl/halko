@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 	"github.com/tarm/serial"
 )
@@ -214,48 +213,10 @@ func (s *SensorUnit) GetTemperatures() ([]Temperature, error) {
 	}
 
 	log.Trace("Parsing temperature response: %q", response)
-	// Parse response format: KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC
-	readings := strings.Split(response, ",")
-	if len(readings) != 3 {
-		log.Trace("Invalid temperature reading format, expected 3 readings but got %d", len(readings))
-		return nil, fmt.Errorf("invalid temperature reading format: %s", response)
-	}
-
-	temperatures := make([]Temperature, 0, 3)
-	for i, reading := range readings {
-		log.Trace("Processing temperature reading %d: %q", i+1, reading)
-		parts := strings.Split(reading, "=")
-		if len(parts) != 2 {
-			log.Trace("Skipping malformed reading: %q", reading)
-			continue
-		}
-
-		name := parts[0]
-		valueStr := parts[1]
-		log.Trace("Parsing sensor %q with value %q", name, valueStr)
-
-		var value float32
-		var unit string
-
-		if valueStr == "NaN" {
-			log.Debug("Sensor %q has invalid reading (NaN)", name)
-			value = types.InvalidTemperatureReading
-			unit = "C"
-		} else {
-			unit = string(valueStr[len(valueStr)-1])
-			valueStr = valueStr[:len(valueStr)-1]
-			_, err := fmt.Sscanf(valueStr, "%f", &value)
-			if err != nil {
-				log.Warning("Failed to parse temperature value for sensor %s: %s", name, valueStr)
-				continue
-			}
-		}
-
-		temperatures = append(temperatures, Temperature{
-			Name:  name,
-			Value: value,
-			Unit:  unit,
-		})
+	temperatures, err := parseTemperatureResponse(response)
+	if err != nil {
+		log.Warning("Failed to parse temperature response: %v", err)
+		return nil, err
 	}
 
 	log.Trace("Successfully parsed %d temperature readings", len(temperatures))

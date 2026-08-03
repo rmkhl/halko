@@ -3,6 +3,7 @@ package router
 import (
 	"sync"
 
+	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/simulator/physics"
 )
 
@@ -19,6 +20,7 @@ type SimulationResetter struct {
 	InitialKilnTemp     float32
 	InitialMaterialTemp float32
 	EnvironmentTemp     float32
+	Faults              *faults.Injector
 	Mutex               sync.Mutex
 	LastMessage         string // Track last display message to avoid redundant resets
 }

@@ -77,11 +77,6 @@ type (
 		reading psuReadings
 	}
 
-	fsmTemperatures struct {
-		updated int64
-		reading temperatureReadings
-	}
-
 	programFSMController struct {
 		state   fsmState
 		started int64
@@ -121,7 +116,9 @@ func (h *startStateHandler) enterState() {
 
 func (h *waitingStateHandler) executeState() fsmState {
 	// Make sure we have received updated temperature and psu status
-	if h.fsm.currentPSUStatus.updated >= h.fsm.started && h.fsm.currentTemperatures.updated >= h.fsm.started {
+	sensorsValid := h.fsm.currentTemperatures.kilnValidAt >= h.fsm.started &&
+		h.fsm.currentTemperatures.materialValidAt >= h.fsm.started
+	if h.fsm.currentPSUStatus.updated >= h.fsm.started && sensorsValid {
 		log.Debug("FSM: waiting state - sensors ready (PSU: %s, Temp: %s), transitioning to preheat",
 			time.Unix(h.fsm.currentPSUStatus.updated, 0).Format(time.RFC3339),
 			time.Unix(h.fsm.currentTemperatures.updated, 0).Format(time.RFC3339))
@@ -353,9 +350,25 @@ func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStat
 }
 
 func (p *programFSMController) executeTick() {
+	p.executeTickAt(time.Now().Unix())
+}
+
+func (p *programFSMController) executeTickAt(now int64) {
 	// Reached the end of the program
 	if p.Completed() {
 		log.Trace("FSM: executeTick - program completed, no action")
+		return
+	}
+
+	// A sensor that has stopped reporting valid readings leaves the
+	// controllers working from a frozen value, so stop the program and
+	// switch everything off rather than keep heating blind.
+	if sensor, seconds := p.currentTemperatures.invalidFor(now, p.started); seconds > maxInvalidTemperatureSeconds {
+		log.Error("FSM: no valid %s temperature for %ds (limit %ds) - failing program",
+			sensor, seconds, maxInvalidTemperatureSeconds)
+		p.state = fsmStateFailed
+		p.stepStarted = now
+		p.stateHandlers[p.state].enterState()
 		return
 	}
 
@@ -379,6 +392,10 @@ func (p *programFSMController) executeTick() {
 func (p *programFSMController) shutdown() {
 	if p.stopped == 0 {
 		p.stopped = time.Now().Unix()
+		if p.psuController == nil {
+			log.Debug("FSM: Shutdown with no power controller attached")
+			return
+		}
 		log.Info("FSM: Shutting down - turning off all power")
 		p.psuController.setPower(psuOven, 0)
 		p.psuController.setPower(psuFan, 0)

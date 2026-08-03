@@ -1,7 +1,17 @@
 const degreesCelsius = "°C";
 
+// The sensor unit reports a failed probe as absolute zero. Nothing at or below
+// it is a real reading, so show it as NaN rather than a believable -273.15°C.
+const invalidTemperatureReading = -273.15;
+
 export const celsius = (value?: number) => {
-  return value !== undefined ? `${value.toFixed(1)}${degreesCelsius}` : `${degreesCelsius}`;
+  if (value === undefined) {
+    return `${degreesCelsius}`;
+  }
+  if (value <= invalidTemperatureReading) {
+    return "NaN";
+  }
+  return `${value.toFixed(1)}${degreesCelsius}`;
 };
 
 export const celsiusRange = (a: number, b: number) => {
