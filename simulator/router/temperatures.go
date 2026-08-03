@@ -2,13 +2,15 @@ package router
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 )
 
-func readAllTemperatureSensors(sensors map[string]engine.TemperatureSensor) http.HandlerFunc {
+func readAllTemperatureSensors(sensors map[string]engine.TemperatureSensor, injector *faults.Injector) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Trace("Processing temperature request from %s", r.RemoteAddr)
 		resp := make(types.TemperatureResponse)
@@ -16,6 +18,10 @@ func readAllTemperatureSensors(sensors map[string]engine.TemperatureSensor) http
 			resp[name] = sensor.Temperature()
 		}
 		log.Trace("Retrieved %d temperature readings from simulator", len(resp))
+
+		// Injection is a no-op unless -fail-sensors was given, and rolls
+		// per read so each control unit poll is an independent chance.
+		injector.Apply(resp, time.Now())
 
 		response := types.APIResponse[types.TemperatureResponse]{Data: resp}
 		log.Trace("Returning temperature data: kiln=%.1f°C, material=%.1f°C", resp["kiln"], resp["material"])

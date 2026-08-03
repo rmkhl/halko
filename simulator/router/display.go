@@ -50,6 +50,9 @@ func (r *Router) setDisplay(w http.ResponseWriter, req *http.Request) {
 			r.Resetter.PhysicsState.FanIsOn = false
 			r.Resetter.PhysicsState.HumidifierIsOn = false
 
+			// Replay the failure schedule from the start on the next run.
+			r.Resetter.Faults.Reset()
+
 			log.Info("Simulation reset complete")
 		}
 	} else if r.Resetter != nil {

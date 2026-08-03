@@ -12,6 +12,7 @@ import (
 
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/simulator/physics"
 	"github.com/rmkhl/halko/simulator/router"
 	"github.com/rmkhl/halko/types"
@@ -24,6 +25,9 @@ func main() {
 	// Simulator-specific configuration flag
 	simConfigPath := flag.String("sim-config", "", "Path to simulator configuration file (simulator.conf)")
 	flag.StringVar(simConfigPath, "s", "", "Path to simulator configuration file (shorthand)")
+
+	// Sensor failure injection, off unless requested
+	failSensors := flag.Bool("fail-sensors", false, "Inject escalating temperature sensor failures during a run")
 
 	// Parse global options and load configurations
 	opts, err := types.ParseGlobalOptions()
@@ -113,6 +117,11 @@ func main() {
 	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (kiln: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
 		simConfig.InitialKilnTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
 
+	faultInjector := faults.New(*failSensors)
+	if *failSensors {
+		log.Info("Sensor failure injection enabled: the schedule starts once the kiln temperature rises above the material temperature")
+	}
+
 	// Initialize physics state
 	physicsState := &physics.SimulationState{
 		KilnTemp:        float32(simConfig.InitialKilnTemp),
@@ -164,11 +173,12 @@ func main() {
 		InitialKilnTemp:     float32(simConfig.InitialKilnTemp),
 		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
 		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
+		Faults:              faultInjector,
 	}
 
 	// Create SensorUnit emulation server
 	sensorMux := http.NewServeMux()
-	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit, resetter)
+	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit, resetter, faultInjector)
 	sensorHandler := router.CORSMiddleware(sensorMux)
 
 	shellySrv := &http.Server{
@@ -210,6 +220,8 @@ func main() {
 				// Apply physics results back to elements
 				heater.SetTemperature(physicsState.KilnTemp)
 				wood.SetTemperature(physicsState.MaterialTemp)
+
+				faultInjector.Observe(physicsState.KilnTemp, physicsState.MaterialTemp, time.Now())
 
 				// Log status summary at configured interval
 				if simConfig.StatusInterval > 0 && tickCount%simConfig.StatusInterval == 0 {
