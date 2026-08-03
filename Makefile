@@ -527,9 +527,12 @@ lint-webapp: $(NODE) webapp/node_modules
 	@echo "Linting webapp..."
 	@cd webapp && $(NPM) run lint && $(NPM) run typecheck
 
-.PHONY: tmux-debug-run tmux-debug-stop
+.PHONY: tmux-debug-run tmux-debug-fail-run tmux-debug-stop
 tmux-debug-run: all
 	@LOGLEVEL=$(LOGLEVEL) SIMULATOR=$(SIMULATOR) ./scripts/tmux-debug-start.sh
+
+tmux-debug-fail-run: all
+	@LOGLEVEL=$(LOGLEVEL) SIMULATOR=$(SIMULATOR) FAIL_SENSORS=yes ./scripts/tmux-debug-start.sh
 
 tmux-debug-stop:
 	@./scripts/tmux-debug-stop.sh
@@ -598,6 +601,9 @@ help:
 	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-run"
 	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"
+	@echo "  tmux-debug-fail-run        Same, but the simulator injects sensor failures."
+	@echo "                               Dropouts at 1min, one sensor lost at 2min, both at 3min."
+	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-fail-run"
 	@echo "  tmux-debug-stop            Stop and terminate the tmux debug session."
 
 .DEFAULT_GOAL := help

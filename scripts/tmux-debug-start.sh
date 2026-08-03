@@ -14,6 +14,9 @@ LOGLEVEL=${LOGLEVEL:-3}
 # Options: thermodynamic, differential, or any other simulator-*.conf file
 SIMULATOR=${SIMULATOR:-}
 
+# Inject temperature sensor failures (any non-empty value enables it)
+FAIL_SENSORS=${FAIL_SENSORS:-}
+
 # Check if session already exists
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "Session '$SESSION' already exists."
@@ -36,6 +39,11 @@ if [ -n "$SIMULATOR" ]; then
     echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL, simulator=$SIMULATOR..."
 else
     echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL..."
+fi
+
+if [ -n "$FAIL_SENSORS" ]; then
+    SIM_CMD="$SIM_CMD -fail-sensors"
+    echo "Sensor failure injection ENABLED: readings degrade once the kiln passes the material."
 fi
 
 # Run each service as the window's command instead of typing it into an
@@ -82,6 +90,7 @@ else
     echo "  LOGLEVEL=2 make tmux-debug-run                          # INFO level"
     echo "  SIMULATOR=thermodynamic make tmux-debug-run             # Use thermodynamic model"
     echo "  LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run   # Both options"
+    echo "  make tmux-debug-fail-run                               # Inject sensor failures"
     echo ""
     echo "Tmux keybindings:"
     echo "  Ctrl+b n       - Next window"
