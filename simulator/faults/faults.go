@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 )
 
@@ -27,6 +28,10 @@ const (
 	dropoutProbability = 0.2
 )
 
+// sensorNames are the readings the simulator's /temperatures endpoint
+// exposes. Failures are injected into these keys.
+var sensorNames = []string{"kiln", "material"}
+
 // Injector rewrites temperature readings to types.InvalidTemperatureReading on
 // an escalating schedule. It stays inert until Observe sees the kiln rise
 // above the material, which is the simulator's proxy for a program heating.
@@ -39,6 +44,12 @@ type Injector struct {
 	rng     *rand.Rand
 	armed   bool
 	armedAt time.Time
+	// lost holds the sensors that fail on every read, in the order they
+	// were lost.
+	lost []string
+	// dropoutsLogged keeps the intermittent-stage announcement to one line
+	// rather than one per read.
+	dropoutsLogged bool
 }
 
 // New returns an Injector seeded from the clock. When enabled is false the
@@ -88,5 +99,85 @@ func (i *Injector) Reset() {
 
 	i.armed = false
 	i.armedAt = time.Time{}
+	i.lost = nil
+	i.dropoutsLogged = false
 	log.Info("Sensor failure injection reset")
+}
+
+// Apply rewrites readings that the current stage of the schedule says have
+// failed, replacing them with types.InvalidTemperatureReading. It mutates the
+// map in place and does nothing until the injector is armed.
+func (i *Injector) Apply(readings types.TemperatureResponse, now time.Time) {
+	if i == nil || !i.enabled {
+		return
+	}
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	if !i.armed {
+		return
+	}
+
+	elapsed := now.Sub(i.armedAt)
+	if elapsed >= dropoutsBegin && !i.dropoutsLogged {
+		i.dropoutsLogged = true
+		log.Info("Sensor failure injection: intermittent dropouts begin (%.0f%% chance per sensor per read)",
+			dropoutProbability*100)
+	}
+	i.loseSensors(lostByElapsed(elapsed))
+
+	for _, sensor := range sensorNames {
+		if _, ok := readings[sensor]; !ok {
+			continue
+		}
+		if i.isLost(sensor) || (elapsed >= dropoutsBegin && i.rng.Float64() < dropoutProbability) {
+			readings[sensor] = types.InvalidTemperatureReading
+			log.Debug("Sensor failure injection: reporting %s as invalid", sensor)
+		}
+	}
+}
+
+// lostByElapsed returns how many sensors should be failing permanently by the
+// given point in the schedule.
+func lostByElapsed(elapsed time.Duration) int {
+	switch {
+	case elapsed >= secondSensorLostAt:
+		return len(sensorNames)
+	case elapsed >= firstSensorLostAt:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// loseSensors picks sensors at random until the wanted number are failing
+// permanently. Callers hold i.mu.
+func (i *Injector) loseSensors(wanted int) {
+	for len(i.lost) < wanted {
+		remaining := make([]string, 0, len(sensorNames))
+		for _, sensor := range sensorNames {
+			if !i.isLost(sensor) {
+				remaining = append(remaining, sensor)
+			}
+		}
+		if len(remaining) == 0 {
+			return
+		}
+
+		sensor := remaining[i.rng.IntN(len(remaining))]
+		i.lost = append(i.lost, sensor)
+		log.Info("Sensor failure injection: %s sensor lost, now failing on every read (%d of %d lost)",
+			sensor, len(i.lost), len(sensorNames))
+	}
+}
+
+// isLost reports whether a sensor is failing permanently. Callers hold i.mu.
+func (i *Injector) isLost(sensor string) bool {
+	for _, name := range i.lost {
+		if name == sensor {
+			return true
+		}
+	}
+	return false
 }
