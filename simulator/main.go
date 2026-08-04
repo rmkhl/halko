@@ -15,6 +15,7 @@ import (
 	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/simulator/physics"
 	"github.com/rmkhl/halko/simulator/router"
+	"github.com/rmkhl/halko/simulator/simulation"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 )
@@ -165,16 +166,16 @@ func main() {
 	shellyHandler := router.CORSMiddleware(shellyMux)
 
 	// Create simulation resetter for display endpoint
-	resetter := &router.SimulationResetter{
+	resetter := &simulation.Resetter{
 		Heater:              heater,
 		Wood:                wood,
 		Fan:                 fan,
 		Humidifier:          humidifier,
 		PhysicsState:        physicsState,
+		Faults:              faultInjector,
 		InitialKilnTemp:     float32(simConfig.InitialKilnTemp),
 		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
 		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
-		Faults:              faultInjector,
 	}
 
 	// Create SensorUnit emulation server

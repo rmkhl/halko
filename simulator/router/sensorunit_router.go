@@ -5,12 +5,13 @@ import (
 
 	"github.com/rmkhl/halko/simulator/engine"
 	"github.com/rmkhl/halko/simulator/faults"
+	"github.com/rmkhl/halko/simulator/simulation"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 )
 
 // SetupSensorUnitRoutes sets up routes for the SensorUnit emulation server using configurable endpoints
-func SetupSensorUnitRoutes(mux *http.ServeMux, temperatureSensors map[string]engine.TemperatureSensor, endpoints types.SensorUnitEndpoints, resetter *SimulationResetter, injector *faults.Injector) {
+func SetupSensorUnitRoutes(mux *http.ServeMux, temperatureSensors map[string]engine.TemperatureSensor, endpoints types.SensorUnitEndpoints, resetter *simulation.Resetter, injector *faults.Injector) {
 	log.Trace("Setting up SensorUnit emulation routes with configurable endpoints")
 	router := &Router{
 		Resetter: resetter,

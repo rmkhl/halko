@@ -1,31 +1,8 @@
 package router
 
-import (
-	"sync"
-
-	"github.com/rmkhl/halko/simulator/faults"
-	"github.com/rmkhl/halko/simulator/physics"
-)
-
-// SimulationResetter holds references for resetting the simulation to initial state
-type SimulationResetter struct {
-	Heater interface {
-		SetTemperature(float32)
-		TurnOn(bool)
-	}
-	Wood                interface{ SetTemperature(float32) }
-	Fan                 interface{ TurnOn(bool) }
-	Humidifier          interface{ TurnOn(bool) }
-	PhysicsState        *physics.SimulationState
-	InitialKilnTemp     float32
-	InitialMaterialTemp float32
-	EnvironmentTemp     float32
-	Faults              *faults.Injector
-	Mutex               sync.Mutex
-	LastMessage         string // Track last display message to avoid redundant resets
-}
+import "github.com/rmkhl/halko/simulator/simulation"
 
 // Router holds methods for handling HTTP requests
 type Router struct {
-	Resetter *SimulationResetter
+	Resetter *simulation.Resetter
 }
