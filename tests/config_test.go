@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/rmkhl/halko/types"
@@ -115,7 +116,12 @@ func createTestConfigFile(t *testing.T) string {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_halko.cfg")
 
-	err := os.WriteFile(configPath, []byte(testConfigData), 0644)
+	// The simulator creates the serial device it emulates, so the test
+	// config must name a path it may create rather than real hardware.
+	configData := strings.Replace(testConfigData, "/dev/ttyUSB0",
+		filepath.Join(tempDir, "esp32"), 1)
+
+	err := os.WriteFile(configPath, []byte(configData), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
