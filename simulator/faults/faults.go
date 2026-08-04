@@ -5,6 +5,7 @@ package faults
 
 import (
 	"math/rand/v2"
+	"slices"
 	"sync"
 	"time"
 
@@ -31,8 +32,16 @@ const (
 
 // sensorNames are the three probes the ESP32 firmware reports, in the order
 // it prints them. Must match sensorName[3] in
-// sensorunit/esp32/sensorunit/sensorunit.ino:69.
+// sensorunit/esp32/sensorunit/sensorunit.ino:69. Exported via SensorNames, so
+// the simulator's probe list is built from this instead of duplicating it.
 var sensorNames = []string{"KilnPrimary", "KilnSecondary", "Wood"}
+
+// SensorNames returns the probes failures are injected into, in the order the
+// firmware reports them. The simulator builds its probe list from this, so the
+// two cannot drift apart.
+func SensorNames() []string {
+	return slices.Clone(sensorNames)
+}
 
 // Injector rewrites temperature readings to types.InvalidTemperatureReading on
 // an escalating schedule. It stays inert until Observe sees the kiln rise

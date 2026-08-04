@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-// heloReply is the firmware's answer to `helo;`, repeated across these tests.
+// heloCommand is the parsed form of the `helo;` command, repeated across
+// these tests.
 const heloCommand = "helo"
 
 func TestFeedReturnsCompleteCommands(t *testing.T) {

@@ -50,7 +50,9 @@ The simulator emulates the ESP32 over a pseudo-terminal, so the real
 `sensorunit` service runs against it. It creates that device at the path named
 by `sensorunit.serial_device` in `halko.cfg`, which during development must
 name a path the simulator may create (for example `/tmp/halko-esp32`) rather
-than real hardware.
+than real hardware. Leaving it pointing at a real device path such as
+`/dev/ttyUSB1` makes the simulator refuse to start, naming that path in the
+error.
 
 ```bash
 # ESP32

@@ -1,6 +1,6 @@
 module github.com/rmkhl/halko/simulator
 
-go 1.25.0
+go 1.24.0
 
 require (
 	github.com/rmkhl/halko/types v0.0.0-20250925152202-3475d41465c7

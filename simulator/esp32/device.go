@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,9 +32,14 @@ type Device struct {
 // naming real hardware fails loudly instead of producing a confusing
 // permission error.
 func Open(path string) (*Device, error) {
-	// O_NONBLOCK matters beyond the flag itself: it makes the runtime treat
-	// the master as pollable, so Close unblocks a Read that Serve is parked
-	// in. Without it, shutdown would block forever on that goroutine.
+	// A tty opened via os.OpenFile is registered with netpoll on Linux
+	// regardless of O_NONBLOCK; that registration happens either way. What
+	// O_NONBLOCK actually controls here is Go's internal File.nonblock flag:
+	// passing it leaves that flag false, so the master.Fd() calls below
+	// (TIOCSPTLCK, TIOCGPTN) do not trigger the runtime's SetBlocking() and
+	// revert the descriptor to blocking mode. Close relies on the descriptor
+	// staying non-blocking to unblock the Read that Serve is parked in — the
+	// next person who adds an Fd() call here is the one who breaks shutdown.
 	master, err := os.OpenFile("/dev/ptmx", os.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open /dev/ptmx: %w", err)
@@ -89,7 +95,7 @@ func (d *Device) Serve(responder *Responder) {
 			// EIO here means every reader has gone away. Our own slave
 			// handle should prevent that, but a transient error must not
 			// kill the emulation for the rest of the run.
-			log.Debug("ESP32 emulation read failed, retrying: %v", err)
+			log.Warning("ESP32 emulation read failed, retrying: %v", err)
 			time.Sleep(readRetryDelay)
 			continue
 		}
@@ -107,20 +113,41 @@ func (d *Device) Serve(responder *Responder) {
 	}
 }
 
-// Close releases the pseudo-terminal and removes the symlink.
+// Close releases the pseudo-terminal and removes the symlink, but only if it
+// still points at this device's slave. A second simulator instance may have
+// since relinked the path to its own pty; removing that link would leave no
+// device at all.
 func (d *Device) Close() error {
 	err := d.master.Close()
 	if slaveErr := d.slave.Close(); err == nil {
 		err = slaveErr
 	}
-	if linkErr := os.Remove(d.path); err == nil && !os.IsNotExist(linkErr) {
+
+	if target, linkErr := os.Readlink(d.path); linkErr == nil {
+		if target == d.slave.Name() {
+			if rmErr := os.Remove(d.path); err == nil {
+				err = rmErr
+			}
+		}
+	} else if !os.IsNotExist(linkErr) && err == nil {
 		err = linkErr
 	}
+
 	return err
 }
 
-// link points path at target, replacing only a symlink.
+// link points path at target, replacing only a symlink. A path under /dev/
+// but outside /dev/pts/ is refused outright, before anything else is
+// attempted: the common case is a configured real device (for example
+// /dev/ttyUSB1) that simply is not plugged in, which os.Lstat reports as "no
+// such file" the same as a path this function may freely create. Falling
+// through to os.Symlink for that case fails with a confusing EACCES, since
+// /dev is not user-writable.
 func link(path, target string) error {
+	if strings.HasPrefix(path, "/dev/") && !strings.HasPrefix(path, "/dev/pts/") {
+		return fmt.Errorf("refusing to create the emulated device at %s: it is under /dev/ but not /dev/pts/, which looks like real hardware (sensorunit.serial_device must name a path the simulator may create, not real hardware)", path)
+	}
+
 	info, err := os.Lstat(path)
 	switch {
 	case err == nil && info.Mode()&os.ModeSymlink == 0:

@@ -32,10 +32,15 @@ type Switch interface {
 
 // Resetter returns the simulation to its initial state between programs.
 type Resetter struct {
-	Heater              Heater
-	Wood                TemperatureSetter
-	Fan                 Switch
-	Humidifier          Switch
+	Heater     Heater
+	Wood       TemperatureSetter
+	Fan        Switch
+	Humidifier Switch
+	// PhysicsState is written here under mu, but the tick loop in
+	// simulator/main.go writes the same struct on every tick with no lock.
+	// That race predates this type — the old HTTP display handler had it
+	// identically — and is not fixed here. mu guards Resetter's own fields
+	// (lastMessage); it does not make PhysicsState safe for concurrent use.
 	PhysicsState        *physics.SimulationState
 	Faults              *faults.Injector
 	InitialKilnTemp     float32

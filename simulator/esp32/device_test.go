@@ -98,14 +98,37 @@ func TestDeviceAnswersReadOverThePTY(t *testing.T) {
 	}
 }
 
-func TestDeviceDoesNotEchoTheCommandBack(t *testing.T) {
-	_, path := newTestDevice(t)
-	slave := openSlave(t, path)
+func TestDeviceMasterDoesNotReceiveItsOwnReply(t *testing.T) {
+	// The sensor unit connects on the slave side, so it would never see a
+	// stray echo of the command it sent (writes to the slave are not fed
+	// back through the line discipline that ECHO governs). The real hazard
+	// of leaving ECHO on is on the master side: Serve writes its reply with
+	// d.master.Write, and with ECHO on, the tty would loop that write
+	// straight back into d.master's own read side, feeding the emulator its
+	// own reply as if it were a new incoming command. Exercise that path
+	// directly, bypassing Serve, so this test fails if setRaw ever stops
+	// disabling ECHO.
+	path := filepath.Join(t.TempDir(), "esp32")
+	device, err := Open(path)
+	if err != nil {
+		t.Fatalf("failed to open the device: %v", err)
+	}
+	t.Cleanup(func() { device.Close() })
 
-	// A tty with ECHO left on would return the command itself before the
-	// reply, which would desynchronise the sensor unit's scanner.
-	if got := exchange(t, slave, "helo;"); strings.Contains(got, "helo;") {
-		t.Fatalf("expected no echo of the command, got %q", got)
+	if _, err := device.master.Write([]byte("helo\r\n")); err != nil {
+		t.Fatalf("failed to write the reply: %v", err)
+	}
+
+	if err := device.master.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+		t.Fatalf("failed to set a read deadline: %v", err)
+	}
+	buf := make([]byte, 256)
+	n, err := device.master.Read(buf)
+	if err == nil {
+		t.Fatalf("expected no data looped back to the master, got %q", buf[:n])
+	}
+	if !os.IsTimeout(err) {
+		t.Fatalf("expected a read timeout (no loopback), got %v", err)
 	}
 }
 
@@ -152,6 +175,24 @@ func TestOpenRefusesToReplaceARealFile(t *testing.T) {
 	}
 }
 
+func TestOpenRefusesARealDevicePath(t *testing.T) {
+	// This is the common development case: the ESP32 is not plugged in, so
+	// the configured path does not exist, and without this guard Open would
+	// fall through to os.Symlink and fail with a confusing EACCES instead of
+	// naming the actual problem. This must not depend on whether
+	// /dev/ttyUSB1 exists on the machine running the test.
+	path := "/dev/ttyUSB1"
+
+	device, err := Open(path)
+	if err == nil {
+		device.Close()
+		t.Fatalf("expected Open to refuse a path under /dev/ that is not under /dev/pts/")
+	}
+	if !strings.Contains(err.Error(), path) {
+		t.Fatalf("expected the error to name %s, got %v", path, err)
+	}
+}
+
 func TestCloseRemovesTheSymlink(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "esp32")
 
@@ -165,5 +206,34 @@ func TestCloseRemovesTheSymlink(t *testing.T) {
 
 	if _, err := os.Lstat(path); !os.IsNotExist(err) {
 		t.Fatalf("expected the symlink removed, got %v", err)
+	}
+}
+
+func TestServeReturnsAfterClose(t *testing.T) {
+	// main.go runs Serve in a goroutine and calls Close before wg.Wait(). If
+	// Serve ever stopped returning once closed, the simulator would hang
+	// forever on shutdown instead of failing a test.
+	path := filepath.Join(t.TempDir(), "esp32")
+	device, err := Open(path)
+	if err != nil {
+		t.Fatalf("failed to open the device: %v", err)
+	}
+
+	responder, _ := newTestResponder(faults.New(false))
+
+	done := make(chan struct{})
+	go func() {
+		device.Serve(responder)
+		close(done)
+	}()
+
+	if err := device.Close(); err != nil {
+		t.Fatalf("failed to close the device: %v", err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("Serve did not return within 2s of Close")
 	}
 }

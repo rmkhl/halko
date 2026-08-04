@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rmkhl/halko/simulator/elements"
+	"github.com/rmkhl/halko/simulator/engine"
 	"github.com/rmkhl/halko/simulator/esp32"
 	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/simulator/physics"
@@ -173,11 +174,24 @@ func main() {
 		log.Fatal("Failed to create the emulated sensor device: %v", err)
 	}
 
-	responder := esp32.NewResponder([]esp32.Probe{
-		{Name: "KilnPrimary", Sensor: heater},
-		{Name: "KilnSecondary", Sensor: heater},
-		{Name: "Wood", Sensor: wood},
-	}, faultInjector, resetter)
+	// Build the probe list from faults.SensorNames rather than repeating the
+	// three names here, so the simulator's probes and the failure injector's
+	// schedule cannot drift apart.
+	probes := make([]esp32.Probe, 0, len(faults.SensorNames()))
+	for _, name := range faults.SensorNames() {
+		var sensor engine.TemperatureSensor
+		switch name {
+		case "KilnPrimary", "KilnSecondary":
+			sensor = heater
+		case "Wood":
+			sensor = wood
+		default:
+			log.Fatal("No sensor mapping for probe %q", name)
+		}
+		probes = append(probes, esp32.Probe{Name: name, Sensor: sensor})
+	}
+
+	responder := esp32.NewResponder(probes, faultInjector, resetter)
 
 	shellySrv := &http.Server{
 		Addr:    ":" + shellyPort,
