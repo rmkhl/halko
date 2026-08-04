@@ -112,17 +112,28 @@ func TestDeviceDoesNotEchoTheCommandBack(t *testing.T) {
 func TestOpenReplacesItsOwnStaleSymlink(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "esp32")
 
-	first, err := Open(path)
-	if err != nil {
-		t.Fatalf("failed to open the device: %v", err)
+	// A stale symlink is what a SIGKILLed simulator leaves behind: the
+	// target pty is long gone, but the link itself remains. Create that
+	// directly, rather than via a device we then close, so Open genuinely
+	// exercises the "replace an existing symlink" branch instead of the
+	// "path does not exist" one.
+	if err := os.Symlink("/dev/pts/nonexistent", path); err != nil {
+		t.Fatalf("failed to create the stale symlink: %v", err)
 	}
-	first.Close()
 
-	second, err := Open(path)
+	device, err := Open(path)
 	if err != nil {
 		t.Fatalf("expected a stale symlink to be replaced, got %v", err)
 	}
-	second.Close()
+	t.Cleanup(func() { device.Close() })
+
+	target, err := os.Readlink(path)
+	if err != nil {
+		t.Fatalf("failed to read the replaced symlink: %v", err)
+	}
+	if !strings.HasPrefix(target, "/dev/pts/") {
+		t.Fatalf("expected the stale symlink replaced with a pty under /dev/pts/, got %q", target)
+	}
 }
 
 func TestOpenRefusesToReplaceARealFile(t *testing.T) {
