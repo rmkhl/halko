@@ -44,7 +44,15 @@ make tmux-debug-run   # all services + simulator in tmux
 LOGLEVEL=4 make tmux-debug-run  # verbose logging (0=ERROR … 4=TRACE)
 SIMULATOR=thermodynamic make tmux-debug-run
 make tmux-debug-fail-run  # same, but the simulator injects escalating sensor failures
+```
 
+The simulator emulates the ESP32 over a pseudo-terminal, so the real
+`sensorunit` service runs against it. It creates that device at the path named
+by `sensorunit.serial_device` in `halko.cfg`, which during development must
+name a path the simulator may create (for example `/tmp/halko-esp32`) rather
+than real hardware.
+
+```bash
 # ESP32
 make build-esp32      # compile firmware
 make upload-esp32     # flash to device
