@@ -21,7 +21,7 @@ func TestFeedReturnsEveryCommandInOneChunk(t *testing.T) {
 	var b commandBuffer
 
 	got := b.Feed([]byte("helo;read;"))
-	if len(got) != 2 || got[0] != heloCommand || got[1] != "read" {
+	if len(got) != 2 || got[0] != heloCommand || got[1] != readCommand {
 		t.Fatalf("expected [helo read], got %v", got)
 	}
 }
@@ -36,7 +36,7 @@ func TestFeedReassemblesCommandSplitAcrossChunks(t *testing.T) {
 		t.Fatalf("expected no complete command yet, got %v", got)
 	}
 	got := b.Feed([]byte(";"))
-	if len(got) != 1 || got[0] != "read" {
+	if len(got) != 1 || got[0] != readCommand {
 		t.Fatalf("expected [read], got %v", got)
 	}
 }
