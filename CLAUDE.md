@@ -27,9 +27,9 @@ When modifying types shared across services, change `types/` and then update all
 The module list lives in the `Makefile` as two variables: `MODULES` (the
 binary-producing services, used by `all`/`build`/`install`/`systemd-units`) and
 `GO_MODULES` (all of them, adding `types` and `types/log`, used by
-`test`/`lint`/`fmt-changed`/`go-tidy`/`prepare`, and the list the per-module
-`test-<module>` targets are generated from). Adding a module means
-updating `GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
+`fmt-changed`/`go-tidy`/`prepare`, and the list the per-module `test-<module>`
+and `lint-<module>` targets are generated from). Adding a module means updating
+`GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
 `GO_MODULES`, so a module missing there silently drops out of the workspace.
 
 ## Build & Test
@@ -88,7 +88,14 @@ Running tests for a single module: `make test-<module>` (or `cd <module> && go
 test ./...`). Adding a module to `GO_MODULES` generates its `test-` target
 automatically.
 
-Running linter on a single module: `cd <module> && golangci-lint run`
+Running the linter on a single module: `make lint-<module>` (or `cd <module> &&
+golangci-lint run`). Like the test targets, these are generated from
+`GO_MODULES`.
+
+The `lint-*` targets are deliberately non-gating: `make lint` runs every linter
+and reports all of their results in one pass rather than stopping at the first
+one with issues. The `test-*` targets behave the same way. Do not add gating to
+either.
 
 ## Test Layout
 

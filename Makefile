@@ -347,14 +347,17 @@ monitor-esp32:
 lint: lint-golang lint-markdown lint-webapp
 	@echo "✓ All linting completed"
 
-.PHONY: lint-golang
-lint-golang:
-	@for mod in $(GO_MODULES); do \
-		if [ -f $$mod/go.mod ]; then \
-			echo "Linting $$mod..."; \
-			(cd $$mod && golangci-lint run ./... || true); \
-		fi; \
-	done
+# One lint target per module, generated from GO_MODULES the same way the test
+# targets are: "make lint-golang" runs them all, "make lint-controlunit" runs
+# one. Non-gating, so every module reports its own issues in a single pass.
+LINT_TARGETS = $(GO_MODULES:%=lint-%)
+
+.PHONY: lint-golang $(LINT_TARGETS)
+lint-golang: $(LINT_TARGETS)
+
+$(LINT_TARGETS): lint-%:
+	@echo "Linting $*..."
+	@(cd $* && golangci-lint run ./...) || true
 
 .PHONY: lint-markdown
 lint-markdown: $(NODE)
@@ -582,7 +585,7 @@ help:
 	@echo "  build-webapp               Build webapp for production to webapp/dist/."
 	@echo "  test                       Run the test suite of every Go module."
 	@echo "  test-<module>              Run one module's tests, e.g. test-controlunit."
-	@echo "                               One target per module in GO_MODULES."
+	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  test-race                  Run them all with the race detector enabled."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
@@ -590,6 +593,8 @@ help:
 	@echo "Code Quality:"
 	@echo "  lint                       Run all linters (golang, markdown, webapp)."
 	@echo "  lint-golang                Run golangci-lint on all Go modules."
+	@echo "  lint-<module>              Run golangci-lint on one module, e.g. lint-controlunit."
+	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  lint-markdown              Run markdownlint-cli2 on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
