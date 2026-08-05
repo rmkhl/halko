@@ -27,7 +27,8 @@ When modifying types shared across services, change `types/` and then update all
 The module list lives in the `Makefile` as two variables: `MODULES` (the
 binary-producing services, used by `all`/`build`/`install`/`systemd-units`) and
 `GO_MODULES` (all of them, adding `types` and `types/log`, used by
-`test`/`lint`/`fmt-changed`/`go-tidy`/`prepare`). Adding a module means
+`test`/`lint`/`fmt-changed`/`go-tidy`/`prepare`, and the list the per-module
+`test-<module>` targets are generated from). Adding a module means
 updating `GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
 `GO_MODULES`, so a module missing there silently drops out of the workspace.
 
@@ -37,8 +38,9 @@ Always use the Makefile, not `go` commands directly from the root.
 
 ```bash
 make all              # build all Go binaries → bin/
-make test             # go test ./... in every Go module (fails if any test fails)
-make test-race        # same, with the race detector
+make test             # go test ./... in every Go module
+make test-controlunit # one module only — one target per entry in GO_MODULES
+make test-race        # all modules, with the race detector
 make lint             # golangci-lint + markdown + ESLint
 make fmt-changed      # gofmt/goimports on changed files only
 make go-tidy          # go mod tidy on all modules
@@ -82,7 +84,9 @@ make upload-esp32     # flash to device
 make monitor-esp32    # serial monitor
 ```
 
-Running tests for a single module directly: `cd <module> && go test ./...`
+Running tests for a single module: `make test-<module>` (or `cd <module> && go
+test ./...`). Adding a module to `GO_MODULES` generates its `test-` target
+automatically.
 
 Running linter on a single module: `cd <module> && golangci-lint run`
 

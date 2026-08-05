@@ -468,25 +468,27 @@ fmt-changed:
 	done
 	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
 
-# Tests live beside the code they cover, so every module is tested the same
-# way. A failing module fails the target - do not add "|| true" here.
-.PHONY: test
-test:
-	@echo "Running all Go tests..."
-	@for mod in $(GO_MODULES); do \
-		echo "Testing $$mod..."; \
-		(cd $$mod && go test ./...) || exit 1; \
-	done
-	@echo "✓ All tests passed"
+# Tests live beside the code they cover, so each module gets its own target
+# generated from GO_MODULES: "make test" runs them all, "make test-controlunit"
+# runs one. Like the lint targets these do not gate, so a module with failing
+# tests still leaves the remaining modules to report their own results.
+GOTESTFLAGS =
+TEST_TARGETS = $(GO_MODULES:%=test-%)
 
+.PHONY: test $(TEST_TARGETS)
+test: $(TEST_TARGETS)
+	@echo "✓ All module tests completed"
+
+$(TEST_TARGETS): test-%:
+	@echo "Testing $*..."
+	@(cd $* && go test $(GOTESTFLAGS) ./...) || true
+
+# Target-specific variables apply to a target's prerequisites too, so this
+# reruns exactly the targets above with the race detector enabled.
 .PHONY: test-race
-test-race:
-	@echo "Running all Go tests with the race detector..."
-	@for mod in $(GO_MODULES); do \
-		echo "Testing $$mod..."; \
-		(cd $$mod && go test -race ./...) || exit 1; \
-	done
-	@echo "✓ All tests passed"
+test-race: GOTESTFLAGS = -race
+test-race: test
+	@echo "✓ Race detector enabled for the run above"
 
 .PHONY: clean-webapp
 clean-webapp:
@@ -579,7 +581,9 @@ help:
 	@echo "  run-webapp                 Start webapp development server with hot reload."
 	@echo "  build-webapp               Build webapp for production to webapp/dist/."
 	@echo "  test                       Run the test suite of every Go module."
-	@echo "  test-race                  Same, with the race detector enabled."
+	@echo "  test-<module>              Run one module's tests, e.g. test-controlunit."
+	@echo "                               One target per module in GO_MODULES."
+	@echo "  test-race                  Run them all with the race detector enabled."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""
