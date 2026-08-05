@@ -17,6 +17,9 @@ SIMULATOR=${SIMULATOR:-}
 # Inject temperature sensor failures (any non-empty value enables it)
 FAIL_SENSORS=${FAIL_SENSORS:-}
 
+# Directory for the per-window log files (truncated on every start)
+LOG_DIR=${LOG_DIR:-$HALKO_DIR/logs}
+
 # Check if session already exists
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "Session '$SESSION' already exists."
@@ -46,34 +49,56 @@ if [ -n "$FAIL_SENSORS" ]; then
     echo "Sensor failure injection ENABLED: readings degrade once the kiln passes the material."
 fi
 
+# The windows pipe their output into $LOG_DIR, so refuse to start unless the
+# directory exists (or can be created) and is writable.
+if [ ! -d "$LOG_DIR" ]; then
+    if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
+        echo "ERROR: Cannot create log directory '$LOG_DIR'."
+        echo "Create it manually or point LOG_DIR at a writable directory."
+        exit 1
+    fi
+fi
+if [ ! -w "$LOG_DIR" ]; then
+    echo "ERROR: Log directory '$LOG_DIR' is not writable."
+    echo "Fix its permissions or point LOG_DIR at a writable directory."
+    exit 1
+fi
+
 # Run each service as the window's command instead of typing it into an
 # interactive shell with send-keys: bash flushes pending tty input while it
 # initializes, so keystrokes sent before the shell is ready are lost.
 # "; exec bash" keeps the window open after the service exits.
 
+# window_cmd <window-name> <command> builds the command line for a window: the
+# service output stays on the window's console and is copied to its log file.
+window_cmd() {
+    printf '%s 2>&1 | tee "%s/%s.log"; exec bash' "$2" "$LOG_DIR" "$1"
+}
+
 # Create new session with simulator window (detached)
-tmux new-session -d -s "$SESSION" -n simulator -c "$HALKO_DIR" "$SIM_CMD; exec bash"
+tmux new-session -d -s "$SESSION" -n simulator -c "$HALKO_DIR" "$(window_cmd simulator "$SIM_CMD")"
 
 # Create powerunit window
-tmux new-window -t "$SESSION:" -n powerunit -c "$HALKO_DIR" "./bin/powerunit -loglevel $LOGLEVEL; exec bash"
+tmux new-window -t "$SESSION:" -n powerunit -c "$HALKO_DIR" "$(window_cmd powerunit "./bin/powerunit -loglevel $LOGLEVEL")"
 
 # Create sensorunit window
-tmux new-window -t "$SESSION:" -n sensorunit -c "$HALKO_DIR" "./bin/sensorunit -loglevel $LOGLEVEL; exec bash"
+tmux new-window -t "$SESSION:" -n sensorunit -c "$HALKO_DIR" "$(window_cmd sensorunit "./bin/sensorunit -loglevel $LOGLEVEL")"
 
 # Create controlunit window
-tmux new-window -t "$SESSION:" -n controlunit -c "$HALKO_DIR" "./bin/controlunit -loglevel $LOGLEVEL; exec bash"
+tmux new-window -t "$SESSION:" -n controlunit -c "$HALKO_DIR" "$(window_cmd controlunit "./bin/controlunit -loglevel $LOGLEVEL")"
 
 # Create dbusunit window (requires sudo for D-Bus access)
-tmux new-window -t "$SESSION:" -n dbusunit -c "$HALKO_DIR" "sudo ./bin/dbusunit -loglevel $LOGLEVEL; exec bash"
+tmux new-window -t "$SESSION:" -n dbusunit -c "$HALKO_DIR" "$(window_cmd dbusunit "sudo ./bin/dbusunit -loglevel $LOGLEVEL")"
 
 # Create webapp window
-tmux new-window -t "$SESSION:" -n webapp -c "$HALKO_DIR" "make run-webapp; exec bash"
+tmux new-window -t "$SESSION:" -n webapp -c "$HALKO_DIR" "$(window_cmd webapp "make run-webapp")"
 
 # Create a shell window for commands
 tmux new-window -t "$SESSION:" -n shell -c "$HALKO_DIR"
 
 echo "✓ Session '$SESSION' created with windows: simulator, powerunit, sensorunit, controlunit, dbusunit, webapp, shell"
 echo "  Log level: $LOGLEVEL (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)"
+echo "  Log files: $LOG_DIR/<window>.log (overwritten on every start)"
 if [ -n "$SIMULATOR" ]; then
     echo "  Simulator: $SIM_CONFIG"
 fi

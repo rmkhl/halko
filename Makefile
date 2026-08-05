@@ -596,6 +596,8 @@ help:
 	@echo "  tmux-debug-run             Start services in tmux session for native debugging."
 	@echo "                               Starts: simulator, powerunit, controlunit, webapp"
 	@echo "                               Default loglevel: 3 (DEBUG)"
+	@echo "                               Each window is also logged to logs/<window>.log"
+	@echo "                               Usage: LOG_DIR=/tmp/halko-logs make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-run"
 	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"

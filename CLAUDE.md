@@ -52,7 +52,20 @@ make tmux-debug-run   # all services + simulator in tmux
 LOGLEVEL=4 make tmux-debug-run  # verbose logging (0=ERROR … 4=TRACE)
 SIMULATOR=thermodynamic make tmux-debug-run
 make tmux-debug-fail-run  # same, but the simulator injects escalating sensor failures
+LOG_DIR=/tmp/halko-logs make tmux-debug-run  # write the log files elsewhere
 ```
+
+Every tmux window pipes its output through `tee`, so the logs are on the
+console and in `logs/<window>.log` under the workspace root (git-ignored,
+overwritten on every start). Override the directory with `LOG_DIR`; the start
+script aborts if it cannot create or write to it.
+
+**When debugging a run, read `logs/` first — no need to ask.** It always holds
+the *latest* run: `logs/controlunit.log`, `logs/simulator.log`,
+`logs/sensorunit.log`, `logs/powerunit.log`, `logs/dbusunit.log`,
+`logs/webapp.log`. Together with `fsdb/running/` and `fsdb/history/` (the run
+that just ended) they are the primary evidence for any "what happened during
+that run" question.
 
 The simulator emulates the ESP32 over a pseudo-terminal, so the real
 `sensorunit` service runs against it. It creates that device at the path named
