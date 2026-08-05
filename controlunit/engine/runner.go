@@ -13,10 +13,9 @@ import (
 )
 
 const (
-	controllerDone = "done"
-	sensorRead     = "read"
-	programDone    = "done"
-	programStep    = "step"
+	sensorRead  = "read"
+	programDone = "done"
+	programStep = "step"
 )
 
 type (
@@ -31,13 +30,16 @@ type (
 		temperatureSensorCommands  chan string
 		temperatureSensorResponses chan temperatureReadings
 		temperatureSensorReader    *temperatureSensorReader
-		programStatus              *types.ExecutionStatus
-		statusWriter               *storagefs.StateWriter
-		logWriter                  *storagefs.ExecutionLogWriter
-		previousStep               string
-		heartbeatManager           *heartbeat.Manager
-		programName                string
-		programStorage             *storagefs.ExecutorFileStorage
+		// Closed once the run loop has stopped, releasing both sensor readers
+		// wherever they are blocked.
+		sensorShutdown   chan struct{}
+		programStatus    *types.ExecutionStatus
+		statusWriter     *storagefs.StateWriter
+		logWriter        *storagefs.ExecutionLogWriter
+		previousStep     string
+		heartbeatManager *heartbeat.Manager
+		programName      string
+		programStorage   *storagefs.ExecutorFileStorage
 		// Note, we rely on the fact that the runner is the only one updating these and fsmController
 		// relies on the fact that they will not be updated while executeStep() or updateStatus() is running.
 		psuStatus         fsmPSUStatus
@@ -56,6 +58,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 		temperatureSensorResponses: make(chan temperatureReadings),
 		psuSensorCommands:          make(chan string),
 		psuSensorResponses:         make(chan psuReadings),
+		sensorShutdown:             make(chan struct{}),
 		currentProgram:             program,
 		programStatus:              &types.ExecutionStatus{Program: *program},
 		defaults:                   halkoConfig.ControlUnitConfig.Defaults,
@@ -68,13 +71,13 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 		return nil, errors.New("API endpoints not configured")
 	}
 
-	psuSensorReader, err := newPSUSensorReader(endpoints.PowerUnit.GetPowerURL(), runner.psuSensorCommands, runner.psuSensorResponses)
+	psuSensorReader, err := newPSUSensorReader(endpoints.PowerUnit.GetPowerURL(), runner.psuSensorCommands, runner.psuSensorResponses, runner.sensorShutdown)
 	if err != nil {
 		return nil, err
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(endpoints.SensorUnit.GetTemperaturesURL(), runner.temperatureSensorCommands, runner.temperatureSensorResponses)
+	temperatureSensorReader, err := newTemperatureSensorReader(endpoints.SensorUnit.GetTemperaturesURL(), runner.temperatureSensorCommands, runner.temperatureSensorResponses, runner.sensorShutdown)
 	if err != nil {
 		return nil, err
 	}
@@ -178,37 +181,13 @@ func (runner *programRunner) Run() {
 		log.Error("Failed to move program files to history: %v", err)
 	}
 
+	// Closing the channel releases both readers no matter where they are
+	// blocked - parked on their command channel, in the middle of a read, or
+	// holding a reading this loop will never collect. Handing them a "done"
+	// message instead only reaches a reader that happens to be parked, and the
+	// ones that are not leak, keeping the engine pinned to a finished program.
 	log.Debug("Runner: Signaling sensor readers to stop")
-
-	// Drain any pending responses first to prevent deadlock
-	// Sensor readers might be blocked trying to send responses
-	for {
-		select {
-		case <-runner.psuSensorResponses:
-			log.Trace("Runner: Drained pending PSU response")
-		case <-runner.temperatureSensorResponses:
-			log.Trace("Runner: Drained pending temperature response")
-		default:
-			// No more pending responses, proceed to send done signals
-			goto sendDone
-		}
-	}
-
-sendDone:
-	// Now safe to send done signals with timeout
-	select {
-	case runner.psuSensorCommands <- controllerDone:
-		log.Trace("Runner: Sent done signal to PSU sensor reader")
-	case <-time.After(1 * time.Second):
-		log.Warning("Runner: Timeout sending done signal to PSU sensor reader")
-	}
-
-	select {
-	case runner.temperatureSensorCommands <- controllerDone:
-		log.Trace("Runner: Sent done signal to temperature sensor reader")
-	case <-time.After(1 * time.Second):
-		log.Warning("Runner: Timeout sending done signal to temperature sensor reader")
-	}
+	close(runner.sensorShutdown)
 
 	log.Debug("Runner: Run() method completing")
 }

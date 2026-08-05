@@ -39,6 +39,10 @@ type (
 		client    *http.Client
 		sensorURL string
 		commands  <-chan string
+		// Closed by the runner once it has stopped receiving responses. A
+		// reader must watch it everywhere it can block, or it outlives the
+		// run and keeps the runner's WaitGroup up forever.
+		shutdown <-chan struct{}
 	}
 
 	temperatureSensorReader struct {
@@ -104,12 +108,13 @@ func readingOrInvalid(data map[string]float32, name string) float32 {
 	return value
 }
 
-func newTemperatureSensorReader(url string, commands <-chan string, responses chan<- temperatureReadings) (*temperatureSensorReader, error) {
+func newTemperatureSensorReader(url string, commands <-chan string, responses chan<- temperatureReadings, shutdown <-chan struct{}) (*temperatureSensorReader, error) {
 	controller := temperatureSensorReader{
 		sensorReader: sensorReader{
 			client:    &http.Client{},
 			sensorURL: url,
 			commands:  commands,
+			shutdown:  shutdown,
 		},
 		runner: responses,
 	}
@@ -161,12 +166,13 @@ func (controller *psuSensorReader) readSensors() (*psuReadings, error) {
 	return &psuReadings{Fan: dataResponse.Data["fan"], Heater: dataResponse.Data["heater"], Humidifier: dataResponse.Data["humidifier"]}, nil
 }
 
-func newPSUSensorReader(url string, commands <-chan string, responses chan<- psuReadings) (*psuSensorReader, error) {
+func newPSUSensorReader(url string, commands <-chan string, responses chan<- psuReadings, shutdown <-chan struct{}) (*psuSensorReader, error) {
 	controller := psuSensorReader{
 		sensorReader: sensorReader{
 			client:    &http.Client{},
 			sensorURL: url,
 			commands:  commands,
+			shutdown:  shutdown,
 		},
 		runner: responses,
 	}
@@ -180,19 +186,43 @@ func newPSUSensorReader(url string, commands <-chan string, responses chan<- psu
 	return &controller, nil
 }
 
+// nextCommand blocks until the runner asks for something or shuts down. The
+// second return value is false once the run is over and the reader must stop.
+func (controller *sensorReader) nextCommand() (string, bool) {
+	select {
+	case <-controller.shutdown:
+		return "", false
+	case engineMessage := <-controller.commands:
+		return engineMessage, true
+	}
+}
+
+// publish hands a reading to the runner, giving up if the run ended while the
+// sensor was being read. Nobody receives from the response channel after that,
+// so a plain send would block for the lifetime of the process.
+func publish[T any](responses chan<- T, shutdown <-chan struct{}, values T) bool {
+	select {
+	case responses <- values:
+		return true
+	case <-shutdown:
+		return false
+	}
+}
+
 func (controller *psuSensorReader) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
-		engineMessage := <-controller.commands
-		switch engineMessage {
-		case controllerDone:
+		engineMessage, ok := controller.nextCommand()
+		if !ok {
 			return
+		}
+		switch engineMessage {
 		case sensorRead:
 			values, err := controller.readSensors()
 			if err != nil {
 				log.Error("Failed to read psu sensors: %v", err)
-			} else {
-				controller.runner <- *values
+			} else if !publish(controller.runner, controller.shutdown, *values) {
+				return
 			}
 		default:
 			log.Warning("Unknown controller message: %s", engineMessage)
@@ -203,16 +233,17 @@ func (controller *psuSensorReader) Run(wg *sync.WaitGroup) {
 func (controller *temperatureSensorReader) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
-		engineMessage := <-controller.commands
-		switch engineMessage {
-		case controllerDone:
+		engineMessage, ok := controller.nextCommand()
+		if !ok {
 			return
+		}
+		switch engineMessage {
 		case sensorRead:
 			values, err := controller.readTemperatures()
 			if err != nil {
 				log.Error("Failed to read temperature sensors: %v", err)
-			} else {
-				controller.runner <- *values
+			} else if !publish(controller.runner, controller.shutdown, *values) {
+				return
 			}
 		default:
 			log.Warning("Unknown controller message: %s", engineMessage)
