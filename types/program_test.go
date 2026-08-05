@@ -1,18 +1,16 @@
-package tests
+package types
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/rmkhl/halko/types"
 )
 
 func TestProgramValidation(t *testing.T) {
 	// Load defaults from the template config
 	// LoadConfig already validates the configuration structure
-	config, err := types.LoadConfig("../templates/halko.cfg")
+	config, err := LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
@@ -40,7 +38,7 @@ func TestProgramValidation(t *testing.T) {
 				t.Fatalf("Failed to read example file %s: %v", tt.filename, err)
 			}
 
-			var program types.Program
+			var program Program
 			err = json.Unmarshal(data, &program)
 			if err != nil {
 				t.Fatalf("Failed to unmarshal program from %s: %v", tt.filename, err)
@@ -60,7 +58,7 @@ func TestProgramValidation(t *testing.T) {
 func TestProgramValidationWithCopy(t *testing.T) {
 	// Load defaults from the template config
 	// LoadConfig already validates the configuration structure
-	config, err := types.LoadConfig("../templates/halko.cfg")
+	config, err := LoadConfig("../templates/halko.cfg")
 	if err != nil {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
@@ -72,7 +70,7 @@ func TestProgramValidationWithCopy(t *testing.T) {
 		t.Fatalf("Failed to read example file: %v", err)
 	}
 
-	var originalProgram types.Program
+	var originalProgram Program
 	err = json.Unmarshal(data, &originalProgram)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal program: %v", err)

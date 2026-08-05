@@ -1,4 +1,7 @@
 MODULES = controlunit powerunit simulator sensorunit halkoctl dbusunit
+# Every Go module in the workspace, including the ones that build no binary.
+# Keep in sync with go.work.
+GO_MODULES = $(MODULES) types types/log
 BINDIR = bin
 
 # Workspace-local Node.js — all node/npm invocations use this installation
@@ -100,7 +103,7 @@ prepare: $(NODE)
 		rm -f go.work && go work init; \
 	fi
 	@# Add all modules that have go.mod files
-	@for mod in $(MODULES) types tests; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Adding $$mod to go.work..."; \
 			go work use ./$$mod; \
@@ -346,7 +349,7 @@ lint: lint-golang lint-markdown lint-webapp
 
 .PHONY: lint-golang
 lint-golang:
-	@for mod in $(MODULES) types tests; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Linting $$mod..."; \
 			(cd $$mod && golangci-lint run ./... || true); \
@@ -374,7 +377,7 @@ go-tidy:
 
 .PHONY: update-modules
 update-modules:
-	@for mod in $(MODULES) types tests; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Updating $$mod..."; \
 			(cd $$mod && go get -u ./... && go mod tidy); \
@@ -457,7 +460,7 @@ install-webapp: build-webapp
 
 .PHONY: fmt-changed
 fmt-changed:
-	@for mod in $(MODULES) types; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Formatting changed files in $$mod..."; \
 			(cd $$mod && git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix -v || true); \
@@ -465,28 +468,25 @@ fmt-changed:
 	done
 	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
 
+# Tests live beside the code they cover, so every module is tested the same
+# way. A failing module fails the target - do not add "|| true" here.
 .PHONY: test
 test:
-	@echo "Running all tests..."
-	@$(MAKE) test-config || true
-	@$(MAKE) test-program-validation || true
-	@$(MAKE) test-shelly-api || true
-	@echo "All tests completed."
+	@echo "Running all Go tests..."
+	@for mod in $(GO_MODULES); do \
+		echo "Testing $$mod..."; \
+		(cd $$mod && go test ./...) || exit 1; \
+	done
+	@echo "✓ All tests passed"
 
-.PHONY: test-config
-test-config:
-	@echo "Running configuration tests..."
-	@cd tests && go test -v -run TestConfig
-
-.PHONY: test-program-validation
-test-program-validation:
-	@echo "Running program validation tests..."
-	@cd tests && go test -v -run TestProgramValidation
-
-.PHONY: test-shelly-api
-test-shelly-api:
-	@echo "Running shelly API tests..."
-	@cd tests && go test -v -run TestShellyAPI
+.PHONY: test-race
+test-race:
+	@echo "Running all Go tests with the race detector..."
+	@for mod in $(GO_MODULES); do \
+		echo "Testing $$mod..."; \
+		(cd $$mod && go test -race ./...) || exit 1; \
+	done
+	@echo "✓ All tests passed"
 
 .PHONY: clean-webapp
 clean-webapp:
@@ -578,10 +578,8 @@ help:
 	@echo "Development & Testing:"
 	@echo "  run-webapp                 Start webapp development server with hot reload."
 	@echo "  build-webapp               Build webapp for production to webapp/dist/."
-	@echo "  test                       Run all tests (config, program validation, Shelly API)."
-	@echo "  test-config                Run configuration loading tests."
-	@echo "  test-program-validation    Run program JSON validation tests."
-	@echo "  test-shelly-api            Run Shelly device API compatibility tests."
+	@echo "  test                       Run the test suite of every Go module."
+	@echo "  test-race                  Same, with the race detector enabled."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""

@@ -13,16 +13,23 @@ Halko is a distributed system for controlling and monitoring wood drying kilns. 
 
 ```text
 types/        — shared types, imported by all other modules
+types/log/    — logging (nested module, imported by types and every service)
 controlunit/  — kiln control logic and program execution
 powerunit/    — Shelly smart switch control
 sensorunit/   — ESP32/Arduino serial bridge
 simulator/    — hardware emulator (physics engines: simple/differential/thermodynamic)
 dbusunit/     — systemd D-Bus integration
 halkoctl/     — CLI management tool
-tests/        — integration test suite (separate module)
 ```
 
 When modifying types shared across services, change `types/` and then update all consumers.
+
+The module list lives in the `Makefile` as two variables: `MODULES` (the
+binary-producing services, used by `all`/`build`/`install`/`systemd-units`) and
+`GO_MODULES` (all of them, adding `types` and `types/log`, used by
+`test`/`lint`/`fmt-changed`/`go-tidy`/`prepare`). Adding a module means
+updating `GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
+`GO_MODULES`, so a module missing there silently drops out of the workspace.
 
 ## Build & Test
 
@@ -30,7 +37,8 @@ Always use the Makefile, not `go` commands directly from the root.
 
 ```bash
 make all              # build all Go binaries → bin/
-make test             # run all test suites
+make test             # go test ./... in every Go module (fails if any test fails)
+make test-race        # same, with the race detector
 make lint             # golangci-lint + markdown + ESLint
 make fmt-changed      # gofmt/goimports on changed files only
 make go-tidy          # go mod tidy on all modules
@@ -61,9 +69,23 @@ make upload-esp32     # flash to device
 make monitor-esp32    # serial monitor
 ```
 
-Running tests directly: `cd tests && go test ./...`
+Running tests for a single module directly: `cd <module> && go test ./...`
 
 Running linter on a single module: `cd <module> && golangci-lint run`
+
+## Test Layout
+
+Tests live in the same package as the code they cover, the standard Go layout —
+there is no separate test module. A change to `controlunit/engine` is tested by
+`controlunit/engine/*_test.go`, `types.LoadConfig` by `types/config_test.go`,
+and so on. Put a new test next to its subject; `make test` picks it up with no
+wiring.
+
+Tests that drive a service end to end belong with that service. `simulator/
+shelly_api_test.go` is the model: it builds the simulator binary, runs it as a
+real process and drives its HTTP API. Such a test must stay self-contained —
+build what it needs, write its config to `t.TempDir()`, and never depend on a
+service the developer is expected to have running.
 
 ## Linting Rules
 
@@ -76,7 +98,7 @@ Config: `.golangci.yaml`. Enabled linters include `bodyclose`, `errchkjson`, `go
 - File-based storage under `/var/opt/halko/` (running programs, history)
 - Configuration loaded from `/etc/opt/halko.cfg` at startup
 - CORS headers are enabled on all services
-- No mocks — tests use real logic (see `tests/`)
+- No mocks — tests use real logic
 - Serial communication to ESP32 at 9600 baud
 
 ## Frontend Conventions
