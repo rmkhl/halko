@@ -32,10 +32,10 @@ type Switch interface {
 
 // Resetter returns the simulation to its initial state between programs.
 type Resetter struct {
-	Heater     Heater
-	Wood       TemperatureSetter
-	Fan        Switch
-	Humidifier Switch
+	Heater Heater
+	Wood   TemperatureSetter
+	Fan    Switch
+	Steam  Switch
 	// PhysicsState is written here under mu, but the tick loop in
 	// simulator/main.go writes the same struct on every tick with no lock.
 	// That race predates this type — the old HTTP display handler had it
@@ -80,14 +80,14 @@ func (r *Resetter) Reset() {
 
 	r.Heater.TurnOn(false)
 	r.Fan.TurnOn(false)
-	r.Humidifier.TurnOn(false)
+	r.Steam.TurnOn(false)
 
 	r.PhysicsState.KilnTemp = r.InitialKilnTemp
 	r.PhysicsState.MaterialTemp = r.InitialMaterialTemp
 	r.PhysicsState.EnvironmentTemp = r.EnvironmentTemp
 	r.PhysicsState.HeaterIsOn = false
 	r.PhysicsState.FanIsOn = false
-	r.PhysicsState.HumidifierIsOn = false
+	r.PhysicsState.SteamIsOn = false
 
 	// Replay the failure schedule from the start on the next run.
 	r.Faults.Reset()

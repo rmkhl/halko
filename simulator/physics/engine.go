@@ -40,8 +40,8 @@ type SimulationState struct {
 	// Fan state (for future use in heat transfer)
 	FanIsOn bool
 
-	// Humidifier state (for future expansion)
-	HumidifierIsOn bool
+	// Steam state (for future expansion)
+	SteamIsOn bool
 }
 
 // NewSimulationEngine creates a simulation engine by name

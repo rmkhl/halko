@@ -36,7 +36,7 @@ export interface TemperatureStatus {
 export interface PSUStatus {
   heater: number;
   fan: number;
-  humidifier: number;
+  steam: number;
 }
 
 /**

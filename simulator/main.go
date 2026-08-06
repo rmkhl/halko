@@ -104,12 +104,12 @@ func main() {
 
 	fan := elements.NewPower("Fan")
 	fan.TurnOn(false) // Start the power controller in off state
-	humidifier := elements.NewPower("Humidifier")
-	humidifier.TurnOn(false) // Start the power controller in off state
+	steam := elements.NewPower("Steam")
+	steam.TurnOn(false) // Start the power controller in off state
 	wood := elements.NewWood(float32(simConfig.InitialMaterialTemp), float32(simConfig.EnvironmentTemp))
 	heater := elements.NewHeater("kiln", float32(simConfig.InitialKilnTemp), float32(simConfig.EnvironmentTemp), wood)
 	heater.TurnOn(false) // Start the heater power controller in off state
-	log.Info("Initialized simulation elements: Fan, Humidifier, Heater (kiln: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
+	log.Info("Initialized simulation elements: Fan, Steam, Heater (kiln: %.1f°C), Wood (material: %.1f°C), Environment: %.1f°C",
 		simConfig.InitialKilnTemp, simConfig.InitialMaterialTemp, simConfig.EnvironmentTemp)
 
 	faultInjector := faults.New(*failSensors)
@@ -124,14 +124,14 @@ func main() {
 		EnvironmentTemp: float32(simConfig.EnvironmentTemp),
 		HeaterIsOn:      false,
 		FanIsOn:         false,
-		HumidifierIsOn:  false,
+		SteamIsOn:       false,
 	}
 
 	// Build element lookup map
 	elementsByName := map[string]interface{}{
-		"heater":     heater,
-		"fan":        fan,
-		"humidifier": humidifier,
+		"heater": heater,
+		"fan":    fan,
+		"steam":  steam,
 	}
 
 	// Map power controls using configuration
@@ -161,7 +161,7 @@ func main() {
 		Heater:              heater,
 		Wood:                wood,
 		Fan:                 fan,
-		Humidifier:          humidifier,
+		Steam:               steam,
 		PhysicsState:        physicsState,
 		Faults:              faultInjector,
 		InitialKilnTemp:     float32(simConfig.InitialKilnTemp),
@@ -213,13 +213,13 @@ func main() {
 
 				// Advance power state machines
 				fan.Tick()
-				humidifier.Tick()
+				steam.Tick()
 				heater.Tick()
 
 				// Update physics state from power states
 				_, physicsState.HeaterIsOn = heater.Info()
 				_, physicsState.FanIsOn = fan.Info()
-				_, physicsState.HumidifierIsOn = humidifier.Info()
+				_, physicsState.SteamIsOn = steam.Info()
 
 				// Run physics simulation
 				physicsEngine.Tick(physicsState)
@@ -234,9 +234,9 @@ func main() {
 				if simConfig.StatusInterval > 0 && tickCount%simConfig.StatusInterval == 0 {
 					_, heaterPower := heater.Info()
 					_, fanPower := fan.Info()
-					_, humidifierPower := humidifier.Info()
-					log.Info("Simulation status - Tick #%d: Kiln=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Humidifier=%v",
-						tickCount, heater.Temperature(), wood.Temperature(), heaterPower, fanPower, humidifierPower)
+					_, steamPower := steam.Info()
+					log.Info("Simulation status - Tick #%d: Kiln=%.1f°C, Material=%.1f°C, Heater=%v, Fan=%v, Steam=%v",
+						tickCount, heater.Temperature(), wood.Temperature(), heaterPower, fanPower, steamPower)
 				}
 			case <-stop:
 				log.Info("Stopping simulation loop at tick #%d", tickCount)

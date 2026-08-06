@@ -38,7 +38,7 @@ const shellyTestConfig = `{
     "shelly_address": "http://localhost:8088",
     "cycle_length": "60s",
     "max_idle_time": "70s",
-    "power_mapping": {"heater": 0, "humidifier": 1, "fan": 2}
+    "power_mapping": {"heater": 0, "steam": 1, "fan": 2}
   },
   "sensorunit": {"serial_device": "%s", "baud_rate": 9600},
   "api_endpoints": {

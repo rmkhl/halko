@@ -9,7 +9,7 @@ func TestFormatTemperatureName(t *testing.T) {
 	}{
 		{"kiln", "Kiln"},
 		{"material", "Material/Wood"},
-		{"humidifier", "Humidifier"},
+		{"steam", "Steam"},
 		{"HEATER", "Heater"},
 		{"", ""},
 	}

@@ -31,7 +31,7 @@ func statusAt(step string, kiln, material float32) *types.ExecutionStatus {
 		CurrentStep:          step,
 		CurrentStepStartedAt: time.Now().Unix(),
 		Temperatures:         types.TemperatureStatus{Kiln: kiln, Material: material},
-		PowerStatus:          types.PSUStatus{Heater: 80, Fan: 50, Humidifier: 0},
+		PowerStatus:          types.PSUStatus{Heater: 80, Fan: 50, Steam: 0},
 	}
 }
 
@@ -49,7 +49,7 @@ func TestExecutionLogWritesItsHeaderOnCreation(t *testing.T) {
 		t.Fatalf("expected only a header row, got %d rows", len(rows))
 	}
 
-	want := []string{"time", "step", "steptime", "material", "kiln", "heater", "fan", "humidifier"}
+	want := []string{"time", "step", "steptime", "material", "kiln", "heater", "fan", "steam"}
 	if len(rows[0]) != len(want) {
 		t.Fatalf("expected %d columns, got %v", len(want), rows[0])
 	}
@@ -142,7 +142,7 @@ func TestExecutionLogRecordsTemperaturesAndPower(t *testing.T) {
 		4: "55.6", // kiln, one decimal
 		5: "80",   // heater
 		6: "50",   // fan
-		7: "0",    // humidifier
+		7: "0",    // steam
 	} {
 		if row[i] != want {
 			t.Fatalf("column %d: expected %q, got %q (row %v)", i, want, row[i], row)

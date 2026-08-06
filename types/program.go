@@ -45,7 +45,7 @@ type (
 		Runtime           *StepDuration     `json:"runtime,omitempty"`
 		Heater            *PowerPidSettings `json:"heater,omitempty"`
 		Fan               *PowerPidSettings `json:"fan,omitempty"`
-		Humidifier        *PowerPidSettings `json:"humidifier,omitempty"`
+		Steam             *PowerPidSettings `json:"steam,omitempty"`
 	}
 
 	Program struct {
@@ -136,13 +136,13 @@ func (p *ProgramStep) Validate() error {
 		return fanErr
 	}
 
-	// Validate humidifier - call validate first to capture any errors
-	humidifierErr := p.Humidifier.Validate("humidifier")
-	if p.Humidifier.Type != PowerSettingTypeSimple {
-		return errors.New("humidifier must use simple power control")
+	// Validate steam - call validate first to capture any errors
+	steamErr := p.Steam.Validate("steam")
+	if p.Steam.Type != PowerSettingTypeSimple {
+		return errors.New("steam must use simple power control")
 	}
-	if humidifierErr != nil {
-		return humidifierErr
+	if steamErr != nil {
+		return steamErr
 	}
 
 	switch p.StepType {
@@ -220,11 +220,11 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 			step.Fan.Power = &zeroPower
 		}
 
-		if step.Humidifier == nil {
-			step.Humidifier = &PowerPidSettings{}
+		if step.Steam == nil {
+			step.Steam = &PowerPidSettings{}
 		}
-		if step.Humidifier.Power == nil {
-			step.Humidifier.Power = &zeroPower
+		if step.Steam.Power == nil {
+			step.Steam.Power = &zeroPower
 		}
 	}
 

@@ -51,7 +51,7 @@ func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolu
 		"kiln",
 		"heater",
 		"fan",
-		"humidifier",
+		"steam",
 	})
 	writer.csvWriter.Flush()
 	log.Debug("Successfully created execution log writer for program '%s'", name)
@@ -91,7 +91,7 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		fmt.Sprintf("%.1f", status.Temperatures.Kiln),
 		strconv.Itoa(int(status.PowerStatus.Heater)),
 		strconv.Itoa(int(status.PowerStatus.Fan)),
-		strconv.Itoa(int(status.PowerStatus.Humidifier)),
+		strconv.Itoa(int(status.PowerStatus.Steam)),
 	})
 	writer.csvWriter.Flush()
 	writer.lastUpdate = now

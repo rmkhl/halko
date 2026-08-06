@@ -37,7 +37,7 @@ export const en = {
       title: "Steps",
       heater: "Heater",
       fan: "Fan",
-      humidifier: "Humidifier",
+      steam: "Steam",
     },
   },
   sensors: {

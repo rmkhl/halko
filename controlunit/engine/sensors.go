@@ -21,9 +21,9 @@ type (
 	}
 
 	psuReadings struct {
-		Fan        PowerResponse
-		Heater     PowerResponse
-		Humidifier PowerResponse
+		Fan    PowerResponse
+		Heater PowerResponse
+		Steam  PowerResponse
 	}
 
 	temperatureResponse struct {
@@ -163,7 +163,7 @@ func (controller *psuSensorReader) readSensors() (*psuReadings, error) {
 		return nil, err
 	}
 
-	return &psuReadings{Fan: dataResponse.Data["fan"], Heater: dataResponse.Data["heater"], Humidifier: dataResponse.Data["humidifier"]}, nil
+	return &psuReadings{Fan: dataResponse.Data["fan"], Heater: dataResponse.Data["heater"], Steam: dataResponse.Data["steam"]}, nil
 }
 
 func newPSUSensorReader(url string, commands <-chan string, responses chan<- psuReadings, shutdown <-chan struct{}) (*psuSensorReader, error) {

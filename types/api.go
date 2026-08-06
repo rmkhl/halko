@@ -100,11 +100,11 @@ type (
 		Kiln     float32 `json:"kiln"`
 	}
 
-	// PSUStatus represents the power level (in percentage) of the heater, fan, and humidifier.
+	// PSUStatus represents the power level (in percentage) of the heater, fan, and steam.
 	PSUStatus struct {
-		Heater     int8 `json:"heater"`
-		Fan        int8 `json:"fan"`
-		Humidifier int8 `json:"humidifier"`
+		Heater int8 `json:"heater"`
+		Fan    int8 `json:"fan"`
+		Steam  int8 `json:"steam"`
 	}
 
 	ExecutionStatus struct {

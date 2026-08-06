@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	psuOven       = "heater"
-	psuFan        = "fan"
-	psuHumidifier = "humidifier"
+	psuOven  = "heater"
+	psuFan   = "fan"
+	psuSteam = "steam"
 )
 
 type (

@@ -389,7 +389,7 @@ export const Programs: React.FC = () => {
                             {index + 1}. {step.name}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Type: {step.type} • Target: {step.temperature_target}°C • Heater: {formatPowerInfo(step.heater)} • Fan: {formatPowerInfo(step.fan)} • Humidifier: {formatPowerInfo(step.humidifier)}{step.runtime ? ` • Runtime: ${step.runtime}` : ''}
+                            Type: {step.type} • Target: {step.temperature_target}°C • Heater: {formatPowerInfo(step.heater)} • Fan: {formatPowerInfo(step.fan)} • Steam: {formatPowerInfo(step.steam)}{step.runtime ? ` • Runtime: ${step.runtime}` : ''}
                           </Typography>
                         </Stack>
                       </Paper>

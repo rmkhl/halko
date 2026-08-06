@@ -266,7 +266,7 @@ Emulates Shelly smart switch RPC endpoints:
 Switch mapping (from halko.cfg):
 
 - 0 = heater
-- 1 = humidifier
+- 1 = steam
 - 2 = fan
 
 ### SensorUnit API (Port 8093)
@@ -313,7 +313,7 @@ Set to 0 to disable status logging (recommended for production-like testing).
 - No humidity effects on heat transfer
 - Fan effects are simplified (on/off, no speed variation)
 - No wood shrinkage or cracking simulation
-- Humidifier has no effect on physics (placeholder only)
+- Steam has no effect on physics (placeholder only)
 
 These limitations make the simulator suitable for temperature control development but not for predicting actual drying outcomes.
 

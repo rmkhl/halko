@@ -19,7 +19,7 @@ A kiln drying program is defined as a JSON file with the following structure:
       "runtime": "6h",
       "heater": { /* power control settings */ },
       "fan": { /* power control settings */ },
-      "humidifier": { /* power control settings */ }
+      "steam": { /* power control settings */ }
     }
   ]
 }
@@ -57,7 +57,7 @@ A kiln drying program is defined as a JSON file with the following structure:
 
 ## Power Control Methods
 
-Each component (heater, fan, humidifier) uses one of three power control methods:
+Each component (heater, fan, steam) uses one of three power control methods:
 
 ### Simple Power Control
 
@@ -70,7 +70,7 @@ Maintains constant power output.
 ```
 
 - **power**: Percentage (0-100) of maximum power
-- **Usage**: Required for fan and humidifier, optional for heater
+- **Usage**: Required for fan and steam, optional for heater
 - **Behavior**: Outputs constant power regardless of temperature
 
 ### Delta Control
@@ -148,7 +148,7 @@ The `runtime` field uses Go's duration string format:
 ### Component Restrictions
 
 - **Fan**: Must always use simple power control
-- **Humidifier**: Must always use simple power control
+- **Steam**: Must always use simple power control
 - **Heater in cooling steps**: Must use simple power control
 
 ## Example Programs
@@ -168,7 +168,7 @@ The `runtime` field uses Go's duration string format:
         "max_delta": 15.0
       },
       "fan": {"power": 100},
-      "humidifier": {"power": 50}
+      "steam": {"power": 50}
     },
     {
       "name": "Acclimation",
@@ -180,7 +180,7 @@ The `runtime` field uses Go's duration string format:
         "max_delta": 5.0
       },
       "fan": {"power": 75},
-      "humidifier": {"power": 25}
+      "steam": {"power": 25}
     },
     {
       "name": "Cool Down",
@@ -189,7 +189,7 @@ The `runtime` field uses Go's duration string format:
       "runtime": "12h",
       "heater": {"power": 0},
       "fan": {"power": 100},
-      "humidifier": {"power": 0}
+      "steam": {"power": 0}
     }
   ]
 }
@@ -210,7 +210,7 @@ The `runtime` field uses Go's duration string format:
         "max_delta": 20.0
       },
       "fan": {"power": 100},
-      "humidifier": {"power": 75}
+      "steam": {"power": 75}
     },
     {
       "name": "PID Acclimation",
@@ -225,7 +225,7 @@ The `runtime` field uses Go's duration string format:
         }
       },
       "fan": {"power": 50},
-      "humidifier": {"power": 25}
+      "steam": {"power": 25}
     },
     {
       "name": "Cool Down",
@@ -234,7 +234,7 @@ The `runtime` field uses Go's duration string format:
       "runtime": "8h",
       "heater": {"power": 0},
       "fan": {"power": 100},
-      "humidifier": {"power": 0}
+      "steam": {"power": 0}
     }
   ]
 }
@@ -276,7 +276,7 @@ The PID controller calculates power adjustments based on temperature error:
 The system applies default settings for components when not specified in the program:
 
 - **Fan power**: 0% (off)
-- **Humidifier power**: 0% (off)
+- **Steam power**: 0% (off)
 - **Heater settings**: Based on step type
   - Heating steps: Use configured delta defaults
   - Acclimate steps: Use configured PID defaults

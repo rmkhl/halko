@@ -1,5 +1,5 @@
 // Parsing and step-grouping of controlunit execution logs (CSV format:
-// time,step,steptime,material,kiln,heater,fan,humidifier).
+// time,step,steptime,material,kiln,heater,fan,steam).
 
 export interface LogRow {
   time: number;
@@ -9,7 +9,7 @@ export interface LogRow {
   kiln: number;
   heater: number;
   fan: number;
-  humidifier: number;
+  steam: number;
 }
 
 export interface StepSegment {
@@ -49,7 +49,7 @@ export const parseExecutionLog = (csv: string): LogRow[] => {
       kiln,
       heater: parseFloat(values[5]),
       fan: parseFloat(values[6]),
-      humidifier: parseFloat(values[7]),
+      steam: parseFloat(values[7]),
     });
   }
 

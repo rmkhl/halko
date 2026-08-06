@@ -54,8 +54,8 @@ func TestPowerIsOnTracksTheRunningState(t *testing.T) {
 }
 
 func TestPowerName(t *testing.T) {
-	if got := NewPower("humidifier").Name(); got != "humidifier" {
-		t.Fatalf("expected name humidifier, got %q", got)
+	if got := NewPower("steam").Name(); got != "steam" {
+		t.Fatalf("expected name steam, got %q", got)
 	}
 }
 
