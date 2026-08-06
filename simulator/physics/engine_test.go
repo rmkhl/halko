@@ -19,11 +19,11 @@ func validSimpleConfig() map[string]interface{} {
 
 func validDifferentialConfig() map[string]interface{} {
 	return map[string]interface{}{
-		keyHeaterPower:              2000.0,
-		"heat_loss_coefficient":     0.08,
-		"heat_transfer_coefficient": 15.0,
-		"kiln_thermal_mass":         70000.0,
-		"material_thermal_mass":     34000.0,
+		keyHeaterPower:             2000.0,
+		keyHeatLossCoefficient:     0.08,
+		keyHeatTransferCoefficient: 15.0,
+		keyKilnThermalMass:         70000.0,
+		keyMaterialThermalMass:     34000.0,
 	}
 }
 
@@ -31,25 +31,25 @@ func validThermodynamicConfig() map[string]interface{} {
 	return map[string]interface{}{
 		sectionKiln: map[string]interface{}{
 			keyMass: 140.0, keySpecificHeat: 500.0, keySurfaceArea: 4.5,
-			"wall_u_value": 0.08, "emissivity": 0.08,
+			keyWallUValue: 0.08, keyEmissivity: 0.08,
 		},
 		sectionAir: map[string]interface{}{
-			"volume": 0.5, keySpecificHeat: 1005.0,
+			keyVolume: 0.5, keySpecificHeat: 1005.0,
 		},
 		sectionMaterial: map[string]interface{}{
 			keyMass: 20.0, keySpecificHeat: 1700.0, keySurfaceArea: 1.5,
 		},
 		sectionHeater: map[string]interface{}{
-			"wattage": 2000.0, "efficiency": 0.95,
+			keyWattage: 2000.0, keyEfficiency: 0.95,
 		},
 		sectionConvection: map[string]interface{}{
-			"natural": 5.0, "forced": 15.0, "fan_waste_heat": 50.0,
+			keyNatural: 5.0, keyForced: 15.0, keyFanWasteHeat: 50.0,
 		},
 		sectionEnvironment: map[string]interface{}{
-			"temperature": 20.0,
+			keyTemperature: 20.0,
 		},
 		sectionPhysics: map[string]interface{}{
-			"stefan_boltzmann": 5.67e-8, keyTimeStep: 6.0,
+			keyStefanBoltzmann: 5.67e-8, keyTimeStep: 6.0,
 		},
 	}
 }

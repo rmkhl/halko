@@ -18,10 +18,20 @@ const (
 	sectionEnvironment = "environment"
 	sectionPhysics     = "physics"
 
-	keyMass         = "mass"
-	keySpecificHeat = "specific_heat"
-	keySurfaceArea  = "surface_area"
-	keyTimeStep     = "time_step"
+	keyMass            = "mass"
+	keySpecificHeat    = "specific_heat"
+	keySurfaceArea     = "surface_area"
+	keyTimeStep        = "time_step"
+	keyWallUValue      = "wall_u_value"
+	keyEmissivity      = "emissivity"
+	keyVolume          = "volume"
+	keyWattage         = "wattage"
+	keyEfficiency      = "efficiency"
+	keyNatural         = "natural"
+	keyForced          = "forced"
+	keyFanWasteHeat    = "fan_waste_heat"
+	keyTemperature     = "temperature"
+	keyStefanBoltzmann = "stefan_boltzmann"
 )
 
 // ThermodynamicSimulation implements physics-based heat transfer using real material properties
@@ -70,12 +80,12 @@ func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) erro
 	t.kilnMass = float32(kiln[keyMass].(float64))
 	t.kilnSpecificHeat = float32(kiln[keySpecificHeat].(float64))
 	t.kilnSurfaceArea = float32(kiln[keySurfaceArea].(float64))
-	t.wallUValue = float32(kiln["wall_u_value"].(float64))
-	t.kilnEmissivity = float32(kiln["emissivity"].(float64))
+	t.wallUValue = float32(kiln[keyWallUValue].(float64))
+	t.kilnEmissivity = float32(kiln[keyEmissivity].(float64))
 
 	// Air properties
 	air := config[sectionAir].(map[string]interface{})
-	t.airVolume = float32(air["volume"].(float64))
+	t.airVolume = float32(air[keyVolume].(float64))
 	t.airSpecificHeat = float32(air[keySpecificHeat].(float64))
 
 	// Material properties
@@ -86,22 +96,22 @@ func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) erro
 
 	// Heater properties
 	heater := config[sectionHeater].(map[string]interface{})
-	t.heaterWattage = float32(heater["wattage"].(float64))
-	t.heaterEfficiency = float32(heater["efficiency"].(float64))
+	t.heaterWattage = float32(heater[keyWattage].(float64))
+	t.heaterEfficiency = float32(heater[keyEfficiency].(float64))
 
 	// Convection properties
 	convection := config[sectionConvection].(map[string]interface{})
-	t.convectionNatural = float32(convection["natural"].(float64))
-	t.convectionForced = float32(convection["forced"].(float64))
-	t.fanWasteHeat = float32(convection["fan_waste_heat"].(float64))
+	t.convectionNatural = float32(convection[keyNatural].(float64))
+	t.convectionForced = float32(convection[keyForced].(float64))
+	t.fanWasteHeat = float32(convection[keyFanWasteHeat].(float64))
 
 	// Environment
 	env := config[sectionEnvironment].(map[string]interface{})
-	t.ambientTemp = float32(env["temperature"].(float64))
+	t.ambientTemp = float32(env[keyTemperature].(float64))
 
 	// Physical constants
 	physics := config[sectionPhysics].(map[string]interface{})
-	t.stefanBoltzmann = float32(physics["stefan_boltzmann"].(float64))
+	t.stefanBoltzmann = float32(physics[keyStefanBoltzmann].(float64))
 	t.timeStep = float32(physics[keyTimeStep].(float64))
 
 	log.Info("Thermodynamic simulation initialized:")
@@ -161,20 +171,20 @@ func (t *ThermodynamicSimulation) ValidateConfig(config map[string]interface{}) 
 		{sectionKiln, keyMass, true},
 		{sectionKiln, keySpecificHeat, true},
 		{sectionKiln, keySurfaceArea, false},
-		{sectionKiln, "wall_u_value", false},
-		{sectionKiln, "emissivity", false},
-		{sectionAir, "volume", false},
+		{sectionKiln, keyWallUValue, false},
+		{sectionKiln, keyEmissivity, false},
+		{sectionAir, keyVolume, false},
 		{sectionAir, keySpecificHeat, false},
 		{sectionMaterial, keyMass, true},
 		{sectionMaterial, keySpecificHeat, true},
 		{sectionMaterial, keySurfaceArea, false},
-		{sectionHeater, "wattage", false},
-		{sectionHeater, "efficiency", false},
-		{sectionConvection, "natural", false},
-		{sectionConvection, "forced", false},
-		{sectionConvection, "fan_waste_heat", false},
-		{sectionEnvironment, "temperature", false},
-		{sectionPhysics, "stefan_boltzmann", false},
+		{sectionHeater, keyWattage, false},
+		{sectionHeater, keyEfficiency, false},
+		{sectionConvection, keyNatural, false},
+		{sectionConvection, keyForced, false},
+		{sectionConvection, keyFanWasteHeat, false},
+		{sectionEnvironment, keyTemperature, false},
+		{sectionPhysics, keyStefanBoltzmann, false},
 		{sectionPhysics, keyTimeStep, true},
 	}
 
