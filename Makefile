@@ -531,6 +531,25 @@ test-ci:
 	fi; \
 	echo "✓ All module tests passed"
 
+# Everything CI runs, in one command, for use before pushing. Mirrors the
+# workflow's three jobs: tests under the race detector, Go lint, and the
+# markdown/webapp checks. Like the *-ci targets it reports every check rather
+# than stopping at the first failure, then exits non-zero if any failed.
+.PHONY: ci-check
+ci-check:
+	@failed=""; \
+	$(MAKE) --no-print-directory test-ci GOTESTFLAGS=-race || failed="$$failed tests"; \
+	$(MAKE) --no-print-directory lint-ci || failed="$$failed go-lint"; \
+	$(MAKE) --no-print-directory lint-markdown-ci || failed="$$failed markdown"; \
+	$(MAKE) --no-print-directory lint-webapp || failed="$$failed webapp-lint"; \
+	$(MAKE) --no-print-directory build-webapp || failed="$$failed webapp-build"; \
+	echo ""; \
+	if [ -n "$$failed" ]; then \
+		echo "✗ CI check failed:$$failed"; \
+		exit 1; \
+	fi; \
+	echo "✓ All CI checks passed"
+
 .PHONY: clean-webapp
 clean-webapp:
 	@echo "Cleaning webapp build artifacts..."
@@ -626,6 +645,7 @@ help:
 	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  test-race                  Run them all with the race detector enabled."
 	@echo "  test-ci                    As 'test', but fails the build if any module fails."
+	@echo "  ci-check                   Run everything CI runs, in one command, before pushing."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""
