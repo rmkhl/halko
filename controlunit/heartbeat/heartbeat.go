@@ -14,6 +14,10 @@ import (
 	"github.com/rmkhl/halko/types/log"
 )
 
+// DisplayIdle is what the display shows when no program is running. Callers
+// use it to return the display to its resting state.
+const DisplayIdle = "idle"
+
 type (
 	Manager struct {
 		networkInterface string
@@ -49,7 +53,7 @@ func NewManager(networkInterface string, apiEndpoints *types.APIEndpoints) (*Man
 		cancel:           cancel,
 		wg:               new(sync.WaitGroup),
 		executorIP:       executorIP,
-		displayMessage:   "idle",
+		displayMessage:   DisplayIdle,
 	}, nil
 }
 
@@ -105,12 +109,12 @@ func (hm *Manager) run() {
 }
 
 // buildDisplayRequest builds the per-beat display update: the status
-// message (defaulting to "idle") plus the executor IP for the display's
+// message (defaulting to DisplayIdle) plus the executor IP for the display's
 // dedicated address line. An empty IP (interface not up yet) leaves the
 // address unset so the sensorunit skips the addr command.
 func buildDisplayRequest(message, ip string) types.DisplayRequest {
 	if message == "" {
-		message = "idle"
+		message = DisplayIdle
 	}
 	return types.DisplayRequest{Message: message, Address: ip}
 }

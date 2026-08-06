@@ -173,7 +173,7 @@ func (runner *programRunner) Run() {
 	runner.fsmController.shutdown()
 
 	// Reset display to idle
-	runner.heartbeatManager.SetDisplayMessage("idle")
+	runner.heartbeatManager.SetDisplayMessage(heartbeat.DisplayIdle)
 
 	// Move files from running to history
 	runner.statusWriter.MarkCompleted()
