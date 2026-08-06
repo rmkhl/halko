@@ -4,6 +4,14 @@ import (
 	"fmt"
 )
 
+// Names of the available simulation engines, as written in the simulator
+// configuration's simulation_engine field.
+const (
+	engineSimple        = "simple"
+	engineDifferential  = "differential"
+	engineThermodynamic = "thermodynamic"
+)
+
 // SimulationEngine defines the interface for physics simulation engines
 type SimulationEngine interface {
 	// Initialize sets up the engine with configuration
@@ -41,11 +49,11 @@ func NewSimulationEngine(engineName string, config map[string]interface{}) (Simu
 	var engine SimulationEngine
 
 	switch engineName {
-	case "simple":
+	case engineSimple:
 		engine = &SimpleSimulation{}
-	case "differential":
+	case engineDifferential:
 		engine = &DifferentialSimulation{}
-	case "thermodynamic":
+	case engineThermodynamic:
 		engine = &ThermodynamicSimulation{}
 	default:
 		return nil, fmt.Errorf("unknown simulation engine: %s", engineName)

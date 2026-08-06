@@ -1,10 +1,37 @@
 package physics
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
 	"github.com/rmkhl/halko/types/log"
+)
+
+// Configuration section and field names shared by Initialize and ValidateConfig.
+const (
+	sectionKiln        = "kiln"
+	sectionAir         = "air"
+	sectionMaterial    = "material"
+	sectionHeater      = "heater"
+	sectionConvection  = "convection"
+	sectionEnvironment = "environment"
+	sectionPhysics     = "physics"
+
+	keyMass            = "mass"
+	keySpecificHeat    = "specific_heat"
+	keySurfaceArea     = "surface_area"
+	keyTimeStep        = "time_step"
+	keyWallUValue      = "wall_u_value"
+	keyEmissivity      = "emissivity"
+	keyVolume          = "volume"
+	keyWattage         = "wattage"
+	keyEfficiency      = "efficiency"
+	keyNatural         = "natural"
+	keyForced          = "forced"
+	keyFanWasteHeat    = "fan_waste_heat"
+	keyTemperature     = "temperature"
+	keyStefanBoltzmann = "stefan_boltzmann"
 )
 
 // ThermodynamicSimulation implements physics-based heat transfer using real material properties
@@ -44,48 +71,48 @@ type ThermodynamicSimulation struct {
 }
 
 func (t *ThermodynamicSimulation) Name() string {
-	return "thermodynamic"
+	return engineThermodynamic
 }
 
 func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) error {
 	// Kiln properties
-	kiln := config["kiln"].(map[string]interface{})
-	t.kilnMass = float32(kiln["mass"].(float64))
-	t.kilnSpecificHeat = float32(kiln["specific_heat"].(float64))
-	t.kilnSurfaceArea = float32(kiln["surface_area"].(float64))
-	t.wallUValue = float32(kiln["wall_u_value"].(float64))
-	t.kilnEmissivity = float32(kiln["emissivity"].(float64))
+	kiln := config[sectionKiln].(map[string]interface{})
+	t.kilnMass = float32(kiln[keyMass].(float64))
+	t.kilnSpecificHeat = float32(kiln[keySpecificHeat].(float64))
+	t.kilnSurfaceArea = float32(kiln[keySurfaceArea].(float64))
+	t.wallUValue = float32(kiln[keyWallUValue].(float64))
+	t.kilnEmissivity = float32(kiln[keyEmissivity].(float64))
 
 	// Air properties
-	air := config["air"].(map[string]interface{})
-	t.airVolume = float32(air["volume"].(float64))
-	t.airSpecificHeat = float32(air["specific_heat"].(float64))
+	air := config[sectionAir].(map[string]interface{})
+	t.airVolume = float32(air[keyVolume].(float64))
+	t.airSpecificHeat = float32(air[keySpecificHeat].(float64))
 
 	// Material properties
-	material := config["material"].(map[string]interface{})
-	t.materialMass = float32(material["mass"].(float64))
-	t.materialSpecificHeat = float32(material["specific_heat"].(float64))
-	t.materialSurfaceArea = float32(material["surface_area"].(float64))
+	material := config[sectionMaterial].(map[string]interface{})
+	t.materialMass = float32(material[keyMass].(float64))
+	t.materialSpecificHeat = float32(material[keySpecificHeat].(float64))
+	t.materialSurfaceArea = float32(material[keySurfaceArea].(float64))
 
 	// Heater properties
-	heater := config["heater"].(map[string]interface{})
-	t.heaterWattage = float32(heater["wattage"].(float64))
-	t.heaterEfficiency = float32(heater["efficiency"].(float64))
+	heater := config[sectionHeater].(map[string]interface{})
+	t.heaterWattage = float32(heater[keyWattage].(float64))
+	t.heaterEfficiency = float32(heater[keyEfficiency].(float64))
 
 	// Convection properties
-	convection := config["convection"].(map[string]interface{})
-	t.convectionNatural = float32(convection["natural"].(float64))
-	t.convectionForced = float32(convection["forced"].(float64))
-	t.fanWasteHeat = float32(convection["fan_waste_heat"].(float64))
+	convection := config[sectionConvection].(map[string]interface{})
+	t.convectionNatural = float32(convection[keyNatural].(float64))
+	t.convectionForced = float32(convection[keyForced].(float64))
+	t.fanWasteHeat = float32(convection[keyFanWasteHeat].(float64))
 
 	// Environment
-	env := config["environment"].(map[string]interface{})
-	t.ambientTemp = float32(env["temperature"].(float64))
+	env := config[sectionEnvironment].(map[string]interface{})
+	t.ambientTemp = float32(env[keyTemperature].(float64))
 
 	// Physical constants
-	physics := config["physics"].(map[string]interface{})
-	t.stefanBoltzmann = float32(physics["stefan_boltzmann"].(float64))
-	t.timeStep = float32(physics["time_step"].(float64))
+	physics := config[sectionPhysics].(map[string]interface{})
+	t.stefanBoltzmann = float32(physics[keyStefanBoltzmann].(float64))
+	t.timeStep = float32(physics[keyTimeStep].(float64))
 
 	log.Info("Thermodynamic simulation initialized:")
 	log.Info("  Kiln: %.0f kg steel, %.1f m² surface, U=%.2f W/m²·K", t.kilnMass, t.kilnSurfaceArea, t.wallUValue)
@@ -96,13 +123,87 @@ func (t *ThermodynamicSimulation) Initialize(config map[string]interface{}) erro
 	return nil
 }
 
+// section returns a named configuration section, which has to be an object.
+func section(config map[string]interface{}, name string) (map[string]interface{}, error) {
+	raw, exists := config[name]
+	if !exists {
+		return nil, fmt.Errorf("required configuration section missing: %s", name)
+	}
+
+	values, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("configuration section %s must be an object", name)
+	}
+	return values, nil
+}
+
+// number checks that a section holds a numeric value under key. Initialize
+// type-asserts these without checking, so everything it reads has to be
+// validated here or a bad config panics the simulator at startup.
+func number(values map[string]interface{}, sectionName, key string, mustBePositive bool) error {
+	raw, exists := values[key]
+	if !exists {
+		return fmt.Errorf("%s.%s is required", sectionName, key)
+	}
+
+	value, ok := raw.(float64)
+	if !ok {
+		return fmt.Errorf("%s.%s must be a number", sectionName, key)
+	}
+	if mustBePositive && value <= 0 {
+		return fmt.Errorf("%s.%s must be positive, got: %f", sectionName, key, value)
+	}
+	return nil
+}
+
 func (t *ThermodynamicSimulation) ValidateConfig(config map[string]interface{}) error {
-	required := []string{"kiln", "air", "material", "heater", "convection", "environment", "physics"}
-	for _, key := range required {
-		if _, exists := config[key]; !exists {
-			return fmt.Errorf("required configuration section missing: %s", key)
+	if config == nil {
+		return errors.New("config cannot be nil")
+	}
+
+	// The fields Initialize reads, and whether a zero would leave the model
+	// dividing by a thermal capacity of zero.
+	required := []struct {
+		section  string
+		key      string
+		positive bool
+	}{
+		{sectionKiln, keyMass, true},
+		{sectionKiln, keySpecificHeat, true},
+		{sectionKiln, keySurfaceArea, false},
+		{sectionKiln, keyWallUValue, false},
+		{sectionKiln, keyEmissivity, false},
+		{sectionAir, keyVolume, false},
+		{sectionAir, keySpecificHeat, false},
+		{sectionMaterial, keyMass, true},
+		{sectionMaterial, keySpecificHeat, true},
+		{sectionMaterial, keySurfaceArea, false},
+		{sectionHeater, keyWattage, false},
+		{sectionHeater, keyEfficiency, false},
+		{sectionConvection, keyNatural, false},
+		{sectionConvection, keyForced, false},
+		{sectionConvection, keyFanWasteHeat, false},
+		{sectionEnvironment, keyTemperature, false},
+		{sectionPhysics, keyStefanBoltzmann, false},
+		{sectionPhysics, keyTimeStep, true},
+	}
+
+	sections := make(map[string]map[string]interface{})
+	for _, field := range required {
+		values, ok := sections[field.section]
+		if !ok {
+			var err error
+			if values, err = section(config, field.section); err != nil {
+				return err
+			}
+			sections[field.section] = values
+		}
+
+		if err := number(values, field.section, field.key, field.positive); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 

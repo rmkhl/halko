@@ -1,10 +1,11 @@
-// Package faults injects temperature sensor failures into the simulator's
-// readings, so the control unit's invalid-reading handling and its failsafe
-// can be exercised without a broken probe on real hardware.
+// Package faults injects probe failures into the simulator's ESP32
+// emulation, so the sensor unit's degraded-probe handling and the control
+// unit's failsafe can be exercised without a broken probe on real hardware.
 package faults
 
 import (
 	"math/rand/v2"
+	"slices"
 	"sync"
 	"time"
 
@@ -14,24 +15,33 @@ import (
 
 // Stage boundaries, measured from the instant the injector arms.
 const (
-	// dropoutsBegin is when sensors start failing intermittently.
+	// dropoutsBegin is when probes start failing intermittently.
 	dropoutsBegin = 60 * time.Second
-	// firstSensorLostAt is when one randomly chosen sensor starts failing
-	// on every read.
+	// firstSensorLostAt is when one randomly chosen probe starts failing on
+	// every read.
 	firstSensorLostAt = 120 * time.Second
-	// secondSensorLostAt is when the remaining sensor joins it, which
-	// should trip the control unit's failsafe two minutes later.
+	// secondSensorLostAt is when a second probe joins it.
 	secondSensorLostAt = 180 * time.Second
+	// thirdSensorLostAt is when the last probe goes too.
+	thirdSensorLostAt = 240 * time.Second
 
-	// dropoutProbability is the chance of any one sensor reporting an
+	// dropoutProbability is the chance of any one probe reporting an
 	// invalid reading on a given read during the intermittent stage.
 	dropoutProbability = 0.2
 )
 
-// sensorNames are the readings the simulator's /temperatures endpoint
-// exposes. Failures are injected into these keys.
-// Must stay in sync with the temperatureSensors map in simulator/main.go.
-var sensorNames = []string{"kiln", "material"}
+// sensorNames are the three probes the ESP32 firmware reports, in the order
+// it prints them. Must match sensorName[3] in
+// sensorunit/esp32/sensorunit/sensorunit.ino:69. Exported via SensorNames, so
+// the simulator's probe list is built from this instead of duplicating it.
+var sensorNames = []string{"KilnPrimary", "KilnSecondary", "Wood"}
+
+// SensorNames returns the probes failures are injected into, in the order the
+// firmware reports them. The simulator builds its probe list from this, so the
+// two cannot drift apart.
+func SensorNames() []string {
+	return slices.Clone(sensorNames)
+}
 
 // Injector rewrites temperature readings to types.InvalidTemperatureReading on
 // an escalating schedule. It stays inert until Observe sees the kiln rise
@@ -84,8 +94,8 @@ func (i *Injector) Observe(kiln, material float32, now time.Time) {
 
 	i.armed = true
 	i.armedAt = now
-	log.Info("Sensor failure injection armed (kiln %.1f°C above material %.1f°C): dropouts in %v, one sensor lost at %v, both at %v",
-		kiln, material, dropoutsBegin, firstSensorLostAt, secondSensorLostAt)
+	log.Info("Sensor failure injection armed (kiln %.1f°C above material %.1f°C): dropouts in %v, one probe lost at %v, a second at %v, the last at %v",
+		kiln, material, dropoutsBegin, firstSensorLostAt, secondSensorLostAt, thirdSensorLostAt)
 }
 
 // Reset disarms the injector and clears every failure, so the next run replays
@@ -139,12 +149,14 @@ func (i *Injector) Apply(readings types.TemperatureResponse, now time.Time) {
 	}
 }
 
-// lostByElapsed returns how many sensors should be failing permanently by the
+// lostByElapsed returns how many probes should be failing permanently by the
 // given point in the schedule.
 func lostByElapsed(elapsed time.Duration) int {
 	switch {
+	case elapsed >= thirdSensorLostAt:
+		return 3
 	case elapsed >= secondSensorLostAt:
-		return len(sensorNames)
+		return 2
 	case elapsed >= firstSensorLostAt:
 		return 1
 	default:

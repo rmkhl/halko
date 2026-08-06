@@ -94,14 +94,38 @@ func armedInjector(t *testing.T) (*Injector, time.Time) {
 	return i, start
 }
 
-// readings is a fresh response map with both sensors reporting plausible
-// values, matching what the simulator's temperature handler builds.
+// readings is a fresh probe map with all three probes reporting plausible
+// values, matching what the responder builds before formatting a read.
 func readings() types.TemperatureResponse {
-	return types.TemperatureResponse{"kiln": 50.0, "material": 30.0}
+	return types.TemperatureResponse{
+		"KilnPrimary":   50.0,
+		"KilnSecondary": 50.0,
+		"Wood":          30.0,
+	}
 }
 
 func invalid(r types.TemperatureResponse, sensor string) bool {
 	return r[sensor] == types.InvalidTemperatureReading
+}
+
+// anyInvalid reports whether any probe was rewritten.
+func anyInvalid(r types.TemperatureResponse) bool {
+	for _, sensor := range sensorNames {
+		if invalid(r, sensor) {
+			return true
+		}
+	}
+	return false
+}
+
+// allInvalid reports whether every probe was rewritten.
+func allInvalid(r types.TemperatureResponse) bool {
+	for _, sensor := range sensorNames {
+		if !invalid(r, sensor) {
+			return false
+		}
+	}
+	return true
 }
 
 func TestApplyLeavesReadingsAloneBeforeArming(t *testing.T) {
@@ -109,7 +133,7 @@ func TestApplyLeavesReadingsAloneBeforeArming(t *testing.T) {
 
 	r := readings()
 	i.Apply(r, time.Now().Add(time.Hour))
-	if invalid(r, "kiln") || invalid(r, "material") {
+	if anyInvalid(r) {
 		t.Fatalf("expected untouched readings before arming, got %v", r)
 	}
 }
@@ -120,7 +144,7 @@ func TestApplyLeavesReadingsAloneInTheFirstMinute(t *testing.T) {
 	for _, elapsed := range []time.Duration{0, 30 * time.Second, 59 * time.Second} {
 		r := readings()
 		i.Apply(r, start.Add(elapsed))
-		if invalid(r, "kiln") || invalid(r, "material") {
+		if anyInvalid(r) {
 			t.Fatalf("expected untouched readings at %v, got %v", elapsed, r)
 		}
 	}
@@ -178,23 +202,40 @@ func TestApplyLosesOneSensorAtTwoMinutes(t *testing.T) {
 		}
 	}
 
-	// The other sensor is still only dropping out intermittently, so across
-	// 100 reads it is valid most of the time.
-	if survivorValid < 50 {
-		t.Fatalf("expected the surviving sensor to stay mostly valid, got %d/100 valid", survivorValid)
+	// The other two probes are still only dropping out intermittently, so
+	// across 100 reads (200 survivor observations) they are valid most of
+	// the time.
+	if survivorValid < 100 {
+		t.Fatalf("expected the surviving probes to stay mostly valid, got %d/200 valid", survivorValid)
 	}
 }
 
-func TestApplyLosesBothSensorsAtThreeMinutes(t *testing.T) {
+func TestApplyLosesTwoProbesAtThreeMinutes(t *testing.T) {
 	i, start := armedInjector(t)
 	at := start.Add(181 * time.Second)
+
+	// The surviving probe can still drop out at random on any given read, so
+	// this asserts on the permanent set rather than on one read's values.
+	r := readings()
+	i.Apply(r, at)
+	if len(i.lost) != 2 {
+		t.Fatalf("expected exactly two lost probes at three minutes, got %v", i.lost)
+	}
+}
+
+func TestApplyLosesEveryProbeAtFourMinutes(t *testing.T) {
+	i, start := armedInjector(t)
+	at := start.Add(241 * time.Second)
 
 	for n := 0; n < 100; n++ {
 		r := readings()
 		i.Apply(r, at)
-		if !invalid(r, "kiln") || !invalid(r, "material") {
-			t.Fatalf("expected both sensors invalid, got %v", r)
+		if !allInvalid(r) {
+			t.Fatalf("expected every probe invalid, got %v", r)
 		}
+	}
+	if len(i.lost) != len(sensorNames) {
+		t.Fatalf("expected all %d probes lost, got %v", len(sensorNames), i.lost)
 	}
 }
 
@@ -202,9 +243,9 @@ func TestResetClearsLostSensors(t *testing.T) {
 	i, start := armedInjector(t)
 
 	r := readings()
-	i.Apply(r, start.Add(200*time.Second))
-	if len(i.lost) != 2 {
-		t.Fatalf("expected both sensors lost, got %v", i.lost)
+	i.Apply(r, start.Add(250*time.Second))
+	if len(i.lost) != len(sensorNames) {
+		t.Fatalf("expected every probe lost, got %v", i.lost)
 	}
 
 	i.Reset()
@@ -217,7 +258,7 @@ func TestResetClearsLostSensors(t *testing.T) {
 	i.Observe(30.0, 20.0, restart)
 	r = readings()
 	i.Apply(r, restart.Add(10*time.Second))
-	if invalid(r, "kiln") || invalid(r, "material") {
+	if anyInvalid(r) {
 		t.Fatalf("expected untouched readings after reset, got %v", r)
 	}
 }
@@ -229,7 +270,7 @@ func TestDisabledInjectorNeverAltersReadings(t *testing.T) {
 
 	r := readings()
 	i.Apply(r, start.Add(time.Hour))
-	if invalid(r, "kiln") || invalid(r, "material") {
+	if anyInvalid(r) {
 		t.Fatalf("expected a disabled injector to leave readings alone, got %v", r)
 	}
 }
@@ -239,7 +280,7 @@ func TestNilInjectorApplyIsSafe(t *testing.T) {
 
 	r := readings()
 	i.Apply(r, time.Now())
-	if invalid(r, "kiln") || invalid(r, "material") {
+	if anyInvalid(r) {
 		t.Fatalf("expected a nil injector to leave readings alone, got %v", r)
 	}
 }

@@ -15,7 +15,7 @@ type SimpleSimulation struct {
 }
 
 func (s *SimpleSimulation) Name() string {
-	return "simple"
+	return engineSimple
 }
 
 func (s *SimpleSimulation) ValidateConfig(config map[string]interface{}) error {

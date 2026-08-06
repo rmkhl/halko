@@ -1,17 +1,16 @@
 package log
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"sync"
 )
 
-type LogLevel int
+type Level int
 
 const (
-	ERROR LogLevel = iota
+	ERROR Level = iota
 	WARN
 	INFO
 	DEBUG
@@ -20,7 +19,7 @@ const (
 
 var (
 	mu       sync.RWMutex
-	level    LogLevel  = INFO
+	level              = INFO
 	output   io.Writer = os.Stdout
 	traceLog *log.Logger
 	debugLog *log.Logger
@@ -35,7 +34,7 @@ func init() {
 	SetLevel(level)
 }
 
-func SetLevel(l LogLevel) {
+func SetLevel(l Level) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -70,23 +69,23 @@ func SetOutput(w io.Writer) {
 }
 
 func Debug(format string, v ...interface{}) {
-	debugLog.Println(fmt.Sprintf(format, v...))
+	debugLog.Printf(format, v...)
 }
 
 func Info(format string, v ...interface{}) {
-	infoLog.Println(fmt.Sprintf(format, v...))
+	infoLog.Printf(format, v...)
 }
 
 func Warning(format string, v ...interface{}) {
-	warnLog.Println(fmt.Sprintf(format, v...))
+	warnLog.Printf(format, v...)
 }
 
 func Error(format string, v ...interface{}) {
-	errorLog.Println(fmt.Sprintf(format, v...))
+	errorLog.Printf(format, v...)
 }
 
 func Trace(format string, v ...interface{}) {
-	traceLog.Println(fmt.Sprintf(format, v...))
+	traceLog.Printf(format, v...)
 }
 
 func Fatal(format string, v ...interface{}) {

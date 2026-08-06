@@ -14,13 +14,13 @@ func TestBuildDisplayRequestSendsMessageAndAddress(t *testing.T) {
 
 func TestBuildDisplayRequestDefaultsEmptyMessageToIdle(t *testing.T) {
 	req := buildDisplayRequest("", "192.168.1.42")
-	if req.Message != "idle" {
-		t.Fatalf("expected message %q, got %q", "idle", req.Message)
+	if req.Message != DisplayIdle {
+		t.Fatalf("expected message %q, got %q", DisplayIdle, req.Message)
 	}
 }
 
 func TestBuildDisplayRequestOmitsUnknownAddress(t *testing.T) {
-	req := buildDisplayRequest("idle", "")
+	req := buildDisplayRequest(DisplayIdle, "")
 	if req.Address != "" {
 		t.Fatalf("expected empty address, got %q", req.Address)
 	}

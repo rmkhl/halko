@@ -44,6 +44,35 @@ func New(address string) *Shelly {
 	}
 }
 
+// decodeSwitchResponse reads an RPC reply, rejecting anything that is not a
+// successful response. The HTTP status has to be checked before the body is
+// trusted: a failed request whose body still decodes would otherwise look like
+// a switch that is off (GetState) or a command that landed (SetState).
+func decodeSwitchResponse(resp *http.Response) (*getStatusResponse, error) {
+	var statusResp getStatusResponse
+	decodeErr := json.NewDecoder(resp.Body).Decode(&statusResp)
+
+	if resp.StatusCode != http.StatusOK {
+		// Gen2 devices report RPC failures as JSON even on a non-200, so
+		// prefer that message when present and fall back to the status line.
+		if decodeErr == nil && len(statusResp.Message) != 0 {
+			return nil, fmt.Errorf("API error: status '%s', code '%d', message '%s'",
+				resp.Status, statusResp.Code, statusResp.Message)
+		}
+		return nil, fmt.Errorf("unexpected HTTP status '%s'", resp.Status)
+	}
+
+	if decodeErr != nil {
+		return nil, decodeErr
+	}
+
+	if statusResp.Code != 0 || len(statusResp.Message) != 0 {
+		return nil, fmt.Errorf("API error: code '%d', message '%s'", statusResp.Code, statusResp.Message)
+	}
+
+	return &statusResp, nil
+}
+
 func (s *Shelly) GetState(id int) (PowerState, error) {
 	url := fmt.Sprintf("%s/rpc/Switch.GetStatus?id=%d", s.address, id)
 	log.Trace("Getting state for device %d: %s", id, url)
@@ -55,15 +84,10 @@ func (s *Shelly) GetState(id int) (PowerState, error) {
 	}
 	defer resp.Body.Close()
 
-	var statusResp getStatusResponse
-	if err = json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
-		log.Error("Failed to decode response for device %d: %v", id, err)
+	statusResp, err := decodeSwitchResponse(resp)
+	if err != nil {
+		log.Warning("Failed to read state for device %d: %v", id, err)
 		return Unknown, err
-	}
-
-	if statusResp.Code != 0 || len(statusResp.Message) != 0 {
-		log.Warning("Shelly API error for device %d: code=%d, message=%s", id, statusResp.Code, statusResp.Message)
-		return Unknown, fmt.Errorf("API error: code '%d', message '%s'", statusResp.Code, statusResp.Message)
 	}
 
 	state := Off
@@ -86,15 +110,9 @@ func (s *Shelly) SetState(state PowerState, id int) (PowerState, error) {
 	}
 	defer resp.Body.Close()
 
-	var statusResp getStatusResponse
-	if err = json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
-		log.Error("Failed to decode response when setting device %d to %s: %v", id, state, err)
+	if _, err := decodeSwitchResponse(resp); err != nil {
+		log.Warning("Failed to set device %d to %s: %v", id, state, err)
 		return Unknown, err
-	}
-
-	if statusResp.Code != 0 || len(statusResp.Message) != 0 {
-		log.Warning("Shelly API error when setting device %d to %s: code=%d, message=%s", id, state, statusResp.Code, statusResp.Message)
-		return Unknown, fmt.Errorf("API error: code '%d', message '%s'", statusResp.Code, statusResp.Message)
 	}
 
 	log.Debug("Successfully set device %d to %s", id, state)
@@ -103,7 +121,7 @@ func (s *Shelly) SetState(state PowerState, id int) (PowerState, error) {
 
 func (s *Shelly) Shutdown() error {
 	log.Info("Shutting down all Shelly devices")
-	for id := range 3 {
+	for id := range NumberOfDevices {
 		if _, err := s.SetState(Off, id); err != nil {
 			log.Error("Failed to shut down device %d: %v", id, err)
 			return fmt.Errorf("failed to shut down device %d: %w", id, err)

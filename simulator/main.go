@@ -12,9 +12,11 @@ import (
 
 	"github.com/rmkhl/halko/simulator/elements"
 	"github.com/rmkhl/halko/simulator/engine"
+	"github.com/rmkhl/halko/simulator/esp32"
 	"github.com/rmkhl/halko/simulator/faults"
 	"github.com/rmkhl/halko/simulator/physics"
 	"github.com/rmkhl/halko/simulator/router"
+	"github.com/rmkhl/halko/simulator/simulation"
 	"github.com/rmkhl/halko/types"
 	"github.com/rmkhl/halko/types/log"
 )
@@ -97,15 +99,8 @@ func main() {
 		log.Fatal("Failed to extract shelly port from configuration: %v", err)
 	}
 
-	// Extract sensor port from api_endpoints.sensorunit.url
-	sensorPort, err := config.APIEndpoints.SensorUnit.GetPort()
-	if err != nil {
-		log.Fatal("Failed to extract sensor port from configuration: %v", err)
-	}
-
 	log.Info("Starting Halko Simulator")
-	log.Debug("Using configuration - ShellyPort=%s (from powerunit), SensorPort=%s (from api_endpoints)",
-		shellyPort, sensorPort)
+	log.Debug("Using configuration - ShellyPort=%s (from powerunit)", shellyPort)
 
 	fan := elements.NewPower("Fan")
 	fan.TurnOn(false) // Start the power controller in off state
@@ -151,9 +146,6 @@ func main() {
 	}
 	log.Info("Configured %d Shelly switch mappings from power_unit.power_mapping", len(shellyControls))
 
-	// Keys must stay in sync with sensorNames in simulator/faults/faults.go.
-	temperatureSensors := map[string]engine.TemperatureSensor{"kiln": heater, "material": wood}
-
 	ticker := time.NewTicker(tickDuration)
 	stop := make(chan struct{})
 	sigs := make(chan os.Signal, 1)
@@ -165,31 +157,45 @@ func main() {
 	shellyHandler := router.CORSMiddleware(shellyMux)
 
 	// Create simulation resetter for display endpoint
-	resetter := &router.SimulationResetter{
+	resetter := &simulation.Resetter{
 		Heater:              heater,
 		Wood:                wood,
 		Fan:                 fan,
 		Humidifier:          humidifier,
 		PhysicsState:        physicsState,
+		Faults:              faultInjector,
 		InitialKilnTemp:     float32(simConfig.InitialKilnTemp),
 		InitialMaterialTemp: float32(simConfig.InitialMaterialTemp),
 		EnvironmentTemp:     float32(simConfig.EnvironmentTemp),
-		Faults:              faultInjector,
 	}
 
-	// Create SensorUnit emulation server
-	sensorMux := http.NewServeMux()
-	router.SetupSensorUnitRoutes(sensorMux, temperatureSensors, config.APIEndpoints.SensorUnit, resetter, faultInjector)
-	sensorHandler := router.CORSMiddleware(sensorMux)
+	device, err := esp32.Open(config.SensorUnit.SerialDevice)
+	if err != nil {
+		log.Fatal("Failed to create the emulated sensor device: %v", err)
+	}
+
+	// Build the probe list from faults.SensorNames rather than repeating the
+	// three names here, so the simulator's probes and the failure injector's
+	// schedule cannot drift apart.
+	probes := make([]esp32.Probe, 0, len(faults.SensorNames()))
+	for _, name := range faults.SensorNames() {
+		var sensor engine.TemperatureSensor
+		switch name {
+		case "KilnPrimary", "KilnSecondary":
+			sensor = heater
+		case "Wood":
+			sensor = wood
+		default:
+			log.Fatal("No sensor mapping for probe %q", name)
+		}
+		probes = append(probes, esp32.Probe{Name: name, Sensor: sensor})
+	}
+
+	responder := esp32.NewResponder(probes, faultInjector, resetter)
 
 	shellySrv := &http.Server{
 		Addr:    ":" + shellyPort,
 		Handler: shellyHandler,
-	}
-
-	sensorSrv := &http.Server{
-		Addr:    ":" + sensorPort,
-		Handler: sensorHandler,
 	}
 
 	// Start simulation loop
@@ -250,14 +256,10 @@ func main() {
 		}
 	}()
 
-	// Start SensorUnit emulation server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Info("SensorUnit emulation server running on port %s", sensorPort)
-		if err := sensorSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error("SensorUnit server error: %s", err)
-		}
+		device.Serve(responder)
 	}()
 
 	<-sigs
@@ -268,14 +270,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Shutdown both servers
+	// Shutdown the Shelly server and the emulated sensor device
 	log.Debug("Shutting down HTTP servers...")
 	if err := shellySrv.Shutdown(ctx); err != nil {
 		log.Warning("Shelly server forced to shutdown: %v", err)
 	}
 
-	if err := sensorSrv.Shutdown(ctx); err != nil {
-		log.Warning("SensorUnit server forced to shutdown: %v", err)
+	if err := device.Close(); err != nil {
+		log.Warning("Failed to close the emulated sensor device: %v", err)
 	}
 
 	log.Info("Waiting for all servers and simulation to complete...")

@@ -9,6 +9,14 @@ import (
 
 // DifferentialSimulation implements temperature-differential physics where heat transfer
 // rates are proportional to temperature differences (Newton's Law of Cooling)
+const (
+	keyHeaterPower             = "heater_power"
+	keyHeatLossCoefficient     = "heat_loss_coefficient"
+	keyHeatTransferCoefficient = "heat_transfer_coefficient"
+	keyKilnThermalMass         = "kiln_thermal_mass"
+	keyMaterialThermalMass     = "material_thermal_mass"
+)
+
 type DifferentialSimulation struct {
 	heaterPower             float32 // Energy per tick when heater is on
 	heatLossCoefficient     float32 // Proportional heat loss to environment
@@ -18,36 +26,36 @@ type DifferentialSimulation struct {
 }
 
 func (d *DifferentialSimulation) Name() string {
-	return "differential"
+	return engineDifferential
 }
 
 func (d *DifferentialSimulation) Initialize(config map[string]interface{}) error {
 	// Extract and validate configuration
-	heaterPower, ok := config["heater_power"].(float64)
+	heaterPower, ok := config[keyHeaterPower].(float64)
 	if !ok {
 		return errors.New("heater_power must be specified as a number")
 	}
 	d.heaterPower = float32(heaterPower)
 
-	heatLossCoeff, ok := config["heat_loss_coefficient"].(float64)
+	heatLossCoeff, ok := config[keyHeatLossCoefficient].(float64)
 	if !ok {
 		return errors.New("heat_loss_coefficient must be specified as a number")
 	}
 	d.heatLossCoefficient = float32(heatLossCoeff)
 
-	heatTransferCoeff, ok := config["heat_transfer_coefficient"].(float64)
+	heatTransferCoeff, ok := config[keyHeatTransferCoefficient].(float64)
 	if !ok {
 		return errors.New("heat_transfer_coefficient must be specified as a number")
 	}
 	d.heatTransferCoefficient = float32(heatTransferCoeff)
 
-	kilnMass, ok := config["kiln_thermal_mass"].(float64)
+	kilnMass, ok := config[keyKilnThermalMass].(float64)
 	if !ok {
 		return errors.New("kiln_thermal_mass must be specified as a number")
 	}
 	d.kilnThermalMass = float32(kilnMass)
 
-	materialMass, ok := config["material_thermal_mass"].(float64)
+	materialMass, ok := config[keyMaterialThermalMass].(float64)
 	if !ok {
 		return errors.New("material_thermal_mass must be specified as a number")
 	}
@@ -60,7 +68,7 @@ func (d *DifferentialSimulation) Initialize(config map[string]interface{}) error
 }
 
 func (d *DifferentialSimulation) ValidateConfig(config map[string]interface{}) error {
-	required := []string{"heater_power", "heat_loss_coefficient", "heat_transfer_coefficient", "kiln_thermal_mass", "material_thermal_mass"}
+	required := []string{"heater_power", keyHeatLossCoefficient, keyHeatTransferCoefficient, keyKilnThermalMass, "material_thermal_mass"}
 	for _, key := range required {
 		if _, exists := config[key]; !exists {
 			return fmt.Errorf("required configuration parameter missing: %s", key)
@@ -71,19 +79,19 @@ func (d *DifferentialSimulation) ValidateConfig(config map[string]interface{}) e
 	}
 
 	// Validate positive values
-	if heaterPower := config["heater_power"].(float64); heaterPower <= 0 {
+	if heaterPower := config[keyHeaterPower].(float64); heaterPower <= 0 {
 		return errors.New("heater_power must be positive")
 	}
-	if heatLoss := config["heat_loss_coefficient"].(float64); heatLoss <= 0 {
+	if heatLoss := config[keyHeatLossCoefficient].(float64); heatLoss <= 0 {
 		return errors.New("heat_loss_coefficient must be positive")
 	}
-	if heatTransfer := config["heat_transfer_coefficient"].(float64); heatTransfer <= 0 {
+	if heatTransfer := config[keyHeatTransferCoefficient].(float64); heatTransfer <= 0 {
 		return errors.New("heat_transfer_coefficient must be positive")
 	}
-	if kilnMass := config["kiln_thermal_mass"].(float64); kilnMass <= 0 {
+	if kilnMass := config[keyKilnThermalMass].(float64); kilnMass <= 0 {
 		return errors.New("kiln_thermal_mass must be positive")
 	}
-	if materialMass := config["material_thermal_mass"].(float64); materialMass <= 0 {
+	if materialMass := config[keyMaterialThermalMass].(float64); materialMass <= 0 {
 		return errors.New("material_thermal_mass must be positive")
 	}
 

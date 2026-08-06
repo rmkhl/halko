@@ -1,18 +1,17 @@
-package tests
+package types
 
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/rmkhl/halko/types"
 )
 
 func TestConfigReading(t *testing.T) {
 	// Test business logic validation using a valid config
 	configPath := createTestConfigFile(t)
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -24,7 +23,7 @@ func TestConfigReading(t *testing.T) {
 	}
 
 	// Check that acclimate PID settings exist and have reasonable values
-	acclimate, exists := config.ControlUnitConfig.Defaults.PidSettings[types.StepTypeAcclimate]
+	acclimate, exists := config.ControlUnitConfig.Defaults.PidSettings[StepTypeAcclimate]
 	if exists && acclimate != nil {
 		if acclimate.Kp <= 0 || acclimate.Ki <= 0 || acclimate.Kd < 0 {
 			t.Error("PID values should be positive (Kp, Ki > 0, Kd >= 0)")
@@ -35,7 +34,7 @@ func TestConfigReading(t *testing.T) {
 func TestConfigStructure(t *testing.T) {
 	// Test that the configuration structure groups temperature control settings correctly
 	configPath := createTestConfigFile(t)
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -115,7 +114,12 @@ func createTestConfigFile(t *testing.T) string {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_halko.cfg")
 
-	err := os.WriteFile(configPath, []byte(testConfigData), 0644)
+	// The simulator creates the serial device it emulates, so the test
+	// config must name a path it may create rather than real hardware.
+	configData := strings.Replace(testConfigData, "/dev/ttyUSB0",
+		filepath.Join(tempDir, "esp32"), 1)
+
+	err := os.WriteFile(configPath, []byte(configData), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
@@ -126,7 +130,7 @@ func createTestConfigFile(t *testing.T) string {
 func TestServiceEndpointEmbedding(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -147,7 +151,7 @@ func TestServiceEndpointEmbedding(t *testing.T) {
 func TestGetServiceURLs(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -185,7 +189,7 @@ func TestGetServiceURLs(t *testing.T) {
 func TestGetPortMethod(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -193,7 +197,7 @@ func TestGetPortMethod(t *testing.T) {
 	// Test GetPort method with explicit ports
 	tests := []struct {
 		name         string
-		endpoint     *types.Endpoint
+		endpoint     *Endpoint
 		expectedPort string
 	}{
 		{"Executor", &config.APIEndpoints.ControlUnit.Endpoint, "8090"},
@@ -217,7 +221,7 @@ func TestGetPortMethod(t *testing.T) {
 func TestDBusUnitConfigOptional(t *testing.T) {
 	// testConfigData has no dbusunit section; config must still load and validate
 	configPath := createTestConfigFile(t)
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config without dbusunit section: %v", err)
 	}
@@ -228,7 +232,7 @@ func TestDBusUnitConfigOptional(t *testing.T) {
 
 func TestDBusUnitConfigParsing(t *testing.T) {
 	data := `{"dbusunit": {"system_bus_socket": "/run/host/run/dbus/system_bus_socket"}}`
-	var config types.HalkoConfig
+	var config HalkoConfig
 	if err := json.Unmarshal([]byte(data), &config); err != nil {
 		t.Fatalf("Failed to unmarshal dbusunit section: %v", err)
 	}
@@ -243,7 +247,7 @@ func TestDBusUnitConfigParsing(t *testing.T) {
 func TestJSONMarshaling(t *testing.T) {
 	configPath := createTestConfigFile(t)
 
-	config, err := types.LoadConfig(configPath)
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -255,7 +259,7 @@ func TestJSONMarshaling(t *testing.T) {
 	}
 
 	// Test that we can unmarshal it back
-	var newConfig types.HalkoConfig
+	var newConfig HalkoConfig
 	err = json.Unmarshal(jsonData, &newConfig)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal config from JSON: %v", err)

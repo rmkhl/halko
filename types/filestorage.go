@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -32,7 +33,7 @@ func (storage *FileStorage) ListPrograms(searchPath string) ([]string, error) {
 
 	for _, file := range files {
 		fileName := filepath.Base(file)
-		programs = append(programs, fileName[:len(fileName)-5])
+		programs = append(programs, strings.TrimSuffix(fileName, filepath.Ext(fileName)))
 	}
 
 	return programs, nil

@@ -1,31 +1,29 @@
-package tests
+package log
 
 import (
 	"bytes"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/rmkhl/halko/types/log"
 )
 
 func TestLogging(t *testing.T) {
 	// Save original output to restore later
 	originalOutput := os.Stdout
-	defer log.SetOutput(originalOutput)
+	defer SetOutput(originalOutput)
 
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
+	SetOutput(&buf)
 
 	t.Run("TraceLevel", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.TRACE)
+		SetLevel(TRACE)
 
-		log.Trace("trace message")
-		log.Debug("debug message")
-		log.Info("info message")
-		log.Warning("warning message")
-		log.Error("error message")
+		Trace("trace message")
+		Debug("debug message")
+		Info("info message")
+		Warning("warning message")
+		Error("error message")
 
 		output := buf.String()
 
@@ -49,13 +47,13 @@ func TestLogging(t *testing.T) {
 
 	t.Run("DebugLevel", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.DEBUG)
+		SetLevel(DEBUG)
 
-		log.Trace("trace message")
-		log.Debug("debug message")
-		log.Info("info message")
-		log.Warning("warning message")
-		log.Error("error message")
+		Trace("trace message")
+		Debug("debug message")
+		Info("info message")
+		Warning("warning message")
+		Error("error message")
 
 		output := buf.String()
 
@@ -79,13 +77,13 @@ func TestLogging(t *testing.T) {
 
 	t.Run("InfoLevel", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.INFO)
+		SetLevel(INFO)
 
-		log.Trace("trace message")
-		log.Debug("debug message")
-		log.Info("info message")
-		log.Warning("warning message")
-		log.Error("error message")
+		Trace("trace message")
+		Debug("debug message")
+		Info("info message")
+		Warning("warning message")
+		Error("error message")
 
 		output := buf.String()
 
@@ -109,13 +107,13 @@ func TestLogging(t *testing.T) {
 
 	t.Run("WarnLevel", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.WARN)
+		SetLevel(WARN)
 
-		log.Trace("trace message")
-		log.Debug("debug message")
-		log.Info("info message")
-		log.Warning("warning message")
-		log.Error("error message")
+		Trace("trace message")
+		Debug("debug message")
+		Info("info message")
+		Warning("warning message")
+		Error("error message")
 
 		output := buf.String()
 
@@ -139,13 +137,13 @@ func TestLogging(t *testing.T) {
 
 	t.Run("ErrorLevel", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.ERROR)
+		SetLevel(ERROR)
 
-		log.Trace("trace message")
-		log.Debug("debug message")
-		log.Info("info message")
-		log.Warning("warning message")
-		log.Error("error message")
+		Trace("trace message")
+		Debug("debug message")
+		Info("info message")
+		Warning("warning message")
+		Error("error message")
 
 		output := buf.String()
 
@@ -169,12 +167,12 @@ func TestLogging(t *testing.T) {
 
 	t.Run("FormattingTest", func(t *testing.T) {
 		buf.Reset()
-		log.SetLevel(log.DEBUG)
+		SetLevel(DEBUG)
 
-		log.Debug("Debug with value: %d", 42)
-		log.Info("Info with string: %s", "test")
-		log.Warning("Warning with multiple: %s = %d", "count", 5)
-		log.Error("Error with float: %.2f", 3.14159)
+		Debug("Debug with value: %d", 42)
+		Info("Info with string: %s", "test")
+		Warning("Warning with multiple: %s = %d", "count", 5)
+		Error("Error with float: %.2f", 3.14159)
 
 		output := buf.String()
 
@@ -195,19 +193,19 @@ func TestLogging(t *testing.T) {
 
 	t.Run("OutputPreservesLevel", func(t *testing.T) {
 		// Test that changing output preserves the current log level
-		log.SetLevel(log.DEBUG)
+		SetLevel(DEBUG)
 
 		var buf1, buf2 bytes.Buffer
 
 		// Set first output and test
-		log.SetOutput(&buf1)
-		log.Debug("debug to buf1")
-		log.Info("info to buf1")
+		SetOutput(&buf1)
+		Debug("debug to buf1")
+		Info("info to buf1")
 
 		// Change output and test again
-		log.SetOutput(&buf2)
-		log.Debug("debug to buf2")
-		log.Info("info to buf2")
+		SetOutput(&buf2)
+		Debug("debug to buf2")
+		Info("info to buf2")
 
 		// Both buffers should have debug messages since level should be preserved
 		if !strings.Contains(buf1.String(), "[DEBUG]") {

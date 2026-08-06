@@ -4,7 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 )
 
 func showNginxHelp() {
@@ -85,28 +87,33 @@ func handleNginxCommand() {
 }
 
 func extractHostPort(urlStr string) (string, string, error) {
-	// Parse URL and extract hostname and port
 	if urlStr == "" {
 		return "", "", errors.New("empty URL")
 	}
 
-	// Simple parsing - extract from http://host:port format
-	var host, port string
-	if _, err := fmt.Sscanf(urlStr, "http://%s", &host); err != nil {
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid URL format: %s", urlStr)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "", "", fmt.Errorf("unsupported URL scheme in %s", urlStr)
+	}
+	if parsed.Hostname() == "" {
 		return "", "", fmt.Errorf("invalid URL format: %s", urlStr)
 	}
 
-	// Split host:port
-	for i := len(host) - 1; i >= 0; i-- {
-		if host[i] == ':' {
-			port = host[i+1:]
-			host = host[:i]
-			break
-		}
+	// Hostname strips the brackets around an IPv6 literal; nginx needs them.
+	host := parsed.Hostname()
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
 	}
 
+	port := parsed.Port()
 	if port == "" {
 		port = "80"
+		if parsed.Scheme == "https" {
+			port = "443"
+		}
 	}
 
 	return host, port, nil

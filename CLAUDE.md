@@ -13,16 +13,24 @@ Halko is a distributed system for controlling and monitoring wood drying kilns. 
 
 ```text
 types/        — shared types, imported by all other modules
+types/log/    — logging (nested module, imported by types and every service)
 controlunit/  — kiln control logic and program execution
 powerunit/    — Shelly smart switch control
 sensorunit/   — ESP32/Arduino serial bridge
 simulator/    — hardware emulator (physics engines: simple/differential/thermodynamic)
 dbusunit/     — systemd D-Bus integration
 halkoctl/     — CLI management tool
-tests/        — integration test suite (separate module)
 ```
 
 When modifying types shared across services, change `types/` and then update all consumers.
+
+The module list lives in the `Makefile` as two variables: `MODULES` (the
+binary-producing services, used by `all`/`build`/`install`/`systemd-units`) and
+`GO_MODULES` (all of them, adding `types` and `types/log`, used by
+`fmt-changed`/`go-tidy`/`prepare`, and the list the per-module `test-<module>`
+and `lint-<module>` targets are generated from). Adding a module means updating
+`GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
+`GO_MODULES`, so a module missing there silently drops out of the workspace.
 
 ## Build & Test
 
@@ -30,7 +38,9 @@ Always use the Makefile, not `go` commands directly from the root.
 
 ```bash
 make all              # build all Go binaries → bin/
-make test             # run all test suites
+make test             # go test ./... in every Go module
+make test-controlunit # one module only — one target per entry in GO_MODULES
+make test-race        # all modules, with the race detector
 make lint             # golangci-lint + markdown + ESLint
 make fmt-changed      # gofmt/goimports on changed files only
 make go-tidy          # go mod tidy on all modules
@@ -44,16 +54,62 @@ make tmux-debug-run   # all services + simulator in tmux
 LOGLEVEL=4 make tmux-debug-run  # verbose logging (0=ERROR … 4=TRACE)
 SIMULATOR=thermodynamic make tmux-debug-run
 make tmux-debug-fail-run  # same, but the simulator injects escalating sensor failures
+LOG_DIR=/tmp/halko-logs make tmux-debug-run  # write the log files elsewhere
+```
 
+Every tmux window pipes its output through `tee`, so the logs are on the
+console and in `logs/<window>.log` under the workspace root (git-ignored,
+overwritten on every start). Override the directory with `LOG_DIR`; the start
+script aborts if it cannot create or write to it.
+
+**When debugging a run, read `logs/` first — no need to ask.** It always holds
+the *latest* run: `logs/controlunit.log`, `logs/simulator.log`,
+`logs/sensorunit.log`, `logs/powerunit.log`, `logs/dbusunit.log`,
+`logs/webapp.log`. Together with `fsdb/running/` and `fsdb/history/` (the run
+that just ended) they are the primary evidence for any "what happened during
+that run" question.
+
+The simulator emulates the ESP32 over a pseudo-terminal, so the real
+`sensorunit` service runs against it. It creates that device at the path named
+by `sensorunit.serial_device` in `halko.cfg`, which during development must
+name a path the simulator may create (for example `/tmp/halko-esp32`) rather
+than real hardware. Leaving it pointing at a real device path such as
+`/dev/ttyUSB1` makes the simulator refuse to start, naming that path in the
+error.
+
+```bash
 # ESP32
 make build-esp32      # compile firmware
 make upload-esp32     # flash to device
 make monitor-esp32    # serial monitor
 ```
 
-Running tests directly: `cd tests && go test ./...`
+Running tests for a single module: `make test-<module>` (or `cd <module> && go
+test ./...`). Adding a module to `GO_MODULES` generates its `test-` target
+automatically.
 
-Running linter on a single module: `cd <module> && golangci-lint run`
+Running the linter on a single module: `make lint-<module>` (or `cd <module> &&
+golangci-lint run`). Like the test targets, these are generated from
+`GO_MODULES`.
+
+The `lint-*` targets are deliberately non-gating: `make lint` runs every linter
+and reports all of their results in one pass rather than stopping at the first
+one with issues. The `test-*` targets behave the same way. Do not add gating to
+either.
+
+## Test Layout
+
+Tests live in the same package as the code they cover, the standard Go layout —
+there is no separate test module. A change to `controlunit/engine` is tested by
+`controlunit/engine/*_test.go`, `types.LoadConfig` by `types/config_test.go`,
+and so on. Put a new test next to its subject; `make test` picks it up with no
+wiring.
+
+Tests that drive a service end to end belong with that service. `simulator/
+shelly_api_test.go` is the model: it builds the simulator binary, runs it as a
+real process and drives its HTTP API. Such a test must stay self-contained —
+build what it needs, write its config to `t.TempDir()`, and never depend on a
+service the developer is expected to have running.
 
 ## Linting Rules
 
@@ -66,7 +122,7 @@ Config: `.golangci.yaml`. Enabled linters include `bodyclose`, `errchkjson`, `go
 - File-based storage under `/var/opt/halko/` (running programs, history)
 - Configuration loaded from `/etc/opt/halko.cfg` at startup
 - CORS headers are enabled on all services
-- No mocks — tests use real logic (see `tests/`)
+- No mocks — tests use real logic
 - Serial communication to ESP32 at 9600 baud
 
 ## Frontend Conventions

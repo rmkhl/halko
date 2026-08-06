@@ -73,10 +73,12 @@ func (p *psuController) setPower(psu string, percentage uint8) {
 	}
 
 	if response.StatusCode != http.StatusOK {
+		// Report the power unit's own message when it sent one, and fall back
+		// to the status line when the body is not the error shape.
 		var errorResponse types.APIErrorResponse
-		err = json.Unmarshal(body, &errorResponse)
-		if err != nil && errorResponse.Err != "" {
-			log.Error("Cannot set power %s: %s", psu, errorResponse.Err)
+		if err := json.Unmarshal(body, &errorResponse); err == nil && errorResponse.Err != "" {
+			log.Error("Cannot set power %s: %s (%s)", psu, errorResponse.Err, response.Status)
+			return
 		}
 		log.Error("Cannot set power %s: %s", psu, response.Status)
 	}

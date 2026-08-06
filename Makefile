@@ -1,4 +1,7 @@
 MODULES = controlunit powerunit simulator sensorunit halkoctl dbusunit
+# Every Go module in the workspace, including the ones that build no binary.
+# Keep in sync with go.work.
+GO_MODULES = $(MODULES) types types/log
 BINDIR = bin
 
 # Workspace-local Node.js — all node/npm invocations use this installation
@@ -100,7 +103,7 @@ prepare: $(NODE)
 		rm -f go.work && go work init; \
 	fi
 	@# Add all modules that have go.mod files
-	@for mod in $(MODULES) types tests; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Adding $$mod to go.work..."; \
 			go work use ./$$mod; \
@@ -344,14 +347,17 @@ monitor-esp32:
 lint: lint-golang lint-markdown lint-webapp
 	@echo "✓ All linting completed"
 
-.PHONY: lint-golang
-lint-golang:
-	@for mod in $(MODULES) types tests; do \
-		if [ -f $$mod/go.mod ]; then \
-			echo "Linting $$mod..."; \
-			(cd $$mod && golangci-lint run ./... || true); \
-		fi; \
-	done
+# One lint target per module, generated from GO_MODULES the same way the test
+# targets are: "make lint-golang" runs them all, "make lint-controlunit" runs
+# one. Non-gating, so every module reports its own issues in a single pass.
+LINT_TARGETS = $(GO_MODULES:%=lint-%)
+
+.PHONY: lint-golang $(LINT_TARGETS)
+lint-golang: $(LINT_TARGETS)
+
+$(LINT_TARGETS): lint-%:
+	@echo "Linting $*..."
+	@(cd $* && golangci-lint run ./...) || true
 
 .PHONY: lint-markdown
 lint-markdown: $(NODE)
@@ -374,7 +380,7 @@ go-tidy:
 
 .PHONY: update-modules
 update-modules:
-	@for mod in $(MODULES) types tests; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Updating $$mod..."; \
 			(cd $$mod && go get -u ./... && go mod tidy); \
@@ -457,7 +463,7 @@ install-webapp: build-webapp
 
 .PHONY: fmt-changed
 fmt-changed:
-	@for mod in $(MODULES) types; do \
+	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
 			echo "Formatting changed files in $$mod..."; \
 			(cd $$mod && git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix -v || true); \
@@ -465,28 +471,27 @@ fmt-changed:
 	done
 	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
 
-.PHONY: test
-test:
-	@echo "Running all tests..."
-	@$(MAKE) test-config || true
-	@$(MAKE) test-program-validation || true
-	@$(MAKE) test-shelly-api || true
-	@echo "All tests completed."
+# Tests live beside the code they cover, so each module gets its own target
+# generated from GO_MODULES: "make test" runs them all, "make test-controlunit"
+# runs one. Like the lint targets these do not gate, so a module with failing
+# tests still leaves the remaining modules to report their own results.
+GOTESTFLAGS =
+TEST_TARGETS = $(GO_MODULES:%=test-%)
 
-.PHONY: test-config
-test-config:
-	@echo "Running configuration tests..."
-	@cd tests && go test -v -run TestConfig
+.PHONY: test $(TEST_TARGETS)
+test: $(TEST_TARGETS)
+	@echo "✓ All module tests completed"
 
-.PHONY: test-program-validation
-test-program-validation:
-	@echo "Running program validation tests..."
-	@cd tests && go test -v -run TestProgramValidation
+$(TEST_TARGETS): test-%:
+	@echo "Testing $*..."
+	@(cd $* && go test $(GOTESTFLAGS) ./...) || true
 
-.PHONY: test-shelly-api
-test-shelly-api:
-	@echo "Running shelly API tests..."
-	@cd tests && go test -v -run TestShellyAPI
+# Target-specific variables apply to a target's prerequisites too, so this
+# reruns exactly the targets above with the race detector enabled.
+.PHONY: test-race
+test-race: GOTESTFLAGS = -race
+test-race: test
+	@echo "✓ Race detector enabled for the run above"
 
 .PHONY: clean-webapp
 clean-webapp:
@@ -578,16 +583,18 @@ help:
 	@echo "Development & Testing:"
 	@echo "  run-webapp                 Start webapp development server with hot reload."
 	@echo "  build-webapp               Build webapp for production to webapp/dist/."
-	@echo "  test                       Run all tests (config, program validation, Shelly API)."
-	@echo "  test-config                Run configuration loading tests."
-	@echo "  test-program-validation    Run program JSON validation tests."
-	@echo "  test-shelly-api            Run Shelly device API compatibility tests."
+	@echo "  test                       Run the test suite of every Go module."
+	@echo "  test-<module>              Run one module's tests, e.g. test-controlunit."
+	@echo "                               <module>: $(GO_MODULES)"
+	@echo "  test-race                  Run them all with the race detector enabled."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  lint                       Run all linters (golang, markdown, webapp)."
 	@echo "  lint-golang                Run golangci-lint on all Go modules."
+	@echo "  lint-<module>              Run golangci-lint on one module, e.g. lint-controlunit."
+	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  lint-markdown              Run markdownlint-cli2 on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
@@ -598,6 +605,8 @@ help:
 	@echo "  tmux-debug-run             Start services in tmux session for native debugging."
 	@echo "                               Starts: simulator, powerunit, controlunit, webapp"
 	@echo "                               Default loglevel: 3 (DEBUG)"
+	@echo "                               Each window is also logged to logs/<window>.log"
+	@echo "                               Usage: LOG_DIR=/tmp/halko-logs make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 make tmux-debug-run"
 	@echo "                               Usage: SIMULATOR=thermodynamic make tmux-debug-run"
 	@echo "                               Usage: LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run"

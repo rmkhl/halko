@@ -138,7 +138,6 @@ func (c *Controller) processTick() error {
 					continue
 				}
 				tracker.currentState = shelly.On
-				c.lastCommand = time.Now()
 			}
 		}
 	}
@@ -153,12 +152,16 @@ func (c *Controller) processTick() error {
 				continue
 			}
 			tracker.currentState = shelly.Off
-			c.lastCommand = time.Now()
 		}
 	}
 
-	// If more than max idle time has passed since the last command, set all percentages to 0
-	// Devices will be turned off on the next tick by the normal cycle logic
+	// If more than max idle time has passed since the last command, set all
+	// percentages to 0. Devices will be turned off on the next tick by the
+	// normal cycle logic.
+	//
+	// Only an incoming command refreshes lastCommand. Switching a relay as part
+	// of the duty cycle must not, or a running cycle would keep feeding the
+	// watchdog it is supposed to be judged by.
 	timeSinceLastCommand := time.Since(c.lastCommand)
 	if timeSinceLastCommand > c.maxIdleTime {
 		if !c.isIdle {
@@ -191,11 +194,14 @@ func (c *Controller) Stop() {
 	}
 }
 
-// GetAllPercentages returns the current power percentages of all devices
+// GetAllPercentages returns the current power percentages of all devices.
+//
+// Reading the status deliberately does not refresh lastCommand: the idle
+// watchdog exists to cut power when the control unit stops commanding, and
+// status polling (the webapp does it every few seconds) must not hold it off.
 func (c *Controller) GetAllPercentages() [shelly.NumberOfDevices]uint8 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	c.lastCommand = time.Now()
 
 	var percentages [shelly.NumberOfDevices]uint8
 	for id := range shelly.NumberOfDevices {
