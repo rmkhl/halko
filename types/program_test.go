@@ -358,7 +358,9 @@ func TestProgramValidationWithCopy(t *testing.T) {
 		t.Fatalf("Failed to read template config: %v", err)
 	}
 
-	// Test the new validation pattern used in createProgram/updateProgram
+	// Test the validation pattern used in startNewProgram, which validates a
+	// copy so the stored program is left as the author wrote it. Storing a
+	// program does not validate at all - only starting one does.
 	examplePath := filepath.Join("..", "example", "example-program-delta.json")
 	data, err := os.ReadFile(examplePath)
 	if err != nil {
