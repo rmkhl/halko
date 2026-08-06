@@ -357,7 +357,7 @@ Sends a GET request to `/engine/running` and displays the current execution stat
     "power_status": {
       "heater": 75,
       "fan": 50,
-      "humidifier": 0
+      "steam": 0
     }
   }
 }

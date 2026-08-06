@@ -46,7 +46,7 @@ func temperatureServer(t *testing.T, gate <-chan struct{}) *httptest.Server {
 func TestReadSensorsMapsEachDeviceToItsOwnReading(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"fan":{"percent":100},"heater":{"percent":0},"humidifier":{"percent":50}}}`))
+		_, _ = w.Write([]byte(`{"data":{"fan":{"percent":100},"heater":{"percent":0},"steam":{"percent":50}}}`))
 	}))
 	defer server.Close()
 
@@ -65,8 +65,8 @@ func TestReadSensorsMapsEachDeviceToItsOwnReading(t *testing.T) {
 	if readings.Heater.Percent != 0 {
 		t.Errorf("Heater.Percent = %d, want 0", readings.Heater.Percent)
 	}
-	if readings.Humidifier.Percent != 50 {
-		t.Errorf("Humidifier.Percent = %d, want 50", readings.Humidifier.Percent)
+	if readings.Steam.Percent != 50 {
+		t.Errorf("Steam.Percent = %d, want 50", readings.Steam.Percent)
 	}
 }
 
@@ -164,7 +164,7 @@ func TestTemperatureReaderStopsWhenShutdownArrivesDuringARead(t *testing.T) {
 func TestPSUReaderStopsWhileBlockedPublishingAReading(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"fan":{"percent":100},"heater":{"percent":0},"humidifier":{"percent":50}}}`))
+		_, _ = w.Write([]byte(`{"data":{"fan":{"percent":100},"heater":{"percent":0},"steam":{"percent":50}}}`))
 	}))
 	defer server.Close()
 

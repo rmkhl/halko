@@ -133,7 +133,7 @@ func TestExecuteTickKeepsRunningWhileReadingsAreValid(t *testing.T) {
 // TestExecuteTickFailsafeCutsAllPower drives the failsafe against a real
 // psuController backed by an httptest server, proving the failed state does
 // not just flip a status field but actually commands the heater, fan and
-// humidifier off. A gutted shutdown() body would pass every other test in
+// steam off. A gutted shutdown() body would pass every other test in
 // this file while leaving the kiln powered.
 func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
 	var mu sync.Mutex
@@ -177,7 +177,7 @@ func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	for _, psuName := range []string{psuOven, psuFan, psuHumidifier} {
+	for _, psuName := range []string{psuOven, psuFan, psuSteam} {
 		percent, ok := commanded[psuName]
 		if !ok {
 			t.Errorf("psu %q was never commanded", psuName)

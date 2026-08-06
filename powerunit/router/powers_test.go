@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	heater     = "heater"
-	fan        = "fan"
-	humidifier = "humidifier"
+	heater = "heater"
+	fan    = "fan"
+	steam  = "steam"
 )
 
 // The mappings powerunit builds from halko.cfg.
 var (
-	testPowerMapping = map[string]int{heater: 0, fan: 1, humidifier: 2}
-	testIDMapping    = [shelly.NumberOfDevices]string{heater, fan, humidifier}
+	testPowerMapping = map[string]int{heater: 0, fan: 1, steam: 2}
+	testIDMapping    = [shelly.NumberOfDevices]string{heater, fan, steam}
 )
 
 // newTestRouter wires the real router to a real power controller talking to a
@@ -77,7 +77,7 @@ func TestGetAllPercentagesNamesEveryDevice(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	for name, want := range map[string]uint8{heater: 10, fan: 20, humidifier: 30} {
+	for name, want := range map[string]uint8{heater: 10, fan: 20, steam: 30} {
 		got, ok := response.Data[name]
 		if !ok {
 			t.Fatalf("expected %q in the response, got %v", name, response.Data)
@@ -89,7 +89,7 @@ func TestGetAllPercentagesNamesEveryDevice(t *testing.T) {
 }
 
 // Regression: a command naming only some devices used to zero the rest, so
-// setting the heater silently switched the fan and humidifier off.
+// setting the heater silently switched the fan and steam off.
 func TestPartialCommandLeavesUnnamedDevicesAlone(t *testing.T) {
 	handler, controller := newTestRouter(t)
 	controller.SetAllPercentages([shelly.NumberOfDevices]uint8{10, 60, 40})
@@ -110,7 +110,7 @@ func TestFullCommandSetsEveryDevice(t *testing.T) {
 	controller.SetAllPercentages([shelly.NumberOfDevices]uint8{10, 60, 40})
 
 	rec := do(t, handler, http.MethodPost, "/power",
-		`{"heater":{"percent":1},"fan":{"percent":2},"humidifier":{"percent":3}}`)
+		`{"heater":{"percent":1},"fan":{"percent":2},"steam":{"percent":3}}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}

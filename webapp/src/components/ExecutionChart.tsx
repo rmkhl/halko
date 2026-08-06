@@ -35,7 +35,7 @@ interface ExecutionChartProps {
 }
 
 // Static CSV data from ,run.csv (used as fallback)
-const defaultCsvData = `time,step,steptime,material,kiln,heater,fan,humidifier
+const defaultCsvData = `time,step,steptime,material,kiln,heater,fan,steam
 6,Initializing,0,0.000000,0.000000,0,0,0
 24,Initial Heating,0,20.000000,20.000000,0,0,0
 84,Initial Heating,60,20.240005,22.500010,100,100,100

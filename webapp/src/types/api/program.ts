@@ -9,7 +9,7 @@ export interface Step {
   runtime?: string;      // Duration string like "6h", "30m"
   heater?: PowerSettings;
   fan?: PowerSettings;
-  humidifier?: PowerSettings;
+  steam?: PowerSettings;
 }
 
 export interface Program {

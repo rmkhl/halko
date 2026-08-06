@@ -227,7 +227,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
         [
           Math.round(mean(segment.rows.map((row) => row.heater))),
           Math.round(mean(segment.rows.map((row) => row.fan))),
-          Math.round(mean(segment.rows.map((row) => row.humidifier))),
+          Math.round(mean(segment.rows.map((row) => row.steam))),
         ].join(" / "),
       ]],
     });
@@ -254,7 +254,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       margin: { left: margin, right: margin },
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 3 },
-      head: [["#", "Name", "Type", "Target (°C)", "Runtime", "Heater", "Fan", "Humidifier"]],
+      head: [["#", "Name", "Type", "Target (°C)", "Runtime", "Heater", "Fan", "Steam"]],
       body: program.steps.map((step, index) => [
         String(index + 1),
         step.name,
@@ -263,7 +263,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
         step.runtime ?? "-",
         describePower(step.heater),
         describePower(step.fan),
-        describePower(step.humidifier),
+        describePower(step.steam),
       ]),
     });
   } else {

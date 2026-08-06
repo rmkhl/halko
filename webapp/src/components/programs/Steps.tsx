@@ -17,7 +17,7 @@ const emptyStep = (): ApiStep => ({
   runtime: undefined,
   heater: { type: "simple", power: 100 },
   fan: { type: "simple", power: 100 },
-  humidifier: { type: "simple", power: 50 },
+  steam: { type: "simple", power: 50 },
 });
 
 export const Steps: React.FC<Props> = (props) => {

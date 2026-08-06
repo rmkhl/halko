@@ -16,7 +16,7 @@ func newTestResetter() (*Resetter, *physics.SimulationState, *faults.Injector) {
 	wood := elements.NewWood(20.0, 20.0)
 	heater := elements.NewHeater("kiln", 20.0, 20.0, wood)
 	fan := elements.NewPower("Fan")
-	humidifier := elements.NewPower("Humidifier")
+	steam := elements.NewPower("Steam")
 	state := &physics.SimulationState{KilnTemp: 20.0, MaterialTemp: 20.0, EnvironmentTemp: 20.0}
 	injector := faults.New(true)
 
@@ -24,7 +24,7 @@ func newTestResetter() (*Resetter, *physics.SimulationState, *faults.Injector) {
 		Heater:              heater,
 		Wood:                wood,
 		Fan:                 fan,
-		Humidifier:          humidifier,
+		Steam:               steam,
 		PhysicsState:        state,
 		Faults:              injector,
 		InitialKilnTemp:     20.0,
@@ -40,16 +40,16 @@ func TestResetRestoresPhysicsState(t *testing.T) {
 	state.MaterialTemp = 60.0
 	state.HeaterIsOn = true
 	state.FanIsOn = true
-	state.HumidifierIsOn = true
+	state.SteamIsOn = true
 
 	r.Reset()
 
 	if state.KilnTemp != 20.0 || state.MaterialTemp != 20.0 {
 		t.Fatalf("expected temperatures back at 20°C, got kiln=%v material=%v", state.KilnTemp, state.MaterialTemp)
 	}
-	if state.HeaterIsOn || state.FanIsOn || state.HumidifierIsOn {
-		t.Fatalf("expected all power off, got heater=%v fan=%v humidifier=%v",
-			state.HeaterIsOn, state.FanIsOn, state.HumidifierIsOn)
+	if state.HeaterIsOn || state.FanIsOn || state.SteamIsOn {
+		t.Fatalf("expected all power off, got heater=%v fan=%v steam=%v",
+			state.HeaterIsOn, state.FanIsOn, state.SteamIsOn)
 	}
 }
 

@@ -66,7 +66,7 @@ func (s *SimpleSimulation) Initialize(config map[string]interface{}) error {
 }
 
 func (s *SimpleSimulation) Tick(state *SimulationState) {
-	log.Debug("Simulation[simple] tick - Heater:%v Fan:%v Humidifier:%v", state.HeaterIsOn, state.FanIsOn, state.HumidifierIsOn)
+	log.Debug("Simulation[simple] tick - Heater:%v Fan:%v Steam:%v", state.HeaterIsOn, state.FanIsOn, state.SteamIsOn)
 
 	// Update kiln temperature based on heater state
 	oldKilnTemp := state.KilnTemp

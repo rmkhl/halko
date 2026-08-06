@@ -324,8 +324,8 @@ func queryProgramDetails(programName string) {
 		if step.Fan != nil {
 			fmt.Printf("    Fan Control:       %s\n", formatPowerControl(step.Fan))
 		}
-		if step.Humidifier != nil {
-			fmt.Printf("    Humidifier Control: %s\n", formatPowerControl(step.Humidifier))
+		if step.Steam != nil {
+			fmt.Printf("    Steam Control: %s\n", formatPowerControl(step.Steam))
 		}
 	}
 	fmt.Println()

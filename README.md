@@ -109,7 +109,7 @@ deployments.
 #### `/powerunit`
 
 The PowerUnit interfaces with Shelly smart switches to control power to
-heaters, fans, and humidifiers. It provides a REST API for direct power
+heaters, fans, and steam injectors. It provides a REST API for direct power
 control operations.
 
 #### `/sensorunit`
@@ -217,7 +217,7 @@ example configuration:
     "max_idle_time": "70s",
     "power_mapping": {
       "heater": 0,
-      "humidifier": 1,
+      "steam": 1,
       "fan": 2
     }
   },

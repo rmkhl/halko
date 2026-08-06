@@ -166,7 +166,7 @@ Gets the status of all power channels.
     "fan": {
       "percent": 100
     },
-    "humidifier": {
+    "steam": {
       "percent": 0
     }
   }
@@ -184,7 +184,7 @@ request are set to 0%.
 {
   "heater": {"percent": 75},
   "fan": {"percent": 50},
-  "humidifier": {"percent": 0}
+  "steam": {"percent": 0}
 }
 ```
 
@@ -205,7 +205,7 @@ Gets the status of a specific power channel.
 **Path Parameters:**
 
 - `power`: The name of the power channel (e.g., `heater`, `fan`,
-  `humidifier`)
+  `steam`)
 
 **Response Format:**
 
@@ -224,7 +224,7 @@ Operates a specific power channel.
 **Path Parameters:**
 
 - `power`: The name of the power channel (e.g., `heater`, `fan`,
-  `humidifier`)
+  `steam`)
 
 **Request Format:**
 
@@ -413,7 +413,7 @@ Gets the execution log CSV for a completed program.
 **Response:** Returns CSV data directly (not JSON-wrapped)
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
 1734007890,Initial Heating,45.2,42.5,75,50,0
 ...
 ```
@@ -456,7 +456,7 @@ When a program is running:
           "fan": {
             "power": 50
           },
-          "humidifier": {
+          "steam": {
             "power": 0
           }
         }
@@ -472,7 +472,7 @@ When a program is running:
     "power_status": {
       "heater": 75,
       "fan": 50,
-      "humidifier": 0
+      "steam": 0
     }
   }
 }
@@ -488,7 +488,7 @@ When a program is running:
 - `temperatures.kiln`: Current kiln temperature in °C
 - `power_status.heater`: Heater power level (0-100%)
 - `power_status.fan`: Fan power level (0-100%)
-- `power_status.humidifier`: Humidifier power level (0-100%)
+- `power_status.steam`: Steam power level (0-100%)
 
 If no program is running, returns HTTP 204 No Content with error message:
 
@@ -521,7 +521,7 @@ The request body should contain a complete Program structure (see PROGRAM.md for
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 50
       }
     },
@@ -540,7 +540,7 @@ The request body should contain a complete Program structure (see PROGRAM.md for
       "fan": {
         "power": 75
       },
-      "humidifier": {
+      "steam": {
         "power": 25
       }
     },
@@ -554,7 +554,7 @@ The request body should contain a complete Program structure (see PROGRAM.md for
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 0
       }
     }
@@ -606,7 +606,7 @@ Fetches the accumulated execution log as CSV data for the currently running prog
 When a program is running, returns CSV data:
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
 1734007890,Initial Heating,45.2,42.5,75,50,0
 1734007896,Initial Heating,46.1,42.8,75,50,0
 ...
@@ -633,7 +633,7 @@ WebSocket endpoint for real-time execution log streaming.
 The server sends CSV lines as text messages:
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,humidifier_power
+timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
 ```
 
 **Behavior:**

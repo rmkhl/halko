@@ -12,7 +12,7 @@
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 100
       }
     },
@@ -27,7 +27,7 @@
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 50
       }
     },
@@ -39,7 +39,7 @@
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 25
       }
     },
@@ -53,7 +53,7 @@
       "fan": {
         "power": 100
       },
-      "humidifier": {
+      "steam": {
         "power": 0
       }
     }

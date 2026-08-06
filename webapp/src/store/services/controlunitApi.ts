@@ -64,7 +64,7 @@ export const controlunitApi = createApi({
             if (s.runtime !== undefined) step.runtime = s.runtime;
             if (s.heater !== undefined) step.heater = s.heater;
             if (s.fan !== undefined) step.fan = s.fan;
-            if (s.humidifier !== undefined) step.humidifier = s.humidifier;
+            if (s.steam !== undefined) step.steam = s.steam;
             return step;
           }),
         }),

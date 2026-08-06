@@ -81,7 +81,7 @@ var testConfigData = `{
     "max_idle_time": "70s",
     "power_mapping": {
       "heater": 0,
-      "humidifier": 1,
+      "steam": 1,
       "fan": 2
     }
   },

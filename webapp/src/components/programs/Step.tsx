@@ -30,7 +30,7 @@ export const Step: React.FC<Props> = (props) => {
     runtime,
     heater,
     fan,
-    humidifier,
+    steam,
   } = step;
   const { data: defaults } = useGetDefaultsQuery();
 
@@ -211,19 +211,19 @@ export const Step: React.FC<Props> = (props) => {
             </Stack>
 
             <Stack direction="row" gap={2} alignItems="center">
-              <Typography variant="body2" sx={{ width: 100 }}>Humidifier Power:</Typography>
+              <Typography variant="body2" sx={{ width: 100 }}>Steam Power:</Typography>
               {editing ? (
                 <TextField
                   type="number"
                   size="small"
-                  value={humidifier?.power ?? 0}
-                  onChange={e => handleChange("humidifier")!({ type: "simple", power: Number(e.target.value) })}
+                  value={steam?.power ?? 0}
+                  onChange={e => handleChange("steam")!({ type: "simple", power: Number(e.target.value) })}
                   inputProps={{ min: 0, max: 100 }}
                   sx={{ width: 100, '& input[type=number]': { MozAppearance: 'textfield' }, '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 }, '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 } }}
                   variant="standard"
                 />
               ) : (
-                <Typography variant="body2" color="text.secondary">{humidifier?.power ?? 0}%</Typography>
+                <Typography variant="body2" color="text.secondary">{steam?.power ?? 0}%</Typography>
               )}
             </Stack>
           </Stack>

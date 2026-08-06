@@ -107,8 +107,8 @@ export const RunningProgram: React.FC = () => {
                 <Typography>{powerData.data.fan?.percent ?? 0}%</Typography>
               </Stack>
               <Stack direction="row" justifyContent="space-between" gap={2}>
-                <Typography>Humidifier:</Typography>
-                <Typography>{powerData.data.humidifier?.percent ?? 0}%</Typography>
+                <Typography>Steam:</Typography>
+                <Typography>{powerData.data.steam?.percent ?? 0}%</Typography>
               </Stack>
             </>
           )}
