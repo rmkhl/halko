@@ -2,8 +2,14 @@ name: CI
 
 # Pull requests only. Pushing a branch on its own runs nothing - the suite is
 # for reviewing proposed changes, not for every intermediate commit.
+#
+# ready_for_review is not one of the default activity types, and without it a
+# pull request opened as a draft would never get a run: its opened and
+# synchronize events are skipped as drafts, and marking it ready would fire
+# nothing to replace them.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   # Allows re-running the suite by hand from the Actions tab.
   workflow_dispatch:
 
@@ -26,6 +32,9 @@ jobs:
   go-test:
     name: Go tests
     runs-on: ubuntu-latest
+    # Drafts are work in progress; a manual dispatch has no pull request
+    # attached, so it must not be filtered out by this.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +67,9 @@ jobs:
   go-test-race:
     name: Go tests (race)
     runs-on: ubuntu-latest
+    # Drafts are work in progress; a manual dispatch has no pull request
+    # attached, so it must not be filtered out by this.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v4
 
@@ -85,6 +97,9 @@ jobs:
   go-lint:
     name: Go lint
     runs-on: ubuntu-latest
+    # Drafts are work in progress; a manual dispatch has no pull request
+    # attached, so it must not be filtered out by this.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v4
 
@@ -123,6 +138,9 @@ jobs:
   webapp:
     name: Webapp and docs
     runs-on: ubuntu-latest
+    # Drafts are work in progress; a manual dispatch has no pull request
+    # attached, so it must not be filtered out by this.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v4
 
