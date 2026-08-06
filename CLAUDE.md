@@ -97,6 +97,12 @@ and reports all of their results in one pass rather than stopping at the first
 one with issues. The `test-*` targets behave the same way. Do not add gating to
 either.
 
+CI needs the opposite, so `test-ci`, `lint-ci` and `lint-markdown-ci` exist as
+gating counterparts. They run the same commands over the same `GO_MODULES`
+list and still report every module, but exit non-zero at the end if any of them
+failed. GitHub Actions calls these, never `make test` or `make lint` — those
+always exit 0 and would make a green build meaningless.
+
 ## Test Layout
 
 Tests live in the same package as the code they cover, the standard Go layout —
