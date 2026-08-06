@@ -51,9 +51,10 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.Ha
 		}
 		log.Debug("Received power commands: %v", commands)
 
+		// Start from the current settings so devices the caller did not mention
+		// keep running as they are; a partial command must not switch them off.
 		currentPercentages := p.GetAllPercentages()
-		var percentages [shelly.NumberOfDevices]uint8
-		changed := false
+		percentages := currentPercentages
 
 		for powerName, command := range commands {
 			id, ok := powerMapping[powerName]
@@ -65,17 +66,15 @@ func setAllPercentages(p *power.Controller, powerMapping map[string]int) http.Ha
 			percentages[id] = command.Percent
 			if currentPercentages[id] != command.Percent {
 				log.Info("Power percentage for %s updated to %d%% (was %d%%)", powerName, command.Percent, currentPercentages[id])
-				changed = true
 			} else {
 				log.Trace("Power percentage for %s unchanged at %d%%", powerName, command.Percent)
 			}
 		}
 
-		if changed {
-			p.SetAllPercentages(percentages)
-		} else {
-			log.Debug("No power percentage changes, skipping update")
-		}
+		// Always forward, even when nothing changed: a command is what tells the
+		// controller the control unit is still alive, and steps that hold a
+		// constant power would otherwise starve the idle watchdog.
+		p.SetAllPercentages(percentages)
 
 		writeJSON(w, http.StatusOK, types.APIResponse[types.PowerOperationResponse]{
 			Data: types.PowerOperationResponse{Message: "completed"},
@@ -129,8 +128,11 @@ func setPercentage(p *power.Controller, powerMapping map[string]int) http.Handle
 		currentPercent := percentages[id]
 		percentages[id] = command.Percent
 
+		// Forwarded unconditionally so that a repeated command still refreshes
+		// the idle watchdog. See setAllPercentages.
+		p.SetAllPercentages(percentages)
+
 		if currentPercent != command.Percent {
-			p.SetAllPercentages(percentages)
 			log.Info("Power percentage for %s updated to %d%% (was %d%%)", powerName, command.Percent, currentPercent)
 		} else {
 			log.Debug("Power percentage for %s unchanged at %d%%", powerName, command.Percent)
