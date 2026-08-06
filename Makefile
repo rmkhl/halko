@@ -83,7 +83,7 @@ prepare: $(NODE)
 	fi
 	@if ! command -v golangci-lint > /dev/null; then \
 		echo "Warning: 'golangci-lint' is not available. Some make targets will not work."; \
-		echo "Install with: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin"; \
+		echo "Install with: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.12.1/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.12.1"; \
 	else \
 		echo "✓ golangci-lint is installed"; \
 	fi
