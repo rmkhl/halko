@@ -10,14 +10,22 @@ interface Props {
   onChange: (steps: ApiStep[]) => void;
 }
 
+// Left without a heater on purpose: the control unit applies the default that
+// suits the step type (delta for heating, PID for acclimate, off for cooling),
+// and Step renders that default until it is overridden. Naming one here would
+// duplicate the configured deltas and go wrong as soon as the type is changed.
+//
+// Steam starts off because that is the only setting valid in every position: a
+// step that begins below 100°C may not run steam at constant power, and a new
+// step could land anywhere in the program.
 const emptyStep = (): ApiStep => ({
   name: "",
   type: "heating",
   temperature_target: 100,
   runtime: undefined,
-  heater: { type: "simple", power: 100 },
+  heater: undefined,
   fan: { type: "simple", power: 100 },
-  steam: { type: "simple", power: 50 },
+  steam: { type: "simple", power: 0 },
 });
 
 export const Steps: React.FC<Props> = (props) => {

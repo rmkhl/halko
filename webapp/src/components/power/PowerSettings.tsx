@@ -1,6 +1,12 @@
 import React from "react";
-import { PowerSettings as ApiPowerSettings } from "../../types/api";
+import { PowerSettings as ApiPowerSettings, PowerSettingType } from "../../types/api";
 import { Stack, Typography, TextField, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
+
+const typeLabels: Record<PowerSettingType, string> = {
+  simple: "Simple",
+  delta: "Delta",
+  pid: "PID",
+};
 
 const noSpinnerSx = {
   '& input[type=number]': {
@@ -21,16 +27,29 @@ interface Props {
   title: string;
   settings?: ApiPowerSettings;
   onChange: (settings?: ApiPowerSettings) => void;
+  // Which control methods this actuator accepts in this step. Steam, for
+  // example, may only be modulated against the delta in a heating step. When
+  // just one is allowed there is nothing to choose, so the selector is hidden.
+  allowedTypes?: PowerSettingType[];
+  // Seeds the delta fields when switching to delta control.
+  defaultDelta?: { min_delta: number; max_delta: number };
 }
 
 export const PowerSettingsComponent: React.FC<Props> = (props) => {
-  const { editing, title, settings, onChange } = props;
+  const {
+    editing,
+    title,
+    settings,
+    onChange,
+    allowedTypes = ["simple", "delta", "pid"],
+    defaultDelta = { min_delta: -5, max_delta: 5 },
+  } = props;
 
   const handleTypeChange = (type: string) => {
     if (type === "simple") {
       onChange({ type: "simple", power: 50 });
     } else if (type === "delta") {
-      onChange({ type: "delta", min_delta: -5, max_delta: 5 });
+      onChange({ type: "delta", ...defaultDelta });
     } else if (type === "pid") {
       onChange({ type: "pid", pid: { kp: 2.0, ki: 1.0, kd: 0.5 } });
     }
@@ -90,18 +109,20 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
 
       {editing ? (
         <>
-          <FormControl sx={{ minWidth: 180 }} size="small">
-            <InputLabel>Control Type</InputLabel>
-            <Select
-              value={controlType}
-              label="Control Type"
-              onChange={(e) => handleTypeChange(e.target.value)}
-            >
-              <MenuItem value="simple">Simple</MenuItem>
-              <MenuItem value="delta">Delta</MenuItem>
-              <MenuItem value="pid">PID</MenuItem>
-            </Select>
-          </FormControl>
+          {allowedTypes.length > 1 && (
+            <FormControl sx={{ minWidth: 180 }} size="small">
+              <InputLabel>Control Type</InputLabel>
+              <Select
+                value={controlType}
+                label="Control Type"
+                onChange={(e) => handleTypeChange(e.target.value)}
+              >
+                {allowedTypes.map((t) => (
+                  <MenuItem key={t} value={t}>{typeLabels[t]}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           {controlType === "simple" && (
             <TextField

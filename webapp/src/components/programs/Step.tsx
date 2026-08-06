@@ -1,5 +1,5 @@
 import React from "react";
-import { Step as ApiStep, PowerSettings } from "../../types/api";
+import { Step as ApiStep, PowerSettings, PowerSettingType } from "../../types/api";
 import { Button, Stack, StackProps, TextField, MenuItem, Select, FormControl, InputLabel, Typography, Box, IconButton, Tooltip } from "@mui/material";
 import { TextComponent } from "../form/TextComponent";
 import { PowerSettingsComponent } from "../power/PowerSettings";
@@ -70,6 +70,18 @@ export const Step: React.FC<Props> = (props) => {
 
   // Display heater (use actual or default)
   const displayHeater = heater || getDefaultHeater();
+
+  // Steam may only be modulated against the kiln/material delta in a heating
+  // step. Elsewhere it runs at constant power, and the control unit rejects
+  // anything else when the program is started.
+  const steamControlTypes: PowerSettingType[] =
+    type === "heating" ? ["simple", "delta"] : ["simple"];
+
+  // Seed a steam delta band from the configured heating deltas rather than the
+  // generic default, which is centred on zero and would leave steam always on.
+  const steamDeltaDefaults = defaults
+    ? { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
+    : undefined;
 
   // Determine current heater power control type
   const getHeaterControlType = (): string => {
@@ -210,22 +222,14 @@ export const Step: React.FC<Props> = (props) => {
               )}
             </Stack>
 
-            <Stack direction="row" gap={2} alignItems="center">
-              <Typography variant="body2" sx={{ width: 100 }}>Steam Power:</Typography>
-              {editing ? (
-                <TextField
-                  type="number"
-                  size="small"
-                  value={steam?.power ?? 0}
-                  onChange={e => handleChange("steam")!({ type: "simple", power: Number(e.target.value) })}
-                  inputProps={{ min: 0, max: 100 }}
-                  sx={{ width: 100, '& input[type=number]': { MozAppearance: 'textfield' }, '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 }, '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 } }}
-                  variant="standard"
-                />
-              ) : (
-                <Typography variant="body2" color="text.secondary">{steam?.power ?? 0}%</Typography>
-              )}
-            </Stack>
+            <PowerSettingsComponent
+              editing={editing}
+              title="Steam"
+              settings={steam ?? { type: "simple", power: 0 }}
+              onChange={handleChange("steam")}
+              allowedTypes={steamControlTypes}
+              defaultDelta={steamDeltaDefaults}
+            />
           </Stack>
         </Stack>
       </Stack>
