@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -14,6 +15,12 @@ const (
 	PowerSettingTypeSimple PowerSettingType = "simple"
 	PowerSettingTypeDelta  PowerSettingType = "delta"
 	PowerSettingTypePid    PowerSettingType = "pid"
+
+	// steamCeilingCelsius is the temperature steam cannot heat the kiln past.
+	// Above it steam is thermally neutral, since it must itself be raised to
+	// kiln temperature. Below it steam outruns the heater and is the most
+	// immediate contributor to kiln temperature.
+	steamCeilingCelsius = 100
 )
 
 type (
@@ -136,12 +143,8 @@ func (p *ProgramStep) Validate() error {
 		return fanErr
 	}
 
-	// Validate steam - call validate first to capture any errors
-	steamErr := p.Steam.Validate("steam")
-	if p.Steam.Type != PowerSettingTypeSimple {
-		return errors.New("steam must use simple power control")
-	}
-	if steamErr != nil {
+	// Validate steam - this resolves Type, which the step validators restrict
+	if steamErr := p.Steam.Validate("steam"); steamErr != nil {
 		return steamErr
 	}
 
@@ -157,16 +160,63 @@ func (p *ProgramStep) Validate() error {
 	}
 }
 
+// steamIsOff reports whether the step holds steam at a constant zero.
+func (p *ProgramStep) steamIsOff() bool {
+	return p.Steam.Type == PowerSettingTypeSimple && p.Steam.Power != nil && *p.Steam.Power == 0
+}
+
+// steamRunsOpenLoop reports whether the step holds steam at a constant non-zero
+// power, with nothing modulating it against the kiln/material delta.
+func (p *ProgramStep) steamRunsOpenLoop() bool {
+	return p.Steam.Type == PowerSettingTypeSimple && p.Steam.Power != nil && *p.Steam.Power > 0
+}
+
+// kilnExitTemperature is the lowest kiln temperature the step can hand over at.
+// A heating step's delta controller holds the kiln within
+// [material+min_delta, material+max_delta] and the step ends once the material
+// reaches target, so the kiln floor at handover is target+min_delta - the top
+// of the band is a maximum, not something the next step can rely on. An
+// acclimate settles the kiln back onto the material, so it hands over at
+// target. Cooling always runs steam off, so its exit temperature gates nothing.
+func (p *ProgramStep) kilnExitTemperature() float32 {
+	if p.StepType == StepTypeHeating && p.Heater.Type == PowerSettingTypeDelta && p.Heater.MinDelta != nil {
+		return float32(p.TargetTemperature) + *p.Heater.MinDelta
+	}
+	return float32(p.TargetTemperature)
+}
+
 func (p *ProgramStep) validateHeatingStep() error {
 	if p.Runtime != nil {
 		return errors.New("heating step cannot have runtime")
 	}
-	return p.Heater.Validate("heater")
+	// Steam may be held constant or modulated against the delta; which of the
+	// two is allowed depends on the entry temperature, checked per program.
+	if p.Steam.Type != PowerSettingTypeSimple && p.Steam.Type != PowerSettingTypeDelta {
+		return errors.New("heating step steam must use simple or delta power control")
+	}
+	if err := p.Heater.Validate("heater"); err != nil {
+		return err
+	}
+	// Only delta control bounds the kiln/material delta. Simple runs the heater
+	// open-loop, and PID regulates the kiln to target while ignoring the
+	// material entirely, so both let the kiln run arbitrarily far ahead.
+	if p.Heater.Type != PowerSettingTypeDelta {
+		return errors.New("heating step heater must use delta power control")
+	}
+	return nil
 }
 
 func (p *ProgramStep) validateAcclimateStep() error {
 	if p.Runtime == nil {
 		return errors.New("acclimate step must have runtime")
+	}
+	if p.Steam.Type != PowerSettingTypeSimple {
+		return errors.New("acclimate step steam must use simple power control")
+	}
+	// An acclimate settles the kiln onto the material, so a target below the
+	// ceiling leaves steam free to heat the kiln with nothing modulating it.
+	if p.TargetTemperature < steamCeilingCelsius && !p.steamIsOff() {
+		return fmt.Errorf("acclimate step below %d°C must switch steam off", steamCeilingCelsius)
 	}
 	return p.Heater.Validate("heater")
 }
@@ -181,6 +231,11 @@ func (p *ProgramStep) validateCoolingStep() error {
 	}
 	if heaterErr != nil {
 		return heaterErr
+	}
+	// The kiln descends back through the ceiling during a cooling step, so any
+	// steam at all would start heating it again on the way down.
+	if !p.steamIsOff() {
+		return errors.New("cooling step must switch steam off")
 	}
 	return nil
 }
@@ -223,7 +278,11 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		if step.Steam == nil {
 			step.Steam = &PowerPidSettings{}
 		}
-		if step.Steam.Power == nil {
+		// Only fill in a constant power when the step named no control method
+		// at all; a step asking for delta steam must keep Power unset, or it
+		// ends up defining two methods and fails validation.
+		if step.Steam.Pid == nil && step.Steam.Power == nil &&
+			step.Steam.MinDelta == nil && step.Steam.MaxDelta == nil {
 			step.Steam.Power = &zeroPower
 		}
 	}
@@ -243,7 +302,35 @@ func (p *Program) Validate() error {
 		}
 	}
 
+	if err := p.validateSteamAgainstKilnTemperature(); err != nil {
+		return err
+	}
+
 	return p.validateStepOrderAndTemperatureProgression()
+}
+
+// validateSteamAgainstKilnTemperature enforces where steam may run open-loop.
+// A heating step may hold steam at constant power only when the kiln is already
+// at or above the ceiling as the step begins, since below it steam outruns the
+// heater and opens a delta the heater cannot close by backing off. Each step
+// enters where its predecessor handed over; the first starts cold, because
+// nothing constrains what temperature a charge is loaded at.
+func (p *Program) validateSteamAgainstKilnTemperature() error {
+	entry := float32(0)
+
+	for i := range p.ProgramSteps {
+		step := &p.ProgramSteps[i]
+
+		if step.StepType == StepTypeHeating && step.steamRunsOpenLoop() && entry < steamCeilingCelsius {
+			return fmt.Errorf(
+				"step %q enters with the kiln at %.1f°C, below %d°C, so it must switch steam off or use delta power control",
+				step.Name, entry, steamCeilingCelsius)
+		}
+
+		entry = step.kilnExitTemperature()
+	}
+
+	return nil
 }
 
 func (p *Program) validateStepOrderAndTemperatureProgression() error {

@@ -13,7 +13,8 @@
         "power": 100
       },
       "steam": {
-        "power": 100
+        "min_delta": 5,
+        "max_delta": 10
       }
     },
     {
