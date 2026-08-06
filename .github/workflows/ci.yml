@@ -29,8 +29,11 @@ env:
   GOLANGCI_LINT_VERSION: v2.12.1
 
 jobs:
-  go-test:
-    name: Go tests
+  # Always under the race detector: it runs the same assertions as a plain
+  # test run and adds data-race detection, so a separate uninstrumented job
+  # would only repeat work.
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     # Drafts are work in progress; a manual dispatch has no pull request
     # attached, so it must not be filtered out by this.
@@ -53,44 +56,11 @@ jobs:
           key: node-${{ runner.os }}-${{ hashFiles('Makefile', 'package.json', 'webapp/package-lock.json') }}
           restore-keys: node-${{ runner.os }}-
 
-      # prepare is what generates go.work, which is git-ignored and so absent
-      # from a fresh checkout. It also verifies GO_MODULES and the workspace
-      # still agree - a module missing from that list silently drops out.
       - name: Prepare workspace
         run: make prepare
 
       # test-ci rather than test: the per-module test targets swallow failures
       # on purpose, so 'make test' can never fail a build.
-      - name: Run tests
-        run: make test-ci
-
-  go-test-race:
-    name: Go tests (race)
-    runs-on: ubuntu-latest
-    # Drafts are work in progress; a manual dispatch has no pull request
-    # attached, so it must not be filtered out by this.
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: "**/go.sum"
-
-      - name: Cache Node.js and modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            .nodejs
-            node_modules
-            webapp/node_modules
-          key: node-${{ runner.os }}-${{ hashFiles('Makefile', 'package.json', 'webapp/package-lock.json') }}
-          restore-keys: node-${{ runner.os }}-
-
-      - name: Prepare workspace
-        run: make prepare
-
       - name: Run tests with the race detector
         run: make test-ci GOTESTFLAGS=-race
 
