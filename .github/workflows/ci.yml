@@ -1,9 +1,9 @@
 name: CI
 
+# Pull requests only. Pushing a branch on its own runs nothing - the suite is
+# for reviewing proposed changes, not for every intermediate commit.
 on:
   pull_request:
-  push:
-    branches: [master]
   # Allows re-running the suite by hand from the Actions tab.
   workflow_dispatch:
 
