@@ -6,7 +6,7 @@ BINDIR = bin
 
 # Workspace-local Node.js — all node/npm invocations use this installation
 # regardless of what is installed on the system.
-NODEJS_VERSION = 18.20.5
+NODEJS_VERSION = 24.19.0
 NODEJS_DIR = $(CURDIR)/.nodejs
 NODE = $(NODEJS_DIR)/bin/node
 NPM = $(NODEJS_DIR)/bin/npm

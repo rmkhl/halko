@@ -39,15 +39,15 @@ jobs:
     # attached, so it must not be filtered out by this.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Cache Node.js and modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             .nodejs
@@ -71,15 +71,15 @@ jobs:
     # attached, so it must not be filtered out by this.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Cache Node.js and modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             .nodejs
@@ -112,15 +112,15 @@ jobs:
     # attached, so it must not be filtered out by this.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: "**/go.sum"
 
       - name: Cache Node.js and modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             .nodejs
