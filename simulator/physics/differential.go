@@ -9,6 +9,8 @@ import (
 
 // DifferentialSimulation implements temperature-differential physics where heat transfer
 // rates are proportional to temperature differences (Newton's Law of Cooling)
+const keyHeaterPower = "heater_power"
+
 type DifferentialSimulation struct {
 	heaterPower             float32 // Energy per tick when heater is on
 	heatLossCoefficient     float32 // Proportional heat loss to environment
@@ -18,12 +20,12 @@ type DifferentialSimulation struct {
 }
 
 func (d *DifferentialSimulation) Name() string {
-	return "differential"
+	return engineDifferential
 }
 
 func (d *DifferentialSimulation) Initialize(config map[string]interface{}) error {
 	// Extract and validate configuration
-	heaterPower, ok := config["heater_power"].(float64)
+	heaterPower, ok := config[keyHeaterPower].(float64)
 	if !ok {
 		return errors.New("heater_power must be specified as a number")
 	}
@@ -71,7 +73,7 @@ func (d *DifferentialSimulation) ValidateConfig(config map[string]interface{}) e
 	}
 
 	// Validate positive values
-	if heaterPower := config["heater_power"].(float64); heaterPower <= 0 {
+	if heaterPower := config[keyHeaterPower].(float64); heaterPower <= 0 {
 		return errors.New("heater_power must be positive")
 	}
 	if heatLoss := config["heat_loss_coefficient"].(float64); heatLoss <= 0 {
