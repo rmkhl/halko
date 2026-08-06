@@ -368,6 +368,29 @@ lint-markdown: $(NODE)
 		echo "Warning: markdownlint-cli2 is not installed. Run 'make prepare' first."; \
 	fi
 
+# Gating counterparts for CI. The targets above deliberately swallow failures
+# so that one bad module cannot hide the rest, which is right for a developer
+# reading a full report but useless for a build that has to fail. These run the
+# same commands and keep reporting every module, then exit non-zero at the end
+# if any of them failed. Do not add gating to the targets above instead.
+.PHONY: lint-ci
+lint-ci:
+	@failed=""; \
+	for mod in $(GO_MODULES); do \
+		echo "Linting $$mod..."; \
+		(cd $$mod && golangci-lint run ./...) || failed="$$failed $$mod"; \
+	done; \
+	if [ -n "$$failed" ]; then \
+		echo "✗ Lint failed in:$$failed"; \
+		exit 1; \
+	fi; \
+	echo "✓ All modules lint clean"
+
+.PHONY: lint-markdown-ci
+lint-markdown-ci: $(NODE)
+	@echo "Linting markdown files..."
+	@$(NPM) run lint:markdown
+
 .PHONY: go-tidy
 go-tidy:
 	@echo "Running go mod tidy on all modules..."
@@ -493,6 +516,21 @@ test-race: GOTESTFLAGS = -race
 test-race: test
 	@echo "✓ Race detector enabled for the run above"
 
+# Gating counterpart for CI - see the note above lint-ci. Runs every module and
+# reports all of them, then fails the build if any module's tests failed.
+.PHONY: test-ci
+test-ci:
+	@failed=""; \
+	for mod in $(GO_MODULES); do \
+		echo "Testing $$mod..."; \
+		(cd $$mod && go test $(GOTESTFLAGS) ./...) || failed="$$failed $$mod"; \
+	done; \
+	if [ -n "$$failed" ]; then \
+		echo "✗ Tests failed in:$$failed"; \
+		exit 1; \
+	fi; \
+	echo "✓ All module tests passed"
+
 .PHONY: clean-webapp
 clean-webapp:
 	@echo "Cleaning webapp build artifacts..."
@@ -587,6 +625,7 @@ help:
 	@echo "  test-<module>              Run one module's tests, e.g. test-controlunit."
 	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  test-race                  Run them all with the race detector enabled."
+	@echo "  test-ci                    As 'test', but fails the build if any module fails."
 	@echo "  monitor-memory             Monitor process memory usage (requires running processes)."
 	@echo "                               Examples: make monitor-memory MONITOR_ARGS='-p controlunit -i 5'"
 	@echo ""
@@ -597,6 +636,8 @@ help:
 	@echo "                               <module>: $(GO_MODULES)"
 	@echo "  lint-markdown              Run markdownlint-cli2 on all markdown files."
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
+	@echo "  lint-ci                    As 'lint-golang', but fails the build on any issue."
+	@echo "  lint-markdown-ci           As 'lint-markdown', but fails the build on any issue."
 	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
 	@echo "  go-tidy                    Run go mod tidy on all modules."
 	@echo "  update-modules             Update all go.mod dependencies and tidy them."

@@ -54,8 +54,6 @@ arduino-cli.yaml
 node_modules
 package-lock.json
 
-.github
-
 # Local test programs
 *-test.json
 .superpowers/
