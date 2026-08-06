@@ -9,9 +9,9 @@ import (
 
 // GlobalOptions represents options common to all modules (controlunit, powerunit, sensorunit, halkoctl)
 type GlobalOptions struct {
-	ConfigPath string       // Path to halko.cfg configuration file
-	Verbose    bool         // Enable verbose output
-	LogLevel   log.LogLevel // Log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
+	ConfigPath string    // Path to halko.cfg configuration file
+	Verbose    bool      // Enable verbose output
+	LogLevel   log.Level // Log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
 }
 
 // ParseGlobalOptions parses command-line options for all modules (controlunit, powerunit, sensorunit, halkoctl)
@@ -43,7 +43,7 @@ func ParseGlobalOptions() (*GlobalOptions, error) {
 	if *logLevel < 0 || *logLevel > 4 {
 		return nil, fmt.Errorf("invalid log level %d: must be between 0 (ERROR) and 4 (TRACE)", *logLevel)
 	}
-	opts.LogLevel = log.LogLevel(*logLevel)
+	opts.LogLevel = log.Level(*logLevel)
 
 	return opts, nil
 }
