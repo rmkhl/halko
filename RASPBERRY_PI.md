@@ -146,7 +146,18 @@ Use **Raspberry Pi OS Lite (32-bit)** for Raspberry Pi 3B, flashed to USB SSD:
 ```bash
 # After booting from USB SSD
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git golang
+sudo apt install -y git curl
+```
+
+**Go**: the workspace needs Go 1.26 or newer, which is well ahead of the
+`golang` package in Raspberry Pi OS. Install the upstream toolchain instead:
+
+```bash
+# Pick armv6l for a 32-bit Raspberry Pi OS, arm64 for a 64-bit one
+curl -fsSLO https://go.dev/dl/go1.26.2.linux-armv6l.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.26.2.linux-armv6l.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.profile && . ~/.profile
+go version
 ```
 
 ### Network Setup
@@ -335,23 +346,33 @@ sudo nano /etc/opt/halko.cfg
 - `network_interface`: Set to `wlan0` (WiFi interface)
   - This IP address will be displayed on the sensor unit for connection purposes
   - Allows remote access to webapp and API from network devices
-- `serial_device`: Arduino path (e.g., `/dev/ttyUSB0` or `/dev/ttyACM0`)
-  - Run `ls /dev/ttyUSB* /dev/ttyACM*` to find Arduino device
+- `serial_device`: ESP32 path (e.g., `/dev/ttyUSB0` or `/dev/ttyACM0`)
+  - Run `ls /dev/ttyUSB* /dev/ttyACM*` to find the ESP32 device
 - `shelly_address`: `192.168.10.2` (Shelly static IP on Ethernet)
 
-**Example configuration:**
+**Example configuration** (only the fields that differ from the installed
+template — `api_endpoints` stays on localhost, since the services all run on
+the Pi and only the PowerUnit talks to the Shelly):
 
 ```json
 {
   "controlunit": {
+    "base_path": "/var/opt/halko",
+    "tick_length": "6s",
     "network_interface": "wlan0",
-    "api_port": 8090,
-    ...
+    "defaults": { "...": "unchanged" }
   },
-  "api_endpoints": {
-    "powerunit": "http://192.168.10.2/..."
+  "power_unit": {
+    "shelly_address": "http://192.168.10.2",
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
+    "power_mapping": { "heater": 0, "steam": 1, "fan": 2 }
   },
-  ...
+  "sensorunit": {
+    "serial_device": "/dev/ttyUSB0",
+    "baud_rate": 9600
+  },
+  "api_endpoints": { "...": "unchanged" }
 }
 ```
 
@@ -365,6 +386,9 @@ See [templates/README.md](templates/README.md) for full configuration details.
 sudo systemctl status halko@controlunit
 sudo systemctl status halko@powerunit
 sudo systemctl status halko@sensorunit
+
+# The dbusunit has its own (non-templated) unit and runs as root:
+sudo systemctl status halko-dbusunit
 
 # View logs:
 sudo journalctl -u halko@controlunit -f
@@ -488,7 +512,7 @@ If services cannot communicate:
 
    ```bash
    sudo iptables -L
-   # If firewall is active, may need to allow ports 8090-8093
+   # If firewall is active, may need to allow ports 8090, 8092, 8093 and 8094
    ```
 
 6. **Restart networking if needed**:
@@ -510,9 +534,13 @@ If services cannot communicate:
 
    ```ini
    [Service]
-   Restart=always
-   RestartSec=10
+   Restart=on-failure
+   RestartSec=5s
    ```
+
+   A clean exit is deliberately not restarted, so stopping a service stays
+   stopped. `StartLimitIntervalSec=0` disables the restart rate limit, so a
+   service that keeps crashing keeps being retried rather than giving up.
 
 3. **Log rotation** for disk space management:
 

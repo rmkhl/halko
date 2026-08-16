@@ -326,14 +326,15 @@ halkoctl interacts with various ControlUnit and SensorUnit endpoints:
 
 ### send command
 
-Sends a POST request to the ControlUnit's `/engine/running` endpoint with the program definition in the request body:
+Sends a POST request to the ControlUnit's `/engine/running` endpoint with the
+program definition as the request body. The program is sent unwrapped,
+consistent with the storage endpoints — the file's contents go on the wire
+as-is:
 
 ```json
 {
-  "program": {
-    "name": "Program Name",
-    "steps": [...]
-  }
+  "name": "Program Name",
+  "steps": [...]
 }
 ```
 
@@ -406,8 +407,14 @@ halkoctl uses the Halko configuration file (`halko.cfg`) to determine API endpoi
 1. Path specified with `-c` or `--config` flag
 2. `HALKO_CONFIG` environment variable
 3. `./halko.cfg` (current directory)
-4. `~/.halko.cfg` (user home directory)
-5. `/etc/opt/halko.cfg` (system-wide)
+4. `~/.halko.cfg`, then `~/.config/halko.cfg` (user home directory)
+5. `/etc/halko/halko.cfg`, then `/etc/opt/halko/halko.cfg`, then
+   `/etc/opt/halko.cfg` (system-wide)
+6. Next to the `halkoctl` executable
+
+`/etc/opt/halko.cfg` is where `make install` puts the config and what the
+systemd units name, so on a production host auto-discovery finds the same file
+the services are running from.
 
 You can also specify a custom config file using the `-c` or `--config` flag.
 

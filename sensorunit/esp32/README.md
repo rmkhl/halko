@@ -90,7 +90,8 @@ sensorunit/esp32/
    make monitor-esp32 PORT=/dev/ttyUSB1  # Connect to specific port
    ```
 
-   - Baud rate: 115200
+   - Baud rate: 9600 (matches `Serial.begin(9600)` in the firmware and
+     `sensorunit.baud_rate` in `halko.cfg`)
    - Displays temperature readings from MAX31855 sensors
    - Shows status on OLED display
    - Press Ctrl+C to exit (may need Ctrl+A then K in screen)
@@ -147,7 +148,7 @@ ls /dev/ttyUSB*
 
 **Serial monitor shows garbage characters:**
 
-- Verify baud rate is 115200
+- Verify baud rate is 9600
 - Press the EN (reset) button on ESP32 to restart the program
 
 **Build fails with "esp32:esp32:esp32 not found":**

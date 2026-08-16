@@ -413,10 +413,19 @@ Gets the execution log CSV for a completed program.
 **Response:** Returns CSV data directly (not JSON-wrapped)
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
-1734007890,Initial Heating,45.2,42.5,75,50,0
+time,step,steptime,material,kiln,heater,fan,steam
+1734007890,Initial Heating,36,42.5,45.2,75,50,0
 ...
 ```
+
+**Columns:**
+
+- `time`: Unix timestamp of the sample
+- `step`: Name of the step that was executing
+- `steptime`: Seconds elapsed within that step
+- `material`: Material (wood) temperature in °C
+- `kiln`: Kiln temperature in °C
+- `heater`, `fan`, `steam`: Power levels (0-100%)
 
 #### DELETE `/engine/history/{name}`
 
@@ -504,7 +513,9 @@ Starts a new program by providing its complete definition.
 
 **Request Format:**
 
-The request body should contain a complete Program structure (see PROGRAM.md for details):
+The request body should contain a complete Program structure (see PROGRAM.md for details).
+Note that a heating step's heater must use delta control, and that steam has to
+be off below 100 °C:
 
 ```json
 {
@@ -522,7 +533,7 @@ The request body should contain a complete Program structure (see PROGRAM.md for
         "power": 100
       },
       "steam": {
-        "power": 50
+        "power": 0
       }
     },
     {
@@ -541,7 +552,7 @@ The request body should contain a complete Program structure (see PROGRAM.md for
         "power": 75
       },
       "steam": {
-        "power": 25
+        "power": 0
       }
     },
     {
@@ -603,12 +614,13 @@ Fetches the accumulated execution log as CSV data for the currently running prog
 
 **Response Format:**
 
-When a program is running, returns CSV data:
+When a program is running, returns CSV data (same columns as
+`/engine/history/{name}/log`):
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
-1734007890,Initial Heating,45.2,42.5,75,50,0
-1734007896,Initial Heating,46.1,42.8,75,50,0
+time,step,steptime,material,kiln,heater,fan,steam
+1734007890,Initial Heating,36,42.5,45.2,75,50,0
+1734007896,Initial Heating,42,42.8,46.1,75,50,0
 ...
 ```
 
@@ -633,7 +645,7 @@ WebSocket endpoint for real-time execution log streaming.
 The server sends CSV lines as text messages:
 
 ```csv
-timestamp,step_name,kiln_temp,material_temp,heater_power,fan_power,steam_power
+time,step,steptime,material,kiln,heater,fan,steam
 ```
 
 **Behavior:**
@@ -917,71 +929,28 @@ Initiates a host system reboot. Request and response formats match
 
 ## 5. Simulator API
 
-The simulator mimics endpoints from the SensorUnit and Shelly devices.
+The simulator emulates the Shelly devices over HTTP. It does **not** serve a
+SensorUnit API: temperature sensing is emulated at the hardware level
+instead, so the real `sensorunit` service runs unmodified against it.
 
-### Simulated SensorUnit API
+### Emulated ESP32 (not HTTP)
 
-Serves the same endpoints as the real SensorUnit (`/temperatures`,
-`/status`, `/display`), on the port configured in
-`api_endpoints.sensorunit.url` (default `8093`).
+The simulator allocates a pseudo-terminal and links it at the path named by
+`sensorunit.serial_device`, then speaks the ESP32's serial protocol (`helo;`,
+`read;`, `show TEXT;`) over it. The real `sensorunit` service opens that
+device and serves `/temperatures`, `/status` and `/display` itself, exactly as
+documented in section 1 — there is no simulated HTTP variant of those
+endpoints.
 
-#### Simulated GET `/temperatures`
+Because the simulator creates that path, `sensorunit.serial_device` must name
+a path it may create (for example `/tmp/esp32-halko`). A path under `/dev/`
+but outside `/dev/pts/` is refused at startup, since that looks like real
+hardware.
 
-Gets readings from all simulated temperature sensors.
+See [SIMULATOR.md](SIMULATOR.md) for the serial protocol and sensor failure
+injection.
 
-**Response Format:**
-
-```json
-{
-  "data": {
-    "kiln": 45.2,
-    "material": 32.1
-  }
-}
-```
-
-#### Simulated GET `/status`
-
-Gets the simulated connection status. Follows the standard status endpoint
-format; the simulated sensor is always healthy.
-
-**Response Format:**
-
-```json
-{
-  "data": {
-    "status": "healthy",
-    "service": "sensorunit",
-    "details": {
-      "sensor_connected": true
-    }
-  }
-}
-```
-
-#### Simulated POST `/display`
-
-Logs a display message (simulates updating the OLED display).
-
-**Request Format:**
-
-```json
-{
-  "message": "Simulation in progress"
-}
-```
-
-**Response Format:**
-
-```json
-{
-  "data": {
-    "status": "ok"
-  }
-}
-```
-
-### Simulated Shelly Switch Control
+### Emulated Shelly Switch Control
 
 Base Path: `/rpc`
 

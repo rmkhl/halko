@@ -79,6 +79,22 @@ make upload-esp32        # Flash to device
 make monitor-esp32       # Serial monitor
 ```
 
+### Tests
+
+There is no separate test module — tests live in the same package as the code
+they cover, the standard Go layout. `make test` runs them across every module,
+`make test-<module>` runs one, and `make test-race` runs the lot under the race
+detector. Tests that drive a service end to end live with that service and are
+self-contained: `simulator/shelly_api_test.go` builds the simulator binary,
+runs it as a real process and drives its HTTP API, so no test depends on a
+service you are expected to have running.
+
+`make test` and `make lint` deliberately report every module rather than
+stopping at the first failure, so they always exit 0. CI uses the gating
+counterparts `make test-ci`, `make lint-ci` and `make lint-markdown-ci`;
+`make ci-check` runs the whole suite the way CI does, which is what to run
+before pushing.
+
 ## Project Structure
 
 ### Components
@@ -130,8 +146,9 @@ configuration, see [sensorunit/README.md](sensorunit/README.md) and
 
 The Simulator emulates the physical components of the kiln, such as
 temperature sensors and Shelly power controls. This is useful for development
-and testing without requiring actual hardware. It mimics the REST APIs of the
-SensorUnit and parts of the PowerUnit (Shelly devices).
+and testing without requiring actual hardware. It emulates the Shelly devices
+over HTTP, and the ESP32 sensor unit at the serial level over a
+pseudo-terminal, so the real `sensorunit` service runs against it unmodified.
 
 The simulator uses physics-based simulation engines (simple, differential, thermodynamic)
 configured via `simulator.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
@@ -169,9 +186,10 @@ Contains built executables for all components.
 
 Contains systemd service templates and configuration samples. See [templates/README.md](templates/README.md) for configuration guidance.
 
-#### `/tests`
+#### `/example`
 
-Integration tests for the system components. Tests validate configuration loading, program validation with defaults, and Shelly API compatibility.
+Example drying programs (delta and PID acclimation) that pass validation and
+can be sent with `halkoctl send`.
 
 #### `/types`
 
@@ -273,6 +291,36 @@ and `/engine` (execution management). There is no separate storage service.
   - **`max_delta_heating`** / **`min_delta_heating`**: Temperature control
     limits
 
+### PowerUnit Configuration Options
+
+- **`shelly_address`**: Base URL of the Shelly device (or the simulator's
+  emulated Shelly during development)
+- **`cycle_length`**: Duty-cycle period (Go duration format). Power percentages
+  are realized by switching relays on for that fraction of each cycle
+- **`max_idle_time`**: How long the PowerUnit will keep applying the last
+  commanded percentages without hearing from the ControlUnit. Past it, all
+  percentages are reset to 0 and the relays go off on the next cycle. This is a
+  safety watchdog: only an incoming command refreshes the timer, so neither the
+  running duty cycle nor status polling (the webapp does it every few seconds)
+  can hold it off. Keep it slightly longer than `cycle_length`
+- **`power_mapping`**: Maps channel names (`heater`, `steam`, `fan`) to Shelly
+  switch IDs
+
+### SensorUnit Configuration Options
+
+- **`serial_device`**: Path to the ESP32 serial device. In production this is
+  real hardware (typically `/dev/ttyUSB0`); during development it must instead
+  name a path the simulator may create, such as `/tmp/esp32-halko`
+- **`baud_rate`**: Serial speed, 9600 to match the firmware
+
+### DBusUnit Configuration Options
+
+- **`system_bus_socket`**: Path to the D-Bus system bus socket. The whole
+  section is optional — when omitted the standard system location is used.
+  Override it when the socket is elsewhere, for example inside a
+  distrobox/toolbox container where the host bus is exposed at
+  `/run/host/run/dbus/system_bus_socket`
+
 ### Heartbeat Service
 
 The controlunit includes an automatic heartbeat service that:
@@ -314,7 +362,7 @@ make systemd-units
 **Important**: Before starting services, edit `/etc/opt/halko.cfg` to configure:
 
 - `network_interface`: Your system's network interface name (see [Network Interface Configuration](#network-interface-configuration))
-- `serial_device`: Your Arduino device path (typically `/dev/ttyUSB0`)
+- `serial_device`: Your ESP32 device path (typically `/dev/ttyUSB0`)
 - `shelly_address`: Your Shelly device IP address or hostname
 
 Each component can be controlled independently:
@@ -419,14 +467,20 @@ Run `./scripts/monitor-memory.py --help` for all options.
 For rapid development and debugging, use the tmux environment to run all services locally:
 
 ```bash
-# Start all services in tmux (simulator, powerunit, controlunit, dbusunit, webapp)
+# Start all services in tmux
 make tmux-debug-run
+
+# Same, but the simulator injects escalating sensor failures (see SIMULATOR.md)
+make tmux-debug-fail-run
 
 # With custom log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)
 LOGLEVEL=4 make tmux-debug-run
 
 # With specific simulator engine
 SIMULATOR=thermodynamic make tmux-debug-run
+
+# Write the log files somewhere other than logs/
+LOG_DIR=/tmp/halko-logs make tmux-debug-run
 
 # Combined options
 LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run
@@ -440,11 +494,24 @@ make tmux-debug-stop
 
 The tmux session includes separate windows for:
 
-- **simulator** - Hardware emulation
+- **simulator** - Hardware emulation (Shelly over HTTP, ESP32 over a pseudo-terminal)
 - **powerunit** - Power control service
+- **sensorunit** - Serial bridge, running against the simulator's emulated ESP32
 - **controlunit** - Main control logic
 - **dbusunit** - Systemd D-Bus integration (runs with sudo)
 - **webapp** - Development server with hot reload
 - **shell** - Command line for halkoctl and testing
+
+Every window pipes its output through `tee`, so logs are on the console *and*
+in `logs/<window>.log` under the workspace root — `logs/controlunit.log`,
+`logs/simulator.log` and so on. That directory is git-ignored and overwritten
+on every start, so it always holds the latest run; override it with `LOG_DIR`
+(the start script aborts if it cannot create or write there). Together with
+`fsdb/running/` and `fsdb/history/` these logs are the primary evidence for
+what happened during a run.
+
+Note that `sensorunit.serial_device` in `halko.cfg` must name a path the
+simulator may create (for example `/tmp/esp32-halko`) rather than real
+hardware, or the simulator refuses to start.
 
 This workflow provides fast iteration with real-time log viewing and easy service restarts.
