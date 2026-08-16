@@ -10,11 +10,15 @@ This guide covers optimizations and monitoring tools for running Halko on resour
 # Build optimized binaries (reduces memory footprint by ~30%)
 OPTIMIZED=yes make build
 
-# Install to system
-sudo make install
-sudo make install-webapp
-sudo make systemd-units
+# Install to system — run these as your normal user, not under sudo:
+# the targets invoke sudo themselves only for the steps that need it
+make install
+make install-webapp
+make systemd-units
 ```
+
+Running `sudo make ...` would build as root too, leaving root-owned Go and
+Parcel caches in the working tree.
 
 ### Optimization Flags
 
@@ -49,6 +53,10 @@ Typical binary sizes on ARM (Raspberry Pi 3B):
 | powerunit | ~12 MB | ~8 MB | 33% |
 | sensorunit | ~11 MB | ~7.5 MB | 32% |
 | halkoctl | ~13 MB | ~9 MB | 31% |
+
+**Note**: these figures predate `dbusunit`, which is also installed to
+`/opt/halko` by `make install`. The simulator is not installed on a production
+host.
 
 ## Memory Monitoring
 
@@ -115,6 +123,10 @@ Memory usage during normal operation (systemd deployment):
 
 **Note**: Total usage stays well under 200 MB, leaving plenty of headroom on 1GB RAM systems.
 
+These figures predate `dbusunit`, which also runs on a production host (as
+root, under `halko-dbusunit.service`). It is idle except when a VPN or power
+request comes in, but the totals above do not include it.
+
 ## Raspberry Pi OS Setup
 
 ### USB Boot Setup (Raspberry Pi 3B)
@@ -126,7 +138,7 @@ Memory usage during normal operation (systemd deployment):
    ```bash
    # Flash Raspberry Pi OS to SD card
    # Boot from SD card, then run:
-   echo program_usb_boot_mode=1 | sudo tee -a /boot/config.txt
+   echo program_usb_boot_mode=1 | sudo tee -a /boot/firmware/config.txt
    sudo reboot
    # After reboot, verify:
    vcgencmd otp_dump | grep 17:
@@ -146,7 +158,18 @@ Use **Raspberry Pi OS Lite (32-bit)** for Raspberry Pi 3B, flashed to USB SSD:
 ```bash
 # After booting from USB SSD
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git golang
+sudo apt install -y git curl
+```
+
+**Go**: the workspace needs Go 1.26 or newer, which is well ahead of the
+`golang` package in Raspberry Pi OS. Install the upstream toolchain instead:
+
+```bash
+# Pick armv6l for a 32-bit Raspberry Pi OS, arm64 for a 64-bit one
+curl -fsSLO https://go.dev/dl/go1.26.2.linux-armv6l.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.26.2.linux-armv6l.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.profile && . ~/.profile
+go version
 ```
 
 ### Network Setup
@@ -156,36 +179,20 @@ The Raspberry Pi uses a dual-interface network configuration:
 - **WiFi (wlan0)**: Internet access and sensor unit display IP
 - **Ethernet (eth0)**: Direct connection to Shelly device
 
+Both interfaces are managed by NetworkManager, so `nmcli` configures them.
+
 #### WiFi Configuration
 
 Configure WiFi for internet access and remote connectivity:
 
 ```bash
-# Edit network configuration
-sudo nano /etc/wpa_supplicant/wpa_supplicant.conf
+sudo nmcli device wifi connect "YourWiFiSSID" password "YourWiFiPassword" ifname wlan0
+
+# Reconnect automatically after a reboot or a dropout
+sudo nmcli connection modify "YourWiFiSSID" connection.autoconnect yes
 ```
 
-Add your WiFi credentials:
-
-```conf
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=US
-
-network={
-    ssid="YourWiFiSSID"
-    psk="YourWiFiPassword"
-    key_mgmt=WPA-PSK
-}
-```
-
-Restart networking:
-
-```bash
-sudo systemctl restart dhcpcd
-# Or reboot:
-sudo reboot
-```
+The connection comes up immediately; there is no service to restart.
 
 Verify WiFi connection:
 
@@ -196,20 +203,17 @@ ip addr show wlan0
 
 #### Ethernet Configuration (Direct Shelly Connection)
 
-Configure static IP for direct Ethernet connection to Shelly device:
+Configure a static IP for the direct Ethernet connection to the Shelly device:
 
 ```bash
-sudo nano /etc/dhcpcd.conf
+sudo nmcli connection add type ethernet ifname eth0 con-name shelly \
+  ipv4.method manual ipv4.addresses 192.168.10.1/24
+sudo nmcli connection up shelly
 ```
 
-Add at the end of the file:
-
-```conf
-# Static IP for Ethernet (direct Shelly connection)
-interface eth0
-static ip_address=192.168.10.1/24
-static domain_name_servers=192.168.10.1
-```
+Deliberately no gateway and no DNS on this connection: it is a point-to-point
+link to the Shelly, and giving it a default route would steal traffic from
+WiFi.
 
 **Configure Shelly device:**
 
@@ -219,11 +223,7 @@ static domain_name_servers=192.168.10.1
 4. Set gateway: `192.168.10.1` (the Raspberry Pi)
 5. Connect Shelly directly to Pi's Ethernet port
 
-Restart networking:
-
-```bash
-sudo systemctl restart dhcpcd
-```
+`nmcli connection up` applies the configuration immediately.
 
 Verify Ethernet configuration:
 
@@ -317,10 +317,13 @@ git clone https://github.com/rmkhl/halko.git
 cd halko
 make prepare
 OPTIMIZED=yes make build
-sudo make install
-sudo make install-webapp
-sudo make systemd-units
+make install
+make install-webapp
+make systemd-units
 ```
+
+Run these as your normal user — the install targets call `sudo` themselves for
+the steps that need it, and will prompt.
 
 ### Configure Before Starting
 
@@ -335,23 +338,33 @@ sudo nano /etc/opt/halko.cfg
 - `network_interface`: Set to `wlan0` (WiFi interface)
   - This IP address will be displayed on the sensor unit for connection purposes
   - Allows remote access to webapp and API from network devices
-- `serial_device`: Arduino path (e.g., `/dev/ttyUSB0` or `/dev/ttyACM0`)
-  - Run `ls /dev/ttyUSB* /dev/ttyACM*` to find Arduino device
+- `serial_device`: ESP32 path (e.g., `/dev/ttyUSB0` or `/dev/ttyACM0`)
+  - Run `ls /dev/ttyUSB* /dev/ttyACM*` to find the ESP32 device
 - `shelly_address`: `192.168.10.2` (Shelly static IP on Ethernet)
 
-**Example configuration:**
+**Example configuration** (only the fields that differ from the installed
+template — `api_endpoints` stays on localhost, since the services all run on
+the Pi and only the PowerUnit talks to the Shelly):
 
 ```json
 {
   "controlunit": {
+    "base_path": "/var/opt/halko",
+    "tick_length": "6s",
     "network_interface": "wlan0",
-    "api_port": 8090,
-    ...
+    "defaults": { "...": "unchanged" }
   },
-  "api_endpoints": {
-    "powerunit": "http://192.168.10.2/..."
+  "power_unit": {
+    "shelly_address": "http://192.168.10.2",
+    "cycle_length": "60s",
+    "max_idle_time": "70s",
+    "power_mapping": { "heater": 0, "steam": 1, "fan": 2 }
   },
-  ...
+  "sensorunit": {
+    "serial_device": "/dev/ttyUSB0",
+    "baud_rate": 9600
+  },
+  "api_endpoints": { "...": "unchanged" }
 }
 ```
 
@@ -365,6 +378,9 @@ See [templates/README.md](templates/README.md) for full configuration details.
 sudo systemctl status halko@controlunit
 sudo systemctl status halko@powerunit
 sudo systemctl status halko@sensorunit
+
+# The dbusunit has its own (non-templated) unit and runs as root:
+sudo systemctl status halko-dbusunit
 
 # View logs:
 sudo journalctl -u halko@controlunit -f
@@ -409,7 +425,19 @@ If you encounter OOM kills:
    ```
 
 4. **Reduce log verbosity**:
-   pass `-loglevel 1` instead of `-loglevel 2` in systemd units
+
+   The installed units do not pass `-loglevel` at all, so the services run at
+   the INFO default (2). To quieten them, add the flag to `ExecStart`:
+
+   ```bash
+   sudo systemctl edit --full halko@controlunit
+   # ExecStart=/opt/halko/controlunit -c /etc/opt/halko.cfg -loglevel 1
+   sudo systemctl restart halko@controlunit
+   ```
+
+   Note that `make systemd-units` rewrites the unit files from
+   `templates/halko-daemon.service`, so edit the template instead if you want
+   the change to survive a reinstall.
 
 ### Build Failures
 
@@ -439,7 +467,8 @@ If services are sluggish:
 
    If throttled (0x50000 or higher), improve cooling
 
-2. **Reduce log verbosity** - edit systemd units to use `-loglevel 1`
+2. **Reduce log verbosity** - add `-loglevel 1` to the unit's `ExecStart` (see
+   [Out of Memory Errors](#out-of-memory-errors) above)
 
 3. **Monitor resource usage**:
 
@@ -456,8 +485,9 @@ If services cannot communicate:
 
    ```bash
    ip addr show wlan0
-   iwconfig wlan0
-   ping -c 3 8.8.8.8  # Test internet
+   nmcli device status        # wlan0 should be "connected"
+   nmcli connection show --active
+   ping -c 3 8.8.8.8          # Test internet
    ```
 
 2. **Verify Ethernet connection to Shelly**:
@@ -470,8 +500,10 @@ If services cannot communicate:
 3. **Check Shelly is accessible**:
 
    ```bash
-   curl http://192.168.10.2/status
-   # Should return Shelly status JSON
+   # The PowerUnit talks to the Shelly over the Gen2 RPC API, so probe that
+   # rather than the Gen1 /status endpoint:
+   curl 'http://192.168.10.2/rpc/Switch.GetStatus?id=0'
+   # Should return switch status JSON, including "output": true|false
    ```
 
 4. **Verify controlunit shows correct IP on sensor display**:
@@ -488,14 +520,16 @@ If services cannot communicate:
 
    ```bash
    sudo iptables -L
-   # If firewall is active, may need to allow ports 8090-8093
+   # If firewall is active, may need to allow ports 8090, 8092, 8093 and 8094
    ```
 
 6. **Restart networking if needed**:
 
    ```bash
-   sudo systemctl restart dhcpcd
-   sudo systemctl restart wpa_supplicant
+   sudo systemctl restart NetworkManager
+
+   # Or bring a single connection back up:
+   sudo nmcli connection up shelly
    ```
 
 ## Production Deployment Tips
@@ -510,9 +544,13 @@ If services cannot communicate:
 
    ```ini
    [Service]
-   Restart=always
-   RestartSec=10
+   Restart=on-failure
+   RestartSec=5s
    ```
+
+   A clean exit is deliberately not restarted, so stopping a service stays
+   stopped. `StartLimitIntervalSec=0` disables the restart rate limit, so a
+   service that keeps crashing keeps being retried rather than giving up.
 
 3. **Log rotation** for disk space management:
 

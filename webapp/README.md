@@ -16,15 +16,16 @@ React-based user interface for the Halko kiln control system.
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ and npm (the project builds and is developed against Node 24 LTS)
 - The Halko backend services running (controlunit, powerunit, sensorunit)
 
 ### Installing Node.js
 
-If you don't have Node.js 18+ installed, the Makefile installs it for you:
-`make prepare` (and the webapp targets that depend on it) downloads Node.js
-18 standalone binaries into the `.nodejs/` directory in the project root.
-No system-wide or user-wide installation is required.
+You do not need a system Node.js at all: `make prepare` (and every webapp
+target that depends on it) downloads the standalone Node.js build pinned by
+`NODEJS_VERSION` in the Makefile — currently 24 LTS — into the `.nodejs/`
+directory in the project root. No system-wide or user-wide installation is
+required.
 
 The installed Node.js is automatically used by the webapp Make targets. If you want to use it manually:
 
@@ -187,7 +188,7 @@ webapp/
 
 | Target | Description |
 |--------|-------------|
-| `prepare` | Check tools; installs Node.js 18 locally to `.nodejs/` if missing |
+| `prepare` | Check tools; installs the pinned Node.js locally to `.nodejs/` if missing |
 | `run-webapp` | Start development server with hot reload |
 | `build-webapp` | Build for production and generate nginx config (uses `halko.cfg`) |
 | `lint-webapp` | Run ESLint and the TypeScript type check |
@@ -229,7 +230,8 @@ This removes:
 
 ### Development server won't start
 
-- Ensure Node.js 18+ is installed: `node --version`
+- Ensure Node.js is available: `node --version` (or let `make prepare` install
+  the pinned version into `.nodejs/`)
 - Delete `node_modules` and `.parcel-cache`, then reinstall: `make clean-webapp && cd webapp && npm install`
 - Check if port 1234 is already in use
 

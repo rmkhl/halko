@@ -29,12 +29,17 @@ A kiln drying program is defined as a JSON file with the following structure:
 
 ### Heating Steps
 
-- **Purpose**: Raise the kiln temperature to target levels
+- **Purpose**: Raise the material temperature to target levels
 - **Behavior**:
   - No fixed runtime - continues until target temperature is reached
-  - Can use any power control method for the heater
-  - Progresses to next step when kiln temperature reaches target
-- **Validation**: Runtime must not be specified
+  - Progresses to next step when **material** temperature reaches target
+- **Validation**:
+  - Runtime must not be specified
+  - Heater **must** use delta control (see [Why the heater must be
+    delta](#why-the-heater-must-be-delta))
+  - Steam must use simple or delta control, and simple non-zero steam is only
+    allowed above the steam ceiling (see [The steam
+    ceiling](#the-steam-ceiling))
 
 ### Acclimate Steps
 
@@ -43,7 +48,11 @@ A kiln drying program is defined as a JSON file with the following structure:
   - Fixed duration specified by `runtime`
   - Maintains target temperature using specified control method
   - Progresses to next step when runtime expires
-- **Validation**: Runtime is required
+- **Validation**:
+  - Runtime is required
+  - Heater may use any control method
+  - Steam must use simple control, and must be 0% when the step's target is
+    below the steam ceiling
 
 ### Cooling Steps
 
@@ -51,9 +60,11 @@ A kiln drying program is defined as a JSON file with the following structure:
 - **Behavior**:
   - Optional runtime - can specify duration, target, or both
   - Progresses when material temperature reaches target OR runtime expires (whichever comes first)
-  - Heater must use simple power control (typically 0% power)
   - Typically the final step in a program
-- **Validation**: Runtime is optional, heater must use simple power
+- **Validation**:
+  - Runtime is optional
+  - Heater must use simple power control (typically 0% power)
+  - Steam must be switched off (simple control at 0%)
 
 ## Power Control Methods
 
@@ -70,7 +81,8 @@ Maintains constant power output.
 ```
 
 - **power**: Percentage (0-100) of maximum power
-- **Usage**: Required for fan and steam, optional for heater
+- **Usage**: Required for the fan; required for the heater in cooling steps;
+  required for steam except in heating steps, where delta is also allowed
 - **Behavior**: Outputs constant power regardless of temperature
 
 ### Delta Control
@@ -86,7 +98,9 @@ Maintains temperature difference between kiln and wood.
 
 - **max_delta**: Maximum temperature difference (kiln - wood) in degrees
 - **min_delta**: Minimum temperature difference (kiln - wood) in degrees
-- **Usage**: Heater only, primarily for heating steps
+- **Usage**: Heater and steam. Required for the heater in heating steps;
+  allowed for the heater in acclimate steps; allowed for steam in heating
+  steps only
 - **Behavior**:
   - Full power (100%) when kiln temperature is below calculated target
   - Zero power (0%) when kiln temperature is above calculated target
@@ -110,7 +124,8 @@ Uses PID algorithm for precise temperature control.
 - **kp**: Proportional gain coefficient
 - **ki**: Integral gain coefficient
 - **kd**: Derivative gain coefficient
-- **Usage**: Heater only, typically for acclimate steps
+- **Usage**: Heater in acclimate steps only. Heating steps require delta and
+  cooling steps require simple, so acclimate is the only place PID is accepted
 - **Behavior**: Calculates power adjustments based on temperature error
 
 ## Runtime Format
@@ -147,13 +162,67 @@ The `runtime` field uses Go's duration string format:
 
 ### Component Restrictions
 
-- **Fan**: Must always use simple power control
-- **Steam**: Must always use simple power control
-- **Heater in cooling steps**: Must use simple power control
+Each component must define exactly one control method per step.
+
+| Step | Heater | Fan | Steam |
+|------|--------|-----|-------|
+| heating | delta (required) | simple | simple or delta; simple must be 0% below the steam ceiling |
+| acclimate | simple, delta or PID | simple | simple; must be 0% when the target is below the steam ceiling |
+| cooling | simple (required) | simple | simple, and must be 0% |
+
+### Why the Heater Must Be Delta
+
+In a heating step the heater is restricted to delta control because only delta
+bounds the gap between the kiln and the wood. Simple control runs the heater
+open-loop, and PID regulates the kiln to its target while ignoring the material
+entirely — both let the kiln run arbitrarily far ahead of the wood, which is
+what causes checking and case-hardening.
+
+### The Steam Ceiling
+
+Steam cannot heat the kiln past **100 °C**: above that it is thermally neutral,
+since it must itself be raised to kiln temperature. Below it, steam outruns the
+heater and becomes the most immediate contributor to kiln temperature — opening
+a kiln/wood delta that the heater cannot close by backing off, because it is
+not the thing supplying the heat.
+
+Steam may therefore only run open-loop (constant non-zero power) where the kiln
+is already at or above 100 °C:
+
+- **Heating steps**: allowed only if the kiln is already at or above 100 °C as
+  the step *begins*. Each step is taken to enter where its predecessor handed
+  over; the first step is taken to start cold, since nothing constrains the
+  temperature a charge is loaded at. A heating step that enters below the
+  ceiling must either switch steam off or put it under delta control.
+- **Acclimate steps**: an acclimate settles the kiln back onto the material, so
+  a step whose target is below 100 °C must switch steam off.
+- **Cooling steps**: the kiln descends back through the ceiling, so steam must
+  be off entirely.
+
+A step's handover temperature is the lowest kiln temperature it can end at: for
+a delta-controlled heating step that is `target + min_delta`, since the step
+ends once the material reaches target and the controller holds the kiln at
+least `min_delta` above it. For an acclimate it is the step target.
+
+### Sensor Failsafe
+
+Independently of program validation, the control unit fails a running program
+and switches all power off if either the kiln or the material temperature goes
+**120 seconds** without a valid reading. A failed probe does not immediately
+disturb control — the last valid value per sensor is held, so a brief dropout
+is ridden out — but the run is abandoned rather than flown blind past that
+point.
 
 ## Example Programs
 
+Runnable copies of both live in [`example/`](example/); validate any program
+with `halkoctl validate <file>` before sending it.
+
 ### Basic Delta Control Program
+
+Crosses the steam ceiling: the first step starts cold, so its steam runs under
+delta control, while the second step enters at 105 °C and may hold steam at a
+constant 50%.
 
 ```json
 {
@@ -168,12 +237,26 @@ The `runtime` field uses Go's duration string format:
         "max_delta": 15.0
       },
       "fan": {"power": 100},
+      "steam": {
+        "min_delta": 5.0,
+        "max_delta": 10.0
+      }
+    },
+    {
+      "name": "Secondary Heating",
+      "type": "heating",
+      "temperature_target": 160,
+      "heater": {
+        "min_delta": 5.0,
+        "max_delta": 15.0
+      },
+      "fan": {"power": 100},
       "steam": {"power": 50}
     },
     {
       "name": "Acclimation",
       "type": "acclimate",
-      "temperature_target": 100,
+      "temperature_target": 160,
       "runtime": "6h",
       "heater": {
         "min_delta": 2.0,
@@ -197,6 +280,9 @@ The `runtime` field uses Go's duration string format:
 
 ### PID Control Program
 
+Stays below the steam ceiling throughout, so steam is off in every step. The
+heater still has to be delta while heating; PID appears only in the acclimate.
+
 ```json
 {
   "name": "PID Controlled Drying",
@@ -210,7 +296,7 @@ The `runtime` field uses Go's duration string format:
         "max_delta": 20.0
       },
       "fan": {"power": 100},
-      "steam": {"power": 75}
+      "steam": {"power": 0}
     },
     {
       "name": "PID Acclimation",
@@ -225,7 +311,7 @@ The `runtime` field uses Go's duration string format:
         }
       },
       "fan": {"power": 50},
-      "steam": {"power": 25}
+      "steam": {"power": 0}
     },
     {
       "name": "Cool Down",
@@ -244,7 +330,7 @@ The `runtime` field uses Go's duration string format:
 
 ### Delta Control Algorithm
 
-The delta control method maintains the temperature difference between oven and
+The delta control method maintains the temperature difference between kiln and
 wood within specified bounds:
 
 1. **Calculate target kiln temperature**:
@@ -294,11 +380,11 @@ These defaults are defined in the main configuration file under `controlunit.def
    - If material temperature > kiln temperature:
      - Heater set to 100% power
      - Fan set to 50% power
-     - Continues until oven reaches material temperature
+     - Continues until the kiln reaches material temperature
    - If kiln temperature ≥ material temperature:
    - Pre-heat phase is skipped
    - Proceeds directly to first program step
-   **Purpose**: Prevents thermal shock by ensuring oven doesn't start colder than wood
+   **Purpose**: Prevents thermal shock by ensuring the kiln doesn't start colder than the wood
 6. **Execute steps sequentially**:
    - Initialize power controllers for current step
    - Monitor temperatures continuously
@@ -313,7 +399,7 @@ The controlunit uses a finite state machine (FSM) with the following states:
 
 1. **start** - Initial state, sets timestamps and initializes
 2. **waiting** - Waits for temperature and PSU status updates before proceeding
-3. **preheat** - Automatic pre-heat if material warmer than oven (see above)
+3. **preheat** - Automatic pre-heat if material warmer than kiln (see above)
 4. **next_program_step** - Increments step counter, determines next state from step type
 5. **heat_up** - Execute heating step logic
 6. **acclimate** - Execute acclimation step logic

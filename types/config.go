@@ -242,10 +242,15 @@ func FindConfigFile(filename string, envVar string) string {
 		}
 	}
 
-	// 4. System directories
+	// 4. System directories. /etc/opt is last but is the one that matters in
+	// practice: `make install` writes the config straight to /etc/opt/halko.cfg
+	// and the systemd units name it explicitly, so without this entry the
+	// production config is invisible to anything relying on auto-discovery
+	// (halkoctl in particular).
 	systemPaths := []string{
 		filepath.Join("/etc/halko", filename),
 		filepath.Join("/etc/opt/halko", filename),
+		filepath.Join("/etc/opt", filename),
 	}
 	for _, path := range systemPaths {
 		if _, err := os.Stat(path); err == nil {
