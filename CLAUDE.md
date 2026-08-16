@@ -138,7 +138,8 @@ Config: `.golangci.yaml`. Enabled linters include `bodyclose`, `errchkjson`, `go
 - RTK Query for all API calls (no raw fetch)
 - MUI v5 with custom theme in `webapp/src/material-ui/`
 - i18next for all user-visible strings
-- API base URL configured in `webapp/src/store/` (dev vs. prod differ)
+- API base URLs configured in `webapp/src/config/api.ts` (dev uses direct
+  localhost ports, prod uses `/api/v1/*` paths behind nginx)
 
 ## Development Configuration
 
