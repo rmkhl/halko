@@ -31,6 +31,11 @@ export const en = {
   programs: {
     ...common(),
     noRunning: "No currently running program",
+    stop: "Stop",
+    stopping: "Stopping...",
+    confirmStopTitle: "Confirm Stop",
+    confirmStopBody:
+      "Are you sure you want to stop the running program? The run will be marked as canceled and all power switched off. This cannot be undone.",
     steps: {
       ...common(),
       add: "Add",

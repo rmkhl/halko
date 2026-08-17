@@ -3,11 +3,20 @@ import {
   useGetRunningProgramQuery,
   useStopRunningProgramMutation,
 } from "../../store/services/controlunitApi";
-import { Button, Stack, Typography } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useGetTemperaturesQuery } from "../../store/services/sensorsApi";
 import { useGetPowerStatusQuery } from "../../store/services/powerunitApi";
-import { celsius } from "../../util";
+import { blockActivationKeys, celsius } from "../../util";
 import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../../types/api";
 
 // Format duration in seconds to human-readable string
@@ -33,6 +42,7 @@ export const RunningProgram: React.FC = () => {
   const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(() => Math.floor(Date.now() / 1000));
   const [stopRequestedFor, setStopRequestedFor] = useState<string | null>(null);
+  const [confirmStopOpen, setConfirmStopOpen] = useState(false);
 
   // Update current time every second for duration display
   useEffect(() => {
@@ -63,6 +73,7 @@ export const RunningProgram: React.FC = () => {
   }, [runningProgramData]);
 
   const handleStop = async () => {
+    setConfirmStopOpen(false);
     try {
       setStopRequestedFor(programRunKey(runningProgram));
       await stopProgram("").unwrap();
@@ -158,11 +169,37 @@ export const RunningProgram: React.FC = () => {
           ) : null}
         </Stack>
         {runningProgram && (
-          <Button onClick={handleStop} disabled={isStopping || isStoppingLocally}>
-            {(isStopping || isStoppingLocally) ? "Stopping..." : "Stop"}
+          <Button
+            onClick={() => setConfirmStopOpen(true)}
+            onKeyDown={blockActivationKeys}
+            disabled={isStopping || isStoppingLocally}
+          >
+            {(isStopping || isStoppingLocally) ? t("programs.stopping") : t("programs.stop")}
           </Button>
         )}
       </Stack>
+
+      <Dialog open={confirmStopOpen} onClose={() => setConfirmStopOpen(false)}>
+        <DialogTitle>{t("programs.confirmStopTitle")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t("programs.confirmStopBody")}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          {/* Cancel stays keyboard-operable on purpose: a stray Enter or Space
+              should be able to back out, never to confirm. */}
+          <Button onClick={() => setConfirmStopOpen(false)} color="primary">
+            {t("programs.cancel")}
+          </Button>
+          <Button
+            onClick={handleStop}
+            onKeyDown={blockActivationKeys}
+            color="error"
+            variant="contained"
+          >
+            {t("programs.stop")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };

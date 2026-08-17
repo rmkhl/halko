@@ -16,6 +16,7 @@ import {
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { useShutdownSystemMutation, useRebootSystemMutation } from "../../store/services/dbusunitApi";
+import { blockActivationKeys } from "../../util";
 
 interface PowerCardProps {
   uptimeSeconds: number;
@@ -100,6 +101,7 @@ export const PowerCard: React.FC<PowerCardProps> = ({ uptimeSeconds }) => {
               color="warning"
               startIcon={isRebooting ? <CircularProgress size={20} /> : <RestartAltIcon />}
               onClick={handleRebootClick}
+              onKeyDown={blockActivationKeys}
               disabled={isRebooting || isShuttingDown}
               fullWidth
             >
@@ -111,6 +113,7 @@ export const PowerCard: React.FC<PowerCardProps> = ({ uptimeSeconds }) => {
               color="error"
               startIcon={isShuttingDown ? <CircularProgress size={20} /> : <PowerSettingsNewIcon />}
               onClick={handleShutdownClick}
+              onKeyDown={blockActivationKeys}
               disabled={isShuttingDown || isRebooting}
               fullWidth
             >
@@ -129,10 +132,17 @@ export const PowerCard: React.FC<PowerCardProps> = ({ uptimeSeconds }) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
+          {/* Cancel stays keyboard-operable on purpose: a stray Enter or Space
+              should be able to back out, never to confirm. */}
           <Button onClick={handleDialogClose} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleShutdownConfirm} color="error" variant="contained">
+          <Button
+            onClick={handleShutdownConfirm}
+            onKeyDown={blockActivationKeys}
+            color="error"
+            variant="contained"
+          >
             Shutdown
           </Button>
         </DialogActions>
@@ -147,10 +157,17 @@ export const PowerCard: React.FC<PowerCardProps> = ({ uptimeSeconds }) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
+          {/* Cancel stays keyboard-operable on purpose: a stray Enter or Space
+              should be able to back out, never to confirm. */}
           <Button onClick={handleDialogClose} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleRebootConfirm} color="warning" variant="contained">
+          <Button
+            onClick={handleRebootConfirm}
+            onKeyDown={blockActivationKeys}
+            color="warning"
+            variant="contained"
+          >
             Reboot
           </Button>
         </DialogActions>
