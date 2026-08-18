@@ -259,6 +259,29 @@ halkoctl programs delete old-program
 
 ---
 
+### config
+
+Checks the configuration file and shows what it resolves to. Exits non-zero if
+the configuration is one the services would refuse to start on, so it is safe to
+run before deploying a config change.
+
+```bash
+halkoctl config
+halkoctl -c /path/to/halko.cfg config
+```
+
+Unlike every other command, this one runs before the configuration is loaded for
+its own use, so it can explain a broken file rather than failing with the same
+generic error the other commands give.
+
+The summary lists the values a program inherits when it names none of its own —
+the delta band per step type, fan and steam power, the preheat fan — along with
+the limits and timings the control unit enforces. Those are the settings nothing
+else surfaces, so this is the way to confirm what a kiln is actually running
+with.
+
+---
+
 ### nginx
 
 Generates an nginx configuration file for proxying Halko services.
