@@ -46,28 +46,21 @@ export const Step: React.FC<Props> = (props) => {
     if (!defaults) return undefined;
 
     if (type === "heating") {
-      return {
-        type: "delta",
-        min_delta: defaults.min_delta_heating,
-        max_delta: defaults.max_delta_heating,
-      };
+      return { type: "delta", ...defaults.deltas.heating };
     } else if (type === "acclimate") {
-      return {
-        type: "delta",
-        min_delta: defaults.min_delta_acclimate,
-        max_delta: defaults.max_delta_acclimate,
-      };
+      return { type: "delta", ...defaults.deltas.acclimate };
     } else if (type === "cooling") {
-      return {
-        type: "simple",
-        power: 0,
-      };
+      // A cooling step never drives the heater.
+      return { type: "simple", power: 0 };
     }
     return undefined;
   };
 
-  // Display heater (use actual or default)
+  // Display heater/fan/steam: the step's own setting, else what the control
+  // unit would fill in. Nothing here invents a value of its own.
   const displayHeater = heater || getDefaultHeater();
+  const displayFanPower = fan?.power ?? defaults?.fan_power;
+  const displaySteam = steam ?? (defaults && { type: "simple" as const, power: defaults.steam_power });
 
   // Steam may only be modulated against the kiln/material delta in a heating
   // step. Elsewhere it runs at constant power, and the control unit rejects
@@ -77,9 +70,7 @@ export const Step: React.FC<Props> = (props) => {
 
   // Seed a steam delta band from the configured heating deltas rather than the
   // generic default, which is centred on zero and would leave steam always on.
-  const steamDeltaDefaults = defaults
-    ? { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
-    : undefined;
+  const steamDeltaDefaults = defaults?.deltas.heating;
 
   // Each step type accepts exactly one heater control method, so there is
   // nothing to choose: delta while heating or acclimating, constant while
@@ -90,11 +81,7 @@ export const Step: React.FC<Props> = (props) => {
   // An acclimate bands the kiln around the step target; a heating step bands it
   // around the material. Same two fields, different reference.
   const isAcclimate = type === "acclimate";
-  const heaterDeltaDefaults = defaults
-    ? isAcclimate
-      ? { min_delta: defaults.min_delta_acclimate, max_delta: defaults.max_delta_acclimate }
-      : { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
-    : undefined;
+  const heaterDeltaDefaults = defaults?.deltas[isAcclimate ? "acclimate" : "heating"];
   const heaterDeltaLabels = isAcclimate
     ? { min: "Kiln floor vs target (°C)", max: "Kiln ceiling vs target (°C)" }
     : { min: "Min Δ vs material (°C)", max: "Max Δ vs material (°C)" };
@@ -161,6 +148,7 @@ export const Step: React.FC<Props> = (props) => {
                 size="small"
                 value={temperature_target}
                 onChange={(e) => handleChange("temperature_target")(Number(e.target.value))}
+                inputProps={{ min: 0, max: defaults?.max_target_temperature }}
                 sx={{
                   width: 80,
                   '& input[type=number]': {
@@ -228,21 +216,21 @@ export const Step: React.FC<Props> = (props) => {
                 <TextField
                   type="number"
                   size="small"
-                  value={fan?.power ?? 0}
+                  value={displayFanPower ?? ""}
                   onChange={e => handleChange("fan")!({ type: "simple", power: Number(e.target.value) })}
                   inputProps={{ min: 0, max: 100 }}
                   sx={{ width: 100, '& input[type=number]': { MozAppearance: 'textfield' }, '& input[type=number]::-webkit-outer-spin-button': { WebkitAppearance: 'none', margin: 0 }, '& input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 } }}
                   variant="standard"
                 />
               ) : (
-                <Typography variant="body2" color="text.secondary">{fan?.power ?? 0}%</Typography>
+                <Typography variant="body2" color="text.secondary">{displayFanPower ?? "-"}%</Typography>
               )}
             </Stack>
 
             <PowerSettingsComponent
               editing={editing}
               title="Steam"
-              settings={steam ?? { type: "simple", power: 0 }}
+              settings={displaySteam}
               onChange={handleChange("steam")}
               allowedTypes={steamControlTypes}
               defaultDelta={steamDeltaDefaults}

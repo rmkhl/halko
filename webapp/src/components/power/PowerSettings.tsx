@@ -30,7 +30,9 @@ interface Props {
   // example, may only be modulated against the delta in a heating step. When
   // just one is allowed there is nothing to choose, so the selector is hidden.
   allowedTypes?: PowerSettingType[];
-  // Seeds the delta fields when switching to delta control.
+  // Seeds the delta fields when switching to delta control. Required when
+  // delta is on offer: there is no sensible generic band, and the one that used
+  // to be here (-5/+5) was wrong for every caller.
   defaultDelta?: { min_delta: number; max_delta: number };
   // What the two delta fields are measured against. An acclimate heater bands
   // the kiln around the step target; everywhere else the band is relative to
@@ -45,14 +47,14 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     settings,
     onChange,
     allowedTypes = ["simple", "delta"],
-    defaultDelta = { min_delta: -5, max_delta: 5 },
+    defaultDelta,
     deltaLabels = { min: "Min Δ (°C)", max: "Max Δ (°C)" },
   } = props;
 
   const handleTypeChange = (type: string) => {
     if (type === "simple") {
       onChange({ type: "simple", power: 50 });
-    } else if (type === "delta") {
+    } else if (type === "delta" && defaultDelta) {
       onChange({ type: "delta", ...defaultDelta });
     }
   };

@@ -23,13 +23,39 @@ type (
 		Status string `json:"status"`
 	}
 
+	// DeltaSettings is the band a step type's delta controller starts from when
+	// a program names no heater of its own. What the band is measured against
+	// depends on the step type, so the numbers are not comparable across them:
+	// a heating step bands the kiln around the material and both values are
+	// positive, an acclimate bands it around the target and straddles zero.
+	DeltaSettings struct {
+		MinDelta float32 `json:"min_delta"`
+		MaxDelta float32 `json:"max_delta"`
+	}
+
+	// Defaults carries every value the control unit would otherwise have to
+	// invent: the delta band each step type falls back to, the power a program
+	// gets for components it does not name, and the kiln's own ceiling. All of
+	// it is required, so a missing entry fails at load rather than turning into
+	// a zero somewhere downstream.
 	Defaults struct {
-		MaxDeltaHeating float32 `json:"max_delta_heating"`
-		MinDeltaHeating float32 `json:"min_delta_heating"`
-		// Acclimate deltas are offsets from the step target, not the material,
-		// so the floor is negative and the ceiling positive.
-		MaxDeltaAcclimate float32 `json:"max_delta_acclimate"`
-		MinDeltaAcclimate float32 `json:"min_delta_acclimate"`
+		Deltas map[StepType]*DeltaSettings `json:"deltas"`
+		// Power applied to a component a step leaves unspecified. Pointers so
+		// that "absent" is distinguishable from a deliberate 0.
+		FanPower   *uint8 `json:"fan_power"`
+		SteamPower *uint8 `json:"steam_power"`
+		// Power the fan runs at while preheating, before the first step.
+		PreheatFanPower *uint8 `json:"preheat_fan_power"`
+		// Highest target any step may ask for.
+		MaxTargetTemperature *uint8 `json:"max_target_temperature"`
+		// Temperature steam cannot heat the kiln past. Above it steam is
+		// thermally neutral; below it steam outruns the heater.
+		SteamCeiling *uint8 `json:"steam_ceiling"`
+		// How long a sensor may go without a valid reading before the running
+		// program is failed and all power switched off.
+		SensorTimeout string `json:"sensor_timeout"`
+		// How often a running program appends a line to its execution log.
+		ExecutionLogInterval string `json:"execution_log_interval"`
 	}
 
 	ControlUnitConfig struct {
@@ -310,6 +336,63 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if _, err := time.ParseDuration(c.ControlUnitConfig.TickLength); err != nil {
 		return fmt.Errorf("controlunit tick_length must be a valid duration (e.g., '6s', '100ms'): %w", err)
+	}
+
+	// Everything the control unit falls back to has to be present and usable.
+	// Without this a missing entry arrives as a zero and the failure only
+	// surfaces when someone starts a program, naming the program rather than
+	// the config.
+	if c.ControlUnitConfig.Defaults == nil {
+		return errors.New("controlunit defaults are required")
+	}
+	defaults := c.ControlUnitConfig.Defaults
+	if defaults.FanPower == nil {
+		return errors.New("controlunit defaults: fan_power is required")
+	}
+	if defaults.SteamPower == nil {
+		return errors.New("controlunit defaults: steam_power is required")
+	}
+	if *defaults.FanPower > 100 || *defaults.SteamPower > 100 {
+		return errors.New("controlunit defaults: fan_power and steam_power must be percentages")
+	}
+	if defaults.MaxTargetTemperature == nil || *defaults.MaxTargetTemperature == 0 {
+		return errors.New("controlunit defaults: max_target_temperature is required")
+	}
+	if defaults.SteamCeiling == nil || *defaults.SteamCeiling == 0 {
+		return errors.New("controlunit defaults: steam_ceiling is required")
+	}
+	if defaults.PreheatFanPower == nil {
+		return errors.New("controlunit defaults: preheat_fan_power is required")
+	}
+	if *defaults.PreheatFanPower > 100 {
+		return errors.New("controlunit defaults: preheat_fan_power must be a percentage")
+	}
+	for _, d := range []struct {
+		name, value string
+	}{
+		{"sensor_timeout", defaults.SensorTimeout},
+		{"execution_log_interval", defaults.ExecutionLogInterval},
+	} {
+		if d.value == "" {
+			return fmt.Errorf("controlunit defaults: %s is required", d.name)
+		}
+		if _, err := time.ParseDuration(d.value); err != nil {
+			return fmt.Errorf("controlunit defaults: %s must be a valid duration: %w", d.name, err)
+		}
+	}
+	for _, stepType := range []StepType{StepTypeHeating, StepTypeAcclimate} {
+		band := defaults.Deltas[stepType]
+		if band == nil {
+			return fmt.Errorf("controlunit defaults are missing a %q entry", stepType)
+		}
+		if band.MinDelta >= band.MaxDelta {
+			return fmt.Errorf("controlunit %q defaults: min_delta must be below max_delta", stepType)
+		}
+	}
+	// An acclimate bands the kiln around the target, so its floor must sit
+	// below the target and its ceiling above it.
+	if acclimate := defaults.Deltas[StepTypeAcclimate]; acclimate.MinDelta >= 0 || acclimate.MaxDelta <= 0 {
+		return errors.New(`controlunit "acclimate" defaults: min_delta must be negative and max_delta positive`)
 	}
 
 	if c.SensorUnit == nil {

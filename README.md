@@ -222,10 +222,17 @@ example configuration:
     "tick_length": "6s",
     "network_interface": "eth0",
     "defaults": {
-      "max_delta_heating": 10.0,
-      "min_delta_heating": 5.0,
-      "max_delta_acclimate": 3.0,
-      "min_delta_acclimate": -1.0
+      "deltas": {
+        "heating": {"min_delta": 5.0, "max_delta": 10.0},
+        "acclimate": {"min_delta": -1.0, "max_delta": 3.0}
+      },
+      "fan_power": 0,
+      "steam_power": 0,
+      "preheat_fan_power": 50,
+      "max_target_temperature": 200,
+      "steam_ceiling": 100,
+      "sensor_timeout": "120s",
+      "execution_log_interval": "60s"
     }
   },
   "power_unit": {
@@ -285,13 +292,28 @@ and `/engine` (execution management). There is no separate storage service.
 - **`tick_length`**: Execution tick duration (Go duration format: "6s", "100ms", etc.)
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
-- **`defaults`**: Default configuration settings
-  - **`max_delta_heating`** / **`min_delta_heating`**: the band a heating step
-    holds the kiln in, measured from the **material** temperature. Both positive.
-  - **`max_delta_acclimate`** / **`min_delta_acclimate`**: the band an acclimate
-    step holds the kiln in, measured from the step **target**. The minimum is
-    negative (how far the air may sag before the heater fires) and the maximum
-    positive (how far above target the air may be driven to bring the wood up).
+- **`defaults`**: Everything the control unit would otherwise have to invent.
+  All of it is required; a missing entry fails at startup rather than becoming a
+  zero somewhere downstream. The webapp reads the same block from
+  `GET /engine/defaults`, so the two cannot drift.
+  - **`deltas.heating`**: the band a heating step holds the kiln in, measured
+    from the **material**. Both values positive.
+  - **`deltas.acclimate`**: the band an acclimate step holds the kiln in,
+    measured from the **target**. `min_delta` negative (how far the kiln may
+    sag before the heater fires), `max_delta` positive (how far the kiln may
+    lead the material).
+  - **`fan_power`** / **`steam_power`**: the power a step gets for a component
+    it does not name.
+  - **`preheat_fan_power`**: the fan power used while preheating, before the
+    first step begins.
+  - **`max_target_temperature`**: the highest target any step may ask for.
+  - **`steam_ceiling`**: the temperature steam cannot heat the kiln past. Above
+    it steam is thermally neutral; below it steam outruns the heater, which is
+    what the steam rules exist to prevent.
+  - **`sensor_timeout`**: how long a probe may go without a valid reading before
+    the running program is failed and all power switched off.
+  - **`execution_log_interval`**: how often a running program appends a line to
+    its execution log.
 
 ### PowerUnit Configuration Options
 

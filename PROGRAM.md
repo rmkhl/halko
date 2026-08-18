@@ -149,7 +149,7 @@ The `runtime` field uses Go's duration string format:
   previous step; when directly following a heating step, it must equal the
   heating step's target temperature
 - **Cooling steps**: Target temperature must be lower than previous step
-- **Maximum temperature**: 200°C limit for all steps
+- **Maximum temperature**: `defaults.max_target_temperature` limit for all steps
 
 ### Component Restrictions
 
@@ -170,14 +170,15 @@ is what causes checking and case-hardening.
 
 ### The Steam Ceiling
 
-Steam cannot heat the kiln past **100 °C**: above that it is thermally neutral,
+Steam cannot heat the kiln past the configured **steam ceiling**
+(`defaults.steam_ceiling`, 100 °C as shipped): above that it is thermally neutral,
 since it must itself be raised to kiln temperature. Below it, steam outruns the
 heater and becomes the most immediate contributor to kiln temperature — opening
 a kiln/wood delta that the heater cannot close by backing off, because it is
 not the thing supplying the heat.
 
 Steam may therefore only run open-loop (constant non-zero power) where the kiln
-is already at or above 100 °C:
+is already at or above the ceiling:
 
 - **Heating steps**: allowed only if the kiln is already at or above 100 °C as
   the step *begins*. Each step is taken to enter where its predecessor handed
@@ -286,12 +287,13 @@ wood within specified bounds:
 
 The system applies default settings for components when not specified in the program:
 
-- **Fan power**: 0% (off)
-- **Steam power**: 0% (off)
+- **Fan power**: `defaults.fan_power`
+- **Steam power**: `defaults.steam_power`
 - **Heater settings**: Based on step type
-  - Heating steps: Use configured delta defaults
-  - Acclimate steps: Use configured acclimate delta defaults
-  - Cooling steps: 0% power
+  - Heating steps: `defaults.deltas.heating`
+  - Acclimate steps: `defaults.deltas.acclimate`
+  - Cooling steps: 0% power — a cooling step never drives the heater, so
+    there is nothing to configure
 
 These defaults are defined in the main configuration file under `controlunit.defaults`.
 

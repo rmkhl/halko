@@ -101,6 +101,8 @@ type (
 		stateHandlers map[fsmState]fsmStateHandler
 		stepToState   map[types.StepType]fsmState
 		defaults      *types.Defaults
+		// Resolved from defaults once, so the tick path does not reparse it.
+		sensorTimeoutSeconds int64
 	}
 )
 
@@ -161,8 +163,9 @@ func (h *preHeatStateHandler) executeState() fsmState {
 func (h *preHeatStateHandler) enterState() {
 	// For preheat we turn on the fan
 	h.fsm.stepStarted = time.Now().Unix()
-	log.Info("FSM: Entered preheat state - setting fan to 50%%")
-	h.fsm.psuController.setPower(psuFan, 50)
+	power := *h.fsm.defaults.PreheatFanPower
+	log.Info("FSM: Entered preheat state - setting fan to %d%%", power)
+	h.fsm.psuController.setPower(psuFan, power)
 }
 
 func (h *nextProgramStepHandler) executeState() fsmState {
@@ -335,6 +338,9 @@ func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStat
 		},
 		defaults: defaults,
 	}
+	// LoadConfig has already rejected an unparseable sensor_timeout.
+	timeout, _ := time.ParseDuration(defaults.SensorTimeout)
+	controller.sensorTimeoutSeconds = int64(timeout.Seconds())
 	controller.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateStart:           &startStateHandler{fsm: controller},
 		fsmStateNextProgramStep: &nextProgramStepHandler{fsm: controller},
@@ -363,9 +369,9 @@ func (p *programFSMController) executeTickAt(now int64) {
 	// A sensor that has stopped reporting valid readings leaves the
 	// controllers working from a frozen value, so stop the program and
 	// switch everything off rather than keep heating blind.
-	if sensor, seconds := p.currentTemperatures.invalidFor(now, p.started); seconds > maxInvalidTemperatureSeconds {
+	if sensor, seconds := p.currentTemperatures.invalidFor(now, p.started); seconds > p.sensorTimeoutSeconds {
 		log.Error("FSM: no valid %s temperature for %ds (limit %ds) - failing program",
-			sensor, seconds, maxInvalidTemperatureSeconds)
+			sensor, seconds, p.sensorTimeoutSeconds)
 		p.state = fsmStateFailed
 		p.stepStarted = now
 		p.stateHandlers[p.state].enterState()

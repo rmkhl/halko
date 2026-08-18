@@ -104,7 +104,9 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 
 	// Capture start time once to ensure ExecutionLogWriter and FSM use the same timestamp
 	startTime := time.Now().Unix()
-	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, 60, startTime)
+	// LoadConfig has already rejected an unparseable execution_log_interval.
+	logInterval, _ := time.ParseDuration(runner.defaults.ExecutionLogInterval)
+	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, int64(logInterval.Seconds()), startTime)
 	return &runner, nil
 }
 
