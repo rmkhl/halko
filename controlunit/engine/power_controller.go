@@ -37,15 +37,26 @@ func NewPidController(config *types.PidSettings) *PidController {
 
 // Update the controller state.
 func (c *PidController) Update(reference float32, actual float32) float32 {
+	now := time.Now().Unix()
 	if c.State.PreviousUpdate == 0 {
-		c.State.PreviousUpdate = time.Now().Unix()
+		c.State.PreviousUpdate = now
+		return 0
+	}
+	// The clock has to advance on every update. Leaving it at the first call
+	// makes sampleInterval time-since-start rather than the tick interval, so
+	// the integral accumulates against an ever-growing weight and saturates.
+	sampleInterval := now - c.State.PreviousUpdate
+	if sampleInterval <= 0 {
+		// Two updates inside the same second: no elapsed time to integrate or
+		// differentiate over, and dividing by it would poison the state with
+		// Inf or NaN. Ask for no change instead.
 		return 0
 	}
 	previousError := c.State.CurrentError
-	sampleInterval := time.Now().Unix() - c.State.PreviousUpdate
 	c.State.CurrentError = reference - actual
 	c.State.CurrentErrorDerivative = (c.State.CurrentError - previousError) / float32(sampleInterval)
 	c.State.CurrentErrorIntegral += c.State.CurrentError * float32(sampleInterval)
+	c.State.PreviousUpdate = now
 	return c.Config.Kp*c.State.CurrentError +
 		c.Config.Ki*c.State.CurrentErrorIntegral +
 		c.Config.Kd*c.State.CurrentErrorDerivative
@@ -75,7 +86,7 @@ func NewPowerController(stepType types.StepType, targetTemperature float32, sett
 		case types.StepTypeHeating:
 			return &heatingDeltaController{minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, heaterOn: true}
 		case types.StepTypeAcclimate:
-			return &acclimateDeltaController{target: targetTemperature, minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta, envelopeOK: true}
+			return &acclimateDeltaController{target: targetTemperature, minDelta: *settings.MinDelta, maxDelta: *settings.MaxDelta}
 		default:
 			return failSafe
 		}
@@ -114,26 +125,41 @@ func (c *heatingDeltaController) Update(kilnTemperature, materialTemperature flo
 	return 0
 }
 
-// acclimateDeltaController holds the material at the step target while
-// keeping the kiln inside the delta safety envelope relative to the material.
-// Heating requires both demand (material below target, no hysteresis) and an
-// armed envelope (same hysteresis band as heating: disarm at
-// material+maxDelta, re-arm at material+minDelta).
+// acclimateDeltaController does two different jobs, and takes the reference
+// and the half of the delta band that belongs to whichever one is in effect.
+//
+// Heating the kiln closes a distance to the step target, so it bands the kiln
+// in [target+minDelta, target]: 0 is on target and minDelta, which is negative,
+// is the most sag tolerated before the heater fires.
+//
+// Heating the material drives the gradient that pushes heat into the wood, and
+// that gradient is measured from the wood, so it bands the kiln in
+// [material, material+maxDelta]: 0 is no transfer and maxDelta, which is
+// positive, is the most gradient the charge can safely take.
+//
+// The two bands meet at the target and together span
+// [target+minDelta, target+maxDelta] without a gap, so the moment the wood
+// reaches target a kiln still up in the heating band is above its new one and
+// the heater stops.
 type acclimateDeltaController struct {
-	target     float32
-	minDelta   float32
-	maxDelta   float32
-	envelopeOK bool
+	target   float32
+	minDelta float32
+	maxDelta float32
+	heaterOn bool
 }
 
 func (c *acclimateDeltaController) Update(kilnTemperature, materialTemperature float32) uint8 {
-	switch {
-	case kilnTemperature >= materialTemperature+c.maxDelta:
-		c.envelopeOK = false
-	case kilnTemperature <= materialTemperature+c.minDelta:
-		c.envelopeOK = true
+	lower, upper := c.target+c.minDelta, c.target
+	if materialTemperature < c.target {
+		lower, upper = materialTemperature, materialTemperature+c.maxDelta
 	}
-	if c.envelopeOK && materialTemperature < c.target {
+	switch {
+	case kilnTemperature >= upper:
+		c.heaterOn = false
+	case kilnTemperature <= lower:
+		c.heaterOn = true
+	}
+	if c.heaterOn {
 		return 100
 	}
 	return 0

@@ -226,7 +226,9 @@ example configuration:
         "acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5}
       },
       "max_delta_heating": 10.0,
-      "min_delta_heating": 5.0
+      "min_delta_heating": 5.0,
+      "max_delta_acclimate": 3.0,
+      "min_delta_acclimate": -1.0
     }
   },
   "power_unit": {
@@ -287,9 +289,14 @@ and `/engine` (execution management). There is no separate storage service.
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
-  - **`pid_settings`**: PID controller parameters for different program phases
-  - **`max_delta_heating`** / **`min_delta_heating`**: Temperature control
-    limits
+  - **`pid_settings`**: PID controller parameters. No step type accepts PID
+    control any more, so these are unused.
+  - **`max_delta_heating`** / **`min_delta_heating`**: the band a heating step
+    holds the kiln in, measured from the **material** temperature. Both positive.
+  - **`max_delta_acclimate`** / **`min_delta_acclimate`**: the band an acclimate
+    step holds the kiln in, measured from the step **target**. The minimum is
+    negative (how far the air may sag before the heater fires) and the maximum
+    positive (how far above target the air may be driven to bring the wood up).
 
 ### PowerUnit Configuration Options
 

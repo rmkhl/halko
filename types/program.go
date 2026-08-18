@@ -126,6 +126,12 @@ func (p *PowerPidSettings) Validate(component string) error {
 		return errors.New(component + " min and max delta must both be defined")
 	}
 
+	// A reversed or collapsed band leaves the controller with a bound it can
+	// never cross, which silently disables it rather than failing loudly.
+	if hasDeltas && *p.MinDelta >= *p.MaxDelta {
+		return errors.New(component + " min delta must be below max delta")
+	}
+
 	if p.Power != nil && !isValidPercentage(*p.Power) {
 		return errors.New(component + " power must be between 0 and 100")
 	}
@@ -172,14 +178,16 @@ func (p *ProgramStep) steamRunsOpenLoop() bool {
 }
 
 // kilnExitTemperature is the lowest kiln temperature the step can hand over at.
-// A heating step's delta controller holds the kiln within
-// [material+min_delta, material+max_delta] and the step ends once the material
-// reaches target, so the kiln floor at handover is target+min_delta - the top
-// of the band is a maximum, not something the next step can rely on. An
-// acclimate settles the kiln back onto the material, so it hands over at
-// target. Cooling always runs steam off, so its exit temperature gates nothing.
+// Both delta-controlled step types bottom out at target+min_delta, for
+// different reasons: a heating step holds the kiln within
+// [material+min_delta, material+max_delta] and ends once the material reaches
+// target, while an acclimate holds it within [target+min_delta,
+// target+max_delta] throughout. Either way the floor of the band is what the
+// next step can rely on - the top is a maximum, not a guarantee. Cooling always
+// runs steam off, so its exit temperature gates nothing.
 func (p *ProgramStep) kilnExitTemperature() float32 {
-	if p.StepType == StepTypeHeating && p.Heater.Type == PowerSettingTypeDelta && p.Heater.MinDelta != nil {
+	usesDeltaBand := p.StepType == StepTypeHeating || p.StepType == StepTypeAcclimate
+	if usesDeltaBand && p.Heater.Type == PowerSettingTypeDelta && p.Heater.MinDelta != nil {
 		return float32(p.TargetTemperature) + *p.Heater.MinDelta
 	}
 	return float32(p.TargetTemperature)
@@ -213,12 +221,37 @@ func (p *ProgramStep) validateAcclimateStep() error {
 	if p.Steam.Type != PowerSettingTypeSimple {
 		return errors.New("acclimate step steam must use simple power control")
 	}
-	// An acclimate settles the kiln onto the material, so a target below the
-	// ceiling leaves steam free to heat the kiln with nothing modulating it.
+	// An acclimate holds the kiln at its target, so a target below the ceiling
+	// leaves steam free to heat the kiln with nothing modulating it.
 	if p.TargetTemperature < steamCeilingCelsius && !p.steamIsOff() {
 		return fmt.Errorf("acclimate step below %d°C must switch steam off", steamCeilingCelsius)
 	}
-	return p.Heater.Validate("heater")
+	if err := p.Heater.Validate("heater"); err != nil {
+		return err
+	}
+	// An acclimate holds the kiln at its target, so both controllers that
+	// regulate against a setpoint are accepted: delta bounds the kiln with
+	// hysteresis, PID drives it continuously. Simple is open-loop and regulates
+	// nothing, so it cannot hold anything.
+	if p.Heater.Type == PowerSettingTypeSimple {
+		return errors.New("acclimate step heater must use delta or pid power control")
+	}
+	// Unlike every other step type, an acclimate's deltas are offsets from the
+	// step target rather than from the material: the controller holds the kiln
+	// in [target+min_delta, target+max_delta] and reads the material only to
+	// decide when a pulse may stop. The band must therefore straddle the
+	// target. A zero min_delta puts the floor on the stop point and chatters; a
+	// zero max_delta leaves the heater unable to drive the air above target,
+	// which is the only way it can pull the wood back up.
+	if p.Heater.Type == PowerSettingTypeDelta {
+		if *p.Heater.MinDelta >= 0 {
+			return errors.New("acclimate step heater min delta must be negative, the kiln floor below target")
+		}
+		if *p.Heater.MaxDelta <= 0 {
+			return errors.New("acclimate step heater max delta must be positive, the kiln ceiling above target")
+		}
+	}
+	return nil
 }
 
 func (p *ProgramStep) validateCoolingStep() error {
@@ -254,12 +287,8 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 			step.Heater.MinDelta == nil && step.Heater.MaxDelta == nil {
 			switch step.StepType {
 			case StepTypeAcclimate:
-				defaultPid := defaults.PidSettings[StepTypeAcclimate]
-				step.Heater.Pid = &PidSettings{
-					Kp: defaultPid.Kp,
-					Ki: defaultPid.Ki,
-					Kd: defaultPid.Kd,
-				}
+				step.Heater.MinDelta = &defaults.MinDeltaAcclimate
+				step.Heater.MaxDelta = &defaults.MaxDeltaAcclimate
 			case StepTypeHeating:
 				step.Heater.MinDelta = &defaults.MinDeltaHeating
 				step.Heater.MaxDelta = &defaults.MaxDeltaHeating

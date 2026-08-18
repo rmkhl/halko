@@ -68,43 +68,6 @@ func TestHeatingDeltaHysteresis(t *testing.T) {
 	}
 }
 
-func TestAcclimateDeltaHoldsTarget(t *testing.T) {
-	tests := []struct {
-		name string
-		seq  []reading
-	}{
-		{
-			name: "never heats when material at or above target",
-			seq: []reading{
-				{kiln: 30, material: 60, want: 0}, // at target, kiln cold: no demand
-				{kiln: 30, material: 61, want: 0}, // above target: never heat
-			},
-		},
-		{
-			name: "heats below target and stops the moment target is reached",
-			seq: []reading{
-				{kiln: 62, material: 59, want: 100}, // demand, kiln inside envelope
-				{kiln: 62, material: 60, want: 0},   // material reached target, off immediately
-			},
-		},
-		{
-			name: "envelope breach cuts power mid-demand and re-arms at lower bound",
-			seq: []reading{
-				{kiln: 70, material: 55, want: 100}, // demand, inside envelope (55+20=75)
-				{kiln: 75, material: 55, want: 0},   // breach at 55+20: off despite demand
-				{kiln: 65, material: 55, want: 0},   // falling through band: still disarmed
-				{kiln: 60, material: 55, want: 100}, // reached 55+5: re-armed, demand present
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &acclimateDeltaController{target: 60, minDelta: 5, maxDelta: 20, envelopeOK: true}
-			runSequence(t, c, tt.seq)
-		})
-	}
-}
-
 func TestSimplePowerControllerReturnsFixedPower(t *testing.T) {
 	c := &simplePowerController{power: 40}
 	runSequence(t, c, []reading{
@@ -184,4 +147,128 @@ func TestNewPowerControllerSimpleUsesConfiguredPower(t *testing.T) {
 	c := NewPowerController(types.StepTypeCooling, 0,
 		&types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(35)})
 	runSequence(t, c, []reading{{kiln: 10, material: 10, want: 35}})
+}
+
+// TestAcclimateHoldsKilnBandAroundTarget covers the target-referenced control
+// law: the kiln is held in [target+minDelta, target+maxDelta] and the material
+// gates only when the heater is allowed to stop.
+// The acclimate controller does two different jobs, each with its own
+// reference and its own half of the delta band. Heating the kiln closes a
+// distance to the target, so it bands the kiln in [target+minDelta, target].
+// Heating the material drives the gradient that pushes heat into the wood, so
+// it bands the kiln in [material, material+maxDelta]. Which job is in effect is
+// decided by whether the wood has reached target.
+func TestAcclimateHeatsTheKilnTowardsTarget(t *testing.T) {
+	tests := []struct {
+		name string
+		seq  []reading
+	}{
+		{
+			name: "bands the kiln between target+minDelta and target",
+			seq: []reading{
+				{kiln: 149.0, material: 151.0, want: 100}, // sagged to target-1
+				{kiln: 149.5, material: 151.0, want: 100}, // inside the band, keep heating
+				{kiln: 150.0, material: 151.0, want: 0},   // reached target
+				{kiln: 149.5, material: 151.0, want: 0},   // inside the band, stay off
+			},
+		},
+		{
+			name: "entering hot from a heating step settles onto target",
+			seq: []reading{
+				{kiln: 155.0, material: 150.0, want: 0}, // handover at target+min_delta_heating
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &acclimateDeltaController{target: 150, minDelta: -1, maxDelta: 3}
+			runSequence(t, c, tt.seq)
+		})
+	}
+}
+
+func TestAcclimateHeatsTheMaterialWithinTheGradientLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		seq  []reading
+	}{
+		{
+			name: "bands the kiln between the material and material+maxDelta",
+			seq: []reading{
+				{kiln: 148.0, material: 149.0, want: 100}, // kiln at or below the wood
+				{kiln: 150.0, material: 149.0, want: 100}, // climbing inside the band
+				{kiln: 152.0, material: 149.0, want: 0},   // reached the gradient limit
+				{kiln: 150.0, material: 149.0, want: 0},   // falling through the band, stay off
+				{kiln: 149.0, material: 149.0, want: 100}, // back down to the wood, heat again
+			},
+		},
+		{
+			name: "never adds heat to a kiln already past the gradient limit",
+			seq: []reading{
+				{kiln: 153.0, material: 149.0, want: 0}, // gap 4 exceeds maxDelta 3
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &acclimateDeltaController{target: 150, minDelta: -1, maxDelta: 3}
+			runSequence(t, c, tt.seq)
+		})
+	}
+}
+
+// The two bands meet at the target: below it the kiln may sit up to maxDelta
+// above the wood, at it the kiln belongs in [target+minDelta, target]. So the
+// moment the wood arrives, a kiln still up in the heating band is above its new
+// one and the heater stops.
+func TestAcclimateStopsWhenTheMaterialReachesTarget(t *testing.T) {
+	c := &acclimateDeltaController{target: 150, minDelta: -1, maxDelta: 3}
+	runSequence(t, c, []reading{
+		{kiln: 149.0, material: 149.0, want: 100}, // heating the wood
+		{kiln: 151.0, material: 149.5, want: 100}, // still below target, still climbing
+		{kiln: 151.0, material: 150.0, want: 0},   // wood arrived, kiln above its new band
+	})
+}
+
+// Replays the decay half of a real 150C hold recorded on the Pi. The kiln sags
+// well below target long before the wood does, so heating the kiln is the job
+// that fires - the previous material-referenced controller waited for the wood
+// to drop, and with a negative min_delta its envelope could never re-arm.
+func TestAcclimateFiresOnKilnSagNotMaterialSag(t *testing.T) {
+	c := &acclimateDeltaController{target: 150, minDelta: -1, maxDelta: 3}
+	runSequence(t, c, []reading{
+		{kiln: 152.8, material: 150.2, want: 0},   // pulse just ended
+		{kiln: 153.2, material: 150.8, want: 0},   // coasting on residual element heat
+		{kiln: 151.5, material: 152.0, want: 0},   // kiln now below the wood, both above target
+		{kiln: 150.2, material: 151.8, want: 0},   // still inside the kiln band
+		{kiln: 149.5, material: 151.0, want: 0},   // still inside the kiln band
+		{kiln: 148.5, material: 150.8, want: 100}, // sagged past target-1, heat
+	})
+}
+
+func TestPidControllerAdvancesItsSampleClock(t *testing.T) {
+	c := NewPidController(&types.PidSettings{Kp: 1, Ki: 1})
+	start := time.Now().Unix() - 60
+	c.State.PreviousUpdate = start
+
+	c.Update(100, 90)
+
+	if c.State.PreviousUpdate == start {
+		t.Fatal("PreviousUpdate did not advance: sampleInterval grows without bound")
+	}
+}
+
+// Two updates inside the same second leave no elapsed time to differentiate
+// over. Dividing by it yields Inf or NaN, and converting that to int is
+// undefined in Go, so the controller must decline to act instead.
+func TestPidControllerIgnoresSubSecondUpdates(t *testing.T) {
+	c := NewPidController(&types.PidSettings{Kp: 1, Ki: 1, Kd: 1})
+	c.State.PreviousUpdate = time.Now().Unix()
+
+	if got := c.Update(100, 90); got != 0 {
+		t.Fatalf("Update within the same second = %v, want 0", got)
+	}
+	if d := c.State.CurrentErrorDerivative; d != d || d > 1e30 || d < -1e30 {
+		t.Fatalf("derivative poisoned: %v", d)
+	}
 }

@@ -33,6 +33,10 @@ interface Props {
   allowedTypes?: PowerSettingType[];
   // Seeds the delta fields when switching to delta control.
   defaultDelta?: { min_delta: number; max_delta: number };
+  // What the two delta fields are measured against. An acclimate heater bands
+  // the kiln around the step target; everywhere else the band is relative to
+  // the material, so the labels have to say which.
+  deltaLabels?: { min: string; max: string };
 }
 
 export const PowerSettingsComponent: React.FC<Props> = (props) => {
@@ -43,6 +47,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     onChange,
     allowedTypes = ["simple", "delta", "pid"],
     defaultDelta = { min_delta: -5, max_delta: 5 },
+    deltaLabels = { min: "Min Δ (°C)", max: "Max Δ (°C)" },
   } = props;
 
   const handleTypeChange = (type: string) => {
@@ -95,7 +100,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
       return `Power: ${settings?.power}%`;
     }
     if (controlType === "delta") {
-      return `Delta: ${settings?.min_delta}°C to ${settings?.max_delta}°C`;
+      return `${deltaLabels.min} ${settings?.min_delta}, ${deltaLabels.max} ${settings?.max_delta}`;
     }
     if (controlType === "pid" && settings?.pid) {
       return `PID: Kp=${settings.pid.kp}, Ki=${settings.pid.ki}, Kd=${settings.pid.kd}`;
@@ -139,20 +144,20 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
           {controlType === "delta" && (
             <>
               <TextField
-                label="Min Δ (°C)"
+                label={deltaLabels.min}
                 type="number"
                 size="small"
                 value={settings?.min_delta || 0}
                 onChange={(e) => handleDeltaChange("min_delta", Number(e.target.value))}
-                sx={{ width: 100, ...noSpinnerSx }}
+                sx={{ width: 170, ...noSpinnerSx }}
               />
               <TextField
-                label="Max Δ (°C)"
+                label={deltaLabels.max}
                 type="number"
                 size="small"
                 value={settings?.max_delta || 0}
                 onChange={(e) => handleDeltaChange("max_delta", Number(e.target.value))}
-                sx={{ width: 100, ...noSpinnerSx }}
+                sx={{ width: 170, ...noSpinnerSx }}
               />
             </>
           )}

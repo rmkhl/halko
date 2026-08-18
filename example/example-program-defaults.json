@@ -1,5 +1,5 @@
 {
-  "name": "Four-Stage Kiln Drying Program using PID acclimation",
+  "name": "Four-Stage Kiln Drying Program relying on step defaults",
   "steps": [
     {
       "name": "Initial Heating",

@@ -45,8 +45,8 @@ func TestProgramValidation(t *testing.T) {
 			filename: "example-program-delta.json",
 		},
 		{
-			name:     "PID Program",
-			filename: "example-program-pid.json",
+			name:     "Defaults Program",
+			filename: "example-program-defaults.json",
 		},
 	}
 
@@ -232,8 +232,9 @@ func TestHeatingStepRequiresDeltaControlledHeater(t *testing.T) {
 // heater and opens a kiln/material delta the heater cannot close by backing
 // off. Constant steam is therefore allowed only once the kiln is at or above
 // the ceiling for the whole step. A heating step hands over at
-// target+heater.min_delta (the floor of its delta band); an acclimate settles
-// the kiln onto the material, so it hands over at target.
+// target+heater.min_delta (the floor of its delta band), and an acclimate holds
+// the kiln in a band around its own target, so it hands over at the floor of
+// that band.
 func TestSteamMayOnlyRunOpenLoopAboveTheKilnCeiling(t *testing.T) {
 	config, err := LoadConfig("../templates/halko.cfg")
 	if err != nil {
@@ -324,6 +325,18 @@ func TestSteamMayOnlyRunOpenLoopAboveTheKilnCeiling(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			// An acclimate holds the kiln down to target+min_delta, so a target
+			// sitting exactly on the ceiling still hands over below it.
+			name: "acclimate at the ceiling hands over below it",
+			steps: []ProgramStep{
+				steamHeatingStep(100, steamDelta()),
+				steamAcclimateStep(100, steamOff()),
+				steamHeatingStep(160, steamConstant()),
+				steamCoolingStep(30, steamOff()),
+			},
+			wantErr: true,
+		},
+		{
 			name: "cooling must switch steam off",
 			steps: []ProgramStep{
 				steamHeatingStep(160, steamDelta()),
@@ -409,5 +422,109 @@ func TestProgramValidationWithCopy(t *testing.T) {
 	// Verify the original does not have defaults applied
 	if originalProgram.DefaultsApplied {
 		t.Error("Original program should not have defaults applied")
+	}
+}
+
+// acclimateStep builds a complete acclimate step whose heater the caller picks.
+func acclimateStep(heater *PowerPidSettings) ProgramStep {
+	step := steamAcclimateStep(150, &PowerPidSettings{Power: u8(0)})
+	step.Heater = heater
+	step.Fan = &PowerPidSettings{Power: u8(100)}
+	return step
+}
+
+// An acclimate holds the kiln in a band around the step target, so its deltas
+// are offsets from the target rather than from the material. min_delta is the
+// floor the air may sag to before the heater fires and must be negative; a zero
+// one puts the floor on the stop point and chatters. max_delta caps how far
+// above target the air may be driven and must be positive; a zero one leaves
+// the heater unable to push the air past target to recover the wood.
+func TestAcclimateStepRequiresTargetReferencedDeltaBand(t *testing.T) {
+	tests := []struct {
+		name    string
+		heater  *PowerPidSettings
+		wantErr bool
+	}{
+		{"band straddling target accepted", &PowerPidSettings{MinDelta: f32(-1), MaxDelta: f32(3)}, false},
+		{"zero min_delta rejected", &PowerPidSettings{MinDelta: f32(0), MaxDelta: f32(3)}, true},
+		{"positive min_delta rejected", &PowerPidSettings{MinDelta: f32(1), MaxDelta: f32(3)}, true},
+		{"zero max_delta rejected", &PowerPidSettings{MinDelta: f32(-1), MaxDelta: f32(0)}, true},
+		{"negative max_delta rejected", &PowerPidSettings{MinDelta: f32(-3), MaxDelta: f32(-1)}, true},
+		{"simple rejected", &PowerPidSettings{Power: u8(100)}, true},
+		// PID regulates the kiln to target, which is what an acclimate wants;
+		// the delta band bounds the same variable with hysteresis instead.
+		{"pid accepted", &PowerPidSettings{Pid: &PidSettings{Kp: 1}}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := acclimateStep(tt.heater)
+			err := step.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatal("expected validation to fail, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected validation to pass, got %v", err)
+			}
+		})
+	}
+}
+
+// A reversed or collapsed band leaves the controller with a bound it can never
+// cross, silently disabling it, so it is rejected wherever deltas are used.
+func TestDeltaBandRequiresMinBelowMax(t *testing.T) {
+	tests := []struct {
+		name    string
+		heater  *PowerPidSettings
+		wantErr bool
+	}{
+		{"ordered band accepted", &PowerPidSettings{MinDelta: f32(5), MaxDelta: f32(10)}, false},
+		{"reversed band rejected", &PowerPidSettings{MinDelta: f32(10), MaxDelta: f32(5)}, true},
+		{"collapsed band rejected", &PowerPidSettings{MinDelta: f32(5), MaxDelta: f32(5)}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := heatingStep(&PowerPidSettings{Power: u8(0)})
+			step.Heater = tt.heater
+			err := step.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatal("expected validation to fail, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected validation to pass, got %v", err)
+			}
+		})
+	}
+}
+
+// An acclimate with no heater block must come out of ApplyDefaults with a
+// target-referenced delta band. It used to default to PID, which regulates the
+// kiln while ignoring the material entirely and is no longer valid here.
+func TestApplyDefaultsGivesAcclimateADeltaBand(t *testing.T) {
+	config, err := LoadConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("Failed to read template config: %v", err)
+	}
+
+	// No heater and no steam: ApplyDefaults must supply both.
+	program := Program{ProgramSteps: []ProgramStep{steamAcclimateStep(150, nil)}}
+	program.ApplyDefaults(config.ControlUnitConfig.Defaults)
+
+	heater := program.ProgramSteps[0].Heater
+	if heater.Pid != nil {
+		t.Fatal("acclimate heater defaulted to PID")
+	}
+	if heater.MinDelta == nil || heater.MaxDelta == nil {
+		t.Fatal("acclimate heater did not default to a delta band")
+	}
+	if *heater.MinDelta >= 0 {
+		t.Fatalf("default min delta = %v, want negative", *heater.MinDelta)
+	}
+	if *heater.MaxDelta <= 0 {
+		t.Fatalf("default max delta = %v, want positive", *heater.MaxDelta)
+	}
+	if err := program.ProgramSteps[0].Validate(); err != nil {
+		t.Fatalf("defaulted acclimate step failed validation: %v", err)
 	}
 }
