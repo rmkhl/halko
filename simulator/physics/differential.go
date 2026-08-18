@@ -19,7 +19,7 @@ const (
 
 type DifferentialSimulation struct {
 	heaterPower             float32 // Energy per tick when heater is on
-	heatLossCoefficient     float32 // Proportional heat loss to environment
+	heatLossCoefficient     float32 // Proportional heat loss from the kiln to the environment
 	heatTransferCoefficient float32 // Heat transfer rate between kiln and material
 	kilnThermalMass         float32 // Heat capacity of kiln (energy needed to raise 1°C)
 	materialThermalMass     float32 // Heat capacity of material
@@ -124,10 +124,10 @@ func (d *DifferentialSimulation) Tick(state *SimulationState) {
 	kilnTempChange := kilnNetEnergy / d.kilnThermalMass
 	state.KilnTemp = max(state.EnvironmentTemp, state.KilnTemp+kilnTempChange)
 
-	// Material receives energy from kiln and loses to environment
-	materialHeatLoss := d.heatLossCoefficient * (state.MaterialTemp - state.EnvironmentTemp)
-	materialNetEnergy := kilnMaterialTransfer - materialHeatLoss
-	materialTempChange := materialNetEnergy / d.materialThermalMass
+	// The material sits inside the kiln, so the kiln is its only thermal
+	// contact: whatever the transfer moves is the whole of its energy change.
+	// It has no path to the environment of its own.
+	materialTempChange := kilnMaterialTransfer / d.materialThermalMass
 	state.MaterialTemp = max(state.EnvironmentTemp, state.MaterialTemp+materialTempChange)
 
 	// Log energy flows and temperature changes
@@ -140,7 +140,7 @@ func (d *DifferentialSimulation) Tick(state *SimulationState) {
 	}
 
 	if state.MaterialTemp != oldMaterialTemp {
-		log.Debug("Simulation[differential]: Material - received=%.3f, mat_loss=%.3f → material: %.1f°C → %.1f°C (Δ%.2f°C)",
-			kilnMaterialTransfer, materialHeatLoss, oldMaterialTemp, state.MaterialTemp, materialTempChange)
+		log.Debug("Simulation[differential]: Material - received=%.3f → material: %.1f°C → %.1f°C (Δ%.2f°C)",
+			kilnMaterialTransfer, oldMaterialTemp, state.MaterialTemp, materialTempChange)
 	}
 }

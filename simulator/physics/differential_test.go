@@ -6,7 +6,7 @@ import "testing"
 // arrived at by hand rather than by recording what the code happens to emit:
 //
 //	kiln change     = (heater - loss*(kiln-env) - transfer*(kiln-material)) / kiln mass
-//	material change = (transfer*(kiln-material) - loss*(material-env)) / material mass
+//	material change = transfer*(kiln-material) / material mass
 func arithmeticDifferentialConfig() map[string]interface{} {
 	return map[string]interface{}{
 		keyHeaterPower:             1000.0,
@@ -34,12 +34,12 @@ func TestDifferentialTickWithTheHeaterOn(t *testing.T) {
 	engine.Tick(state)
 
 	// kiln:     (1000 - 10*30 - 20*20) / 100 = +3.0
-	// material: (20*20 - 10*10) / 200        = +1.5
+	// material: (20*20) / 200                = +2.0
 	if !nearly(state.KilnTemp, 53.0) {
 		t.Fatalf("expected kiln 53.0, got %v", state.KilnTemp)
 	}
-	if !nearly(state.MaterialTemp, 31.5) {
-		t.Fatalf("expected material 31.5, got %v", state.MaterialTemp)
+	if !nearly(state.MaterialTemp, 32.0) {
+		t.Fatalf("expected material 32.0, got %v", state.MaterialTemp)
 	}
 }
 
@@ -55,8 +55,8 @@ func TestDifferentialTickWithTheHeaterOff(t *testing.T) {
 	}
 	// The material still receives the transfer computed from the old kiln
 	// temperature, so it is unchanged from the heater-on case.
-	if !nearly(state.MaterialTemp, 31.5) {
-		t.Fatalf("expected material 31.5, got %v", state.MaterialTemp)
+	if !nearly(state.MaterialTemp, 32.0) {
+		t.Fatalf("expected material 32.0, got %v", state.MaterialTemp)
 	}
 }
 
@@ -69,12 +69,12 @@ func TestDifferentialTickWithTheMaterialHotterThanTheKiln(t *testing.T) {
 
 	// transfer is negative, so the kiln gains despite the heater being off:
 	// kiln:     (0 - 10*10 - 20*(-20)) / 100 = +3.0
-	// material: (20*(-20) - 10*30) / 200     = -3.5
+	// material: (20*(-20)) / 200             = -2.0
 	if !nearly(state.KilnTemp, 33.0) {
 		t.Fatalf("expected kiln 33.0, got %v", state.KilnTemp)
 	}
-	if !nearly(state.MaterialTemp, 46.5) {
-		t.Fatalf("expected material 46.5, got %v", state.MaterialTemp)
+	if !nearly(state.MaterialTemp, 48.0) {
+		t.Fatalf("expected material 48.0, got %v", state.MaterialTemp)
 	}
 }
 
