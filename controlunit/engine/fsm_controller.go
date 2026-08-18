@@ -55,6 +55,10 @@ type (
 		fanPower    PowerController
 		heaterPower PowerController
 		steamPower  PowerController
+		// Resolved when the step is entered. elapsed is a second count, so
+		// keeping the runtime in the same unit avoids converting the step's
+		// duration on every tick.
+		runtimeSeconds int64
 	}
 
 	coolDownStateHandler struct {
@@ -62,6 +66,11 @@ type (
 		fanPower    PowerController
 		heaterPower PowerController
 		steamPower  PowerController
+		// Resolved when the step is entered. A cooling step's runtime is
+		// optional, so hasRuntimeLimit says whether runtimeSeconds means
+		// anything.
+		runtimeSeconds  int64
+		hasRuntimeLimit bool
 	}
 
 	failedStateHandler struct {
@@ -161,8 +170,9 @@ func (h *preHeatStateHandler) executeState() fsmState {
 func (h *preHeatStateHandler) enterState() {
 	// For preheat we turn on the fan
 	h.fsm.stepStarted = time.Now().Unix()
-	log.Info("FSM: Entered preheat state - setting fan to 50%%")
-	h.fsm.psuController.setPower(psuFan, 50)
+	power := *h.fsm.defaults.PreheatFanPower
+	log.Info("FSM: Entered preheat state - setting fan to %d%%", power)
+	h.fsm.psuController.setPower(psuFan, power)
 }
 
 func (h *nextProgramStepHandler) executeState() fsmState {
@@ -232,13 +242,12 @@ func (h *heatUpStateHandler) enterState() {
 func (h *acclimateStateHandler) executeState() fsmState {
 	// Once we have been acclimating long enough, we can move to the next step
 	elapsed := time.Now().Unix() - h.fsm.stepStarted
-	required := int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds())
-	if elapsed >= required {
-		log.Info("FSM: acclimate - runtime complete (%ds / %ds)", elapsed, required)
+	if elapsed >= h.runtimeSeconds {
+		log.Info("FSM: acclimate - runtime complete (%ds / %ds)", elapsed, h.runtimeSeconds)
 		return fsmStateNextProgramStep
 	}
 	log.Trace("FSM: acclimate - maintaining temperature (%ds / %ds, material: %.1f°C, target: %d°C)",
-		elapsed, required, h.fsm.temperatures.reading.Material, h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
+		elapsed, h.runtimeSeconds, h.fsm.temperatures.reading.Material, h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
 	// If we have new temperature readings, update the power settings
 	if h.fsm.currentTemperatures.updated >= h.fsm.temperatures.updated {
 		log.Debug("FSM: acclimate - updating power (kiln: %.1f°C, material: %.1f°C)",
@@ -254,10 +263,10 @@ func (h *acclimateStateHandler) executeState() fsmState {
 }
 
 func (h *acclimateStateHandler) enterState() {
-	log.Info("FSM: Entered acclimate state - target: %d°C, duration: %.0fs",
-		h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature,
-		h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds())
 	step := &h.fsm.program.ProgramSteps[h.fsm.step]
+	h.runtimeSeconds = int64(step.Runtime.Seconds())
+	log.Info("FSM: Entered acclimate state - target: %d°C, duration: %ds",
+		step.TargetTemperature, h.runtimeSeconds)
 	h.fanPower = NewPowerController(step.StepType, 0, step.Fan)
 	h.heaterPower = NewPowerController(step.StepType, float32(step.TargetTemperature), step.Heater)
 	h.steamPower = NewPowerController(step.StepType, 0, step.Steam)
@@ -266,12 +275,9 @@ func (h *acclimateStateHandler) enterState() {
 func (h *coolDownStateHandler) executeState() fsmState {
 	// If we have been cooling down long enough, we can move to the next step
 	elapsed := time.Now().Unix() - h.fsm.stepStarted
-	if h.fsm.program.ProgramSteps[h.fsm.step].Runtime != nil {
-		required := int64(h.fsm.program.ProgramSteps[h.fsm.step].Runtime.Seconds())
-		if elapsed >= required {
-			log.Info("FSM: cool_down - runtime limit reached (%ds / %ds)", elapsed, required)
-			return fsmStateNextProgramStep
-		}
+	if h.hasRuntimeLimit && elapsed >= h.runtimeSeconds {
+		log.Info("FSM: cool_down - runtime limit reached (%ds / %ds)", elapsed, h.runtimeSeconds)
+		return fsmStateNextProgramStep
 	}
 	// If the wood has cooled enough (or we have reached the time limit), we can move to the next step
 	if h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature != 0 && h.fsm.temperatures.reading.Material <= float32(h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature) {
@@ -296,8 +302,12 @@ func (h *coolDownStateHandler) executeState() fsmState {
 }
 
 func (h *coolDownStateHandler) enterState() {
-	log.Info("FSM: Entered cool_down state - target: %d°C", h.fsm.program.ProgramSteps[h.fsm.step].TargetTemperature)
 	step := &h.fsm.program.ProgramSteps[h.fsm.step]
+	h.hasRuntimeLimit = step.Runtime != nil
+	if h.hasRuntimeLimit {
+		h.runtimeSeconds = int64(step.Runtime.Seconds())
+	}
+	log.Info("FSM: Entered cool_down state - target: %d°C", step.TargetTemperature)
 	h.fanPower = NewPowerController(step.StepType, 0, step.Fan)
 	h.heaterPower = NewPowerController(step.StepType, float32(step.TargetTemperature), step.Heater)
 	h.steamPower = NewPowerController(step.StepType, 0, step.Steam)
@@ -363,9 +373,9 @@ func (p *programFSMController) executeTickAt(now int64) {
 	// A sensor that has stopped reporting valid readings leaves the
 	// controllers working from a frozen value, so stop the program and
 	// switch everything off rather than keep heating blind.
-	if sensor, seconds := p.currentTemperatures.invalidFor(now, p.started); seconds > maxInvalidTemperatureSeconds {
+	if sensor, seconds := p.currentTemperatures.invalidFor(now, p.started); seconds > p.defaults.SensorTimeoutSeconds {
 		log.Error("FSM: no valid %s temperature for %ds (limit %ds) - failing program",
-			sensor, seconds, maxInvalidTemperatureSeconds)
+			sensor, seconds, p.defaults.SensorTimeoutSeconds)
 		p.state = fsmStateFailed
 		p.stepStarted = now
 		p.stateHandlers[p.state].enterState()

@@ -123,7 +123,7 @@ func TestSteamDeltaControlAcceptedOnlyInHeatingSteps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.step.Validate()
+			err := tt.step.Validate(100)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected validation to fail, got nil")
 			}
@@ -160,7 +160,7 @@ func TestApplyDefaultsLeavesSteamDeltaControlIntact(t *testing.T) {
 
 	// Validate the step rather than the program: whole-program validation also
 	// enforces step count and ordering, which this test says nothing about.
-	if err := program.ProgramSteps[0].Validate(); err != nil {
+	if err := program.ProgramSteps[0].Validate(100); err != nil {
 		t.Errorf("step validation failed after applying defaults: %v", err)
 	}
 }
@@ -211,7 +211,7 @@ func TestHeatingStepRequiresDeltaControlledHeater(t *testing.T) {
 			step := heatingStep(&PowerPidSettings{Power: u8(0)})
 			step.Heater = tt.heater
 
-			err := step.Validate()
+			err := step.Validate(100)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected validation to fail, got nil")
 			}
@@ -450,7 +450,7 @@ func TestAcclimateStepRequiresTargetReferencedDeltaBand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			step := acclimateStep(tt.heater)
-			err := step.Validate()
+			err := step.Validate(100)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected validation to fail, got nil")
 			}
@@ -478,7 +478,7 @@ func TestDeltaBandRequiresMinBelowMax(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := heatingStep(&PowerPidSettings{Power: u8(0)})
 			step.Heater = tt.heater
-			err := step.Validate()
+			err := step.Validate(100)
 			if tt.wantErr && err == nil {
 				t.Fatal("expected validation to fail, got nil")
 			}
@@ -511,7 +511,67 @@ func TestApplyDefaultsGivesAcclimateADeltaBand(t *testing.T) {
 	if *heater.MaxDelta <= 0 {
 		t.Fatalf("default max delta = %v, want positive", *heater.MaxDelta)
 	}
-	if err := program.ProgramSteps[0].Validate(); err != nil {
+	if err := program.ProgramSteps[0].Validate(100); err != nil {
 		t.Fatalf("defaulted acclimate step failed validation: %v", err)
+	}
+}
+
+// The ceiling on a step's target is a property of the kiln, so it comes from
+// the configured defaults rather than a constant in the validator.
+func TestTargetTemperatureCeilingComesFromDefaults(t *testing.T) {
+	config, err := LoadConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("Failed to read template config: %v", err)
+	}
+	defaults := config.ControlUnitConfig.Defaults
+	lowered := uint8(120)
+	defaults.MaxTargetTemperature = &lowered
+
+	program := Program{ProgramSteps: []ProgramStep{
+		steamHeatingStep(150, steamDelta()),
+		steamAcclimateStep(150, &PowerPidSettings{Power: u8(0)}),
+		steamCoolingStep(30, &PowerPidSettings{Power: u8(0)}),
+	}}
+	program.ApplyDefaults(defaults)
+
+	if err := program.Validate(); err == nil {
+		t.Fatal("expected a 150C step to be rejected under a 120C ceiling, got nil")
+	}
+}
+
+// The temperature steam stops being able to heat the kiln past is a property of
+// the installation, so it comes from the configured defaults rather than a
+// constant in the validator.
+func TestSteamCeilingComesFromDefaults(t *testing.T) {
+	config, err := LoadConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("Failed to read template config: %v", err)
+	}
+	defaults := config.ControlUnitConfig.Defaults
+
+	// An acclimate at 90C with steam held on: rejected under a 100C ceiling,
+	// accepted once the ceiling is configured below it.
+	program := func() Program {
+		return Program{ProgramSteps: []ProgramStep{
+			steamHeatingStep(90, steamDelta()),
+			steamAcclimateStep(90, &PowerPidSettings{Power: u8(50)}),
+			steamCoolingStep(30, &PowerPidSettings{Power: u8(0)}),
+		}}
+	}
+
+	high := uint8(100)
+	defaults.SteamCeiling = &high
+	p := program()
+	p.ApplyDefaults(defaults)
+	if err := p.Validate(); err == nil {
+		t.Fatal("expected steam-on acclimate below the ceiling to be rejected")
+	}
+
+	low := uint8(80)
+	defaults.SteamCeiling = &low
+	p = program()
+	p.ApplyDefaults(defaults)
+	if err := p.Validate(); err != nil {
+		t.Fatalf("expected acclimate above a lowered ceiling to pass, got %v", err)
 	}
 }

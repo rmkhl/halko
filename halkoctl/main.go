@@ -77,8 +77,19 @@ func main() {
 			case "nginx":
 				showNginxHelp()
 				os.Exit(exitSuccess)
+			case "config":
+				showConfigHelp()
+				os.Exit(exitSuccess)
 			}
 		}
+	}
+
+	// Checking the configuration has to happen before the load below, or a
+	// configuration bad enough to diagnose would exit with the generic error
+	// instead of the explanation.
+	if command == "config" {
+		handleConfigCommand(globalOpts.ConfigPath)
+		os.Exit(exitSuccess)
 	}
 
 	config, err := types.LoadConfig(globalOpts.ConfigPath)

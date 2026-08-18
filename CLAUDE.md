@@ -27,7 +27,7 @@ When modifying types shared across services, change `types/` and then update all
 The module list lives in the `Makefile` as two variables: `MODULES` (the
 binary-producing services, used by `all`/`build`/`install`/`systemd-units`) and
 `GO_MODULES` (all of them, adding `types` and `types/log`, used by
-`fmt-changed`/`go-tidy`/`prepare`, and the list the per-module `test-<module>`
+`fmt`/`go-tidy`/`prepare`, and the list the per-module `test-<module>`
 and `lint-<module>` targets are generated from). Adding a module means updating
 `GO_MODULES` and `go.work` — `make prepare` regenerates `go.work` from
 `GO_MODULES`, so a module missing there silently drops out of the workspace.
@@ -42,7 +42,7 @@ make test             # go test ./... in every Go module
 make test-controlunit # one module only — one target per entry in GO_MODULES
 make test-race        # all modules, with the race detector
 make lint             # golangci-lint + markdown + ESLint
-make fmt-changed      # gofmt/goimports on changed files only
+make fmt              # golangci-lint --fix over every module
 make go-tidy          # go mod tidy on all modules
 
 # Webapp

@@ -6,11 +6,16 @@ import { API_ENDPOINTS } from "../../config/api";
 const runningProgramTag = "runningProgram";
 const defaultsTag = "defaults";
 
+export interface DeltaBand {
+  min_delta: number;
+  max_delta: number;
+}
+
 export interface EngineDefaults {
-  max_delta_heating: number;
-  min_delta_heating: number;
-  max_delta_acclimate: number;
-  min_delta_acclimate: number;
+  deltas: Record<string, DeltaBand>;
+  fan_power: number;
+  steam_power: number;
+  max_target_temperature: number;
 }
 
 export interface RunHistory {

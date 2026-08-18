@@ -17,9 +17,9 @@ func TestConfigReading(t *testing.T) {
 	}
 
 	// Test specific business logic that's not covered by basic validation
-	// Verify that delta heating values are sensible
-	if config.ControlUnitConfig.Defaults.MaxDeltaHeating <= config.ControlUnitConfig.Defaults.MinDeltaHeating {
-		t.Error("MaxDeltaHeating should be greater than MinDeltaHeating")
+	heating := config.ControlUnitConfig.Defaults.Deltas[StepTypeHeating]
+	if heating == nil || heating.MaxDelta <= heating.MinDelta {
+		t.Error("heating defaults should have max_delta greater than min_delta")
 	}
 }
 
@@ -35,11 +35,12 @@ func TestConfigStructure(t *testing.T) {
 	defaults := config.ControlUnitConfig.Defaults
 
 	// Verify that delta heating values are reasonable for the use case
-	if defaults.MaxDeltaHeating < 1.0 || defaults.MaxDeltaHeating > 100.0 {
-		t.Errorf("MaxDeltaHeating value %f seems unreasonable for temperature control", defaults.MaxDeltaHeating)
+	heating := defaults.Deltas[StepTypeHeating]
+	if heating.MaxDelta < 1.0 || heating.MaxDelta > 100.0 {
+		t.Errorf("heating max_delta %f seems unreasonable for temperature control", heating.MaxDelta)
 	}
-	if defaults.MinDeltaHeating < 0.1 || defaults.MinDeltaHeating > 50.0 {
-		t.Errorf("MinDeltaHeating value %f seems unreasonable for temperature control", defaults.MinDeltaHeating)
+	if heating.MinDelta < 0.1 || heating.MinDelta > 50.0 {
+		t.Errorf("heating min_delta %f seems unreasonable for temperature control", heating.MinDelta)
 	}
 }
 
@@ -51,8 +52,17 @@ var testConfigData = `{
     "tick_length": "6s",
     "network_interface": "enp4s0",
     "defaults": {
-      "max_delta_heating": 10.0,
-      "min_delta_heating": 5.0
+      "deltas": {
+        "heating": {"min_delta": 5.0, "max_delta": 10.0},
+        "acclimate": {"min_delta": -1.0, "max_delta": 3.0}
+      },
+      "fan_power": 0,
+      "steam_power": 0,
+      "max_target_temperature": 200,
+      "preheat_fan_power": 50,
+      "steam_ceiling": 100,
+      "sensor_timeout": "120s",
+      "execution_log_interval": "60s"
     }
   },
   "power_unit": {
@@ -265,5 +275,99 @@ func TestJSONMarshaling(t *testing.T) {
 	}
 	if newConfig.APIEndpoints.SensorUnit.Temperatures != "/temperatures" {
 		t.Error("SensorUnit temperatures path not preserved after JSON round-trip")
+	}
+}
+
+// writeConfigWithDefaults writes the standard test config with its
+// controlunit.defaults block replaced by the given JSON.
+func writeConfigWithDefaults(t *testing.T, defaults string) string {
+	t.Helper()
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_halko.cfg")
+
+	data := strings.Replace(testConfigData, "/dev/ttyUSB0", filepath.Join(tempDir, "esp32"), 1)
+	start := strings.Index(data, `"defaults": {`)
+	if start < 0 {
+		t.Fatal("test config has no defaults block")
+	}
+	// The block nests, so find its close by balancing braces rather than
+	// taking the first one.
+	depth, end := 0, -1
+	for i := strings.Index(data[start:], "{") + start; i < len(data); i++ {
+		switch data[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				end = i + 1
+			}
+		}
+		if end >= 0 {
+			break
+		}
+	}
+	if end < 0 {
+		t.Fatal("unbalanced defaults block in test config")
+	}
+	data = data[:start] + `"defaults": ` + defaults + data[end:]
+
+	if err := os.WriteFile(configPath, []byte(data), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return configPath
+}
+
+// A delta-controlled step type whose defaults are missing or unusable used to
+// surface much later: ApplyDefaults handed the step a 0/0 band and the program
+// failed validation when someone started it, naming the program rather than the
+// config. Catch it while loading instead.
+func TestLoadConfigRejectsUnusableDeltaDefaults(t *testing.T) {
+	tests := []struct {
+		name     string
+		defaults string
+	}{
+		{
+			"acclimate entry missing",
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+		},
+		{
+			"heating entry missing",
+			`{"deltas": {"acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+		},
+		{
+			"collapsed band",
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 5.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+		},
+		{
+			"reversed band",
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": 3.0, "max_delta": -1.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := LoadConfig(writeConfigWithDefaults(t, tt.defaults)); err == nil {
+				t.Fatal("expected LoadConfig to fail, got nil")
+			}
+		})
+	}
+}
+
+func TestLoadConfigAcceptsNestedDeltaDefaults(t *testing.T) {
+	path := writeConfigWithDefaults(t,
+		`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`)
+
+	config, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+
+	acclimate := config.ControlUnitConfig.Defaults.Deltas[StepTypeAcclimate]
+	if acclimate == nil {
+		t.Fatal("acclimate defaults missing after load")
+	}
+	if acclimate.MinDelta != -1.0 || acclimate.MaxDelta != 3.0 {
+		t.Fatalf("acclimate defaults = %v/%v, want -1/3", acclimate.MinDelta, acclimate.MaxDelta)
 	}
 }

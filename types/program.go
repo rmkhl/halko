@@ -14,12 +14,6 @@ const (
 
 	PowerSettingTypeSimple PowerSettingType = "simple"
 	PowerSettingTypeDelta  PowerSettingType = "delta"
-
-	// steamCeilingCelsius is the temperature steam cannot heat the kiln past.
-	// Above it steam is thermally neutral, since it must itself be raised to
-	// kiln temperature. Below it steam outruns the heater and is the most
-	// immediate contributor to kiln temperature.
-	steamCeilingCelsius = 100
 )
 
 type (
@@ -51,6 +45,9 @@ type (
 		ProgramName     string        `json:"name"`
 		ProgramSteps    []ProgramStep `json:"steps"`
 		DefaultsApplied bool          `json:"-"`
+		// Captured from the defaults so Validate does not need them passed in.
+		maxTargetTemperature uint8
+		steamCeiling         uint8
 	}
 )
 
@@ -126,7 +123,10 @@ func (p *PowerPidSettings) Validate(component string) error {
 	return nil
 }
 
-func (p *ProgramStep) Validate() error {
+// Validate checks a step in isolation. steamCeiling is the temperature above
+// which steam stops being able to heat the kiln, which the step needs to know
+// to decide whether it may hold steam at constant power.
+func (p *ProgramStep) Validate(steamCeiling uint8) error {
 	// Validate fan - call validate first to capture any errors
 	fanErr := p.Fan.Validate("fan")
 	if p.Fan.Type != PowerSettingTypeSimple {
@@ -145,7 +145,7 @@ func (p *ProgramStep) Validate() error {
 	case StepTypeHeating:
 		return p.validateHeatingStep()
 	case StepTypeAcclimate:
-		return p.validateAcclimateStep()
+		return p.validateAcclimateStep(steamCeiling)
 	case StepTypeCooling:
 		return p.validateCoolingStep()
 	default:
@@ -200,7 +200,7 @@ func (p *ProgramStep) validateHeatingStep() error {
 	return nil
 }
 
-func (p *ProgramStep) validateAcclimateStep() error {
+func (p *ProgramStep) validateAcclimateStep(steamCeiling uint8) error {
 	if p.Runtime == nil {
 		return errors.New("acclimate step must have runtime")
 	}
@@ -209,8 +209,8 @@ func (p *ProgramStep) validateAcclimateStep() error {
 	}
 	// An acclimate holds the kiln at its target, so a target below the ceiling
 	// leaves steam free to heat the kiln with nothing modulating it.
-	if p.TargetTemperature < steamCeilingCelsius && !p.steamIsOff() {
-		return fmt.Errorf("acclimate step below %d°C must switch steam off", steamCeilingCelsius)
+	if p.TargetTemperature < steamCeiling && !p.steamIsOff() {
+		return fmt.Errorf("acclimate step below %d°C must switch steam off", steamCeiling)
 	}
 	if err := p.Heater.Validate("heater"); err != nil {
 		return err
@@ -254,8 +254,6 @@ func (p *ProgramStep) validateCoolingStep() error {
 }
 
 func (p *Program) ApplyDefaults(defaults *Defaults) {
-	zeroPower := uint8(0)
-
 	for i := range p.ProgramSteps {
 		step := &p.ProgramSteps[i]
 
@@ -266,14 +264,15 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		if step.Heater.Power == nil &&
 			step.Heater.MinDelta == nil && step.Heater.MaxDelta == nil {
 			switch step.StepType {
-			case StepTypeAcclimate:
-				step.Heater.MinDelta = &defaults.MinDeltaAcclimate
-				step.Heater.MaxDelta = &defaults.MaxDeltaAcclimate
-			case StepTypeHeating:
-				step.Heater.MinDelta = &defaults.MinDeltaHeating
-				step.Heater.MaxDelta = &defaults.MaxDeltaHeating
+			case StepTypeAcclimate, StepTypeHeating:
+				band := defaults.Deltas[step.StepType]
+				step.Heater.MinDelta = &band.MinDelta
+				step.Heater.MaxDelta = &band.MaxDelta
 			case StepTypeCooling:
-				step.Heater.Power = &zeroPower
+				// A cooling step never drives the heater; it waits for the
+				// charge to fall, so there is nothing to configure.
+				off := uint8(0)
+				step.Heater.Power = &off
 			}
 		}
 
@@ -281,7 +280,7 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 			step.Fan = &PowerPidSettings{}
 		}
 		if step.Fan.Power == nil {
-			step.Fan.Power = &zeroPower
+			step.Fan.Power = defaults.FanPower
 		}
 
 		if step.Steam == nil {
@@ -292,10 +291,12 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		// ends up defining two methods and fails validation.
 		if step.Steam.Power == nil &&
 			step.Steam.MinDelta == nil && step.Steam.MaxDelta == nil {
-			step.Steam.Power = &zeroPower
+			step.Steam.Power = defaults.SteamPower
 		}
 	}
 
+	p.maxTargetTemperature = *defaults.MaxTargetTemperature
+	p.steamCeiling = *defaults.SteamCeiling
 	p.DefaultsApplied = true
 }
 
@@ -305,7 +306,7 @@ func (p *Program) Validate() error {
 	}
 
 	for _, step := range p.ProgramSteps {
-		err := step.Validate()
+		err := step.Validate(p.steamCeiling)
 		if err != nil {
 			return err
 		}
@@ -330,10 +331,10 @@ func (p *Program) validateSteamAgainstKilnTemperature() error {
 	for i := range p.ProgramSteps {
 		step := &p.ProgramSteps[i]
 
-		if step.StepType == StepTypeHeating && step.steamRunsOpenLoop() && entry < steamCeilingCelsius {
+		if step.StepType == StepTypeHeating && step.steamRunsOpenLoop() && entry < float32(p.steamCeiling) {
 			return fmt.Errorf(
 				"step %q enters with the kiln at %.1f°C, below %d°C, so it must switch steam off or use delta power control",
-				step.Name, entry, steamCeilingCelsius)
+				step.Name, entry, p.steamCeiling)
 		}
 
 		entry = step.kilnExitTemperature()
@@ -358,8 +359,8 @@ func (p *Program) validateStepOrderAndTemperatureProgression() error {
 	for i := 0; i < len(p.ProgramSteps)-1; i++ {
 		currentStep := p.ProgramSteps[i]
 
-		if currentStep.TargetTemperature > 200 {
-			return errors.New("target temperature must not exceed 200 degrees")
+		if currentStep.TargetTemperature > p.maxTargetTemperature {
+			return fmt.Errorf("target temperature must not exceed %d degrees", p.maxTargetTemperature)
 		}
 
 		nextStep := p.ProgramSteps[i+1]

@@ -4,10 +4,6 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
-// maxInvalidTemperatureSeconds is how long a sensor may go without a valid
-// reading before the running program is failed and all power switched off.
-const maxInvalidTemperatureSeconds = 120
-
 type (
 	// fsmTemperatures holds the most recent valid reading for each sensor.
 	// A failed probe reports types.InvalidTemperatureReading; keeping the

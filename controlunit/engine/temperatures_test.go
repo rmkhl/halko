@@ -11,6 +11,10 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
+// testSensorTimeoutSeconds mirrors the sensor_timeout the shipped config
+// carries; the FSM now reads it from the defaults rather than a constant.
+const testSensorTimeoutSeconds = 120
+
 const invalid = float32(types.InvalidTemperatureReading)
 
 func TestObserveHoldsLastValidReading(t *testing.T) {
@@ -95,15 +99,16 @@ func TestExecuteTickFailsProgramWhenSensorInvalidTooLong(t *testing.T) {
 		started:             1000,
 		currentPSUStatus:    &fsmPSUStatus{},
 		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 	}
 	fsm.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
 		fsmStateFailed:  &failedStateHandler{fsm: fsm},
 	}
 	// No valid reading has ever arrived and the threshold has passed.
-	fsm.currentTemperatures.updated = 1000 + maxInvalidTemperatureSeconds + 1
+	fsm.currentTemperatures.updated = 1000 + testSensorTimeoutSeconds + 1
 
-	fsm.executeTickAt(fsm.started + maxInvalidTemperatureSeconds + 1)
+	fsm.executeTickAt(fsm.started + testSensorTimeoutSeconds + 1)
 
 	if fsm.state != fsmStateFailed {
 		t.Errorf("state = %q, want %q", fsm.state, fsmStateFailed)
@@ -116,6 +121,7 @@ func TestExecuteTickKeepsRunningWhileReadingsAreValid(t *testing.T) {
 		started:             1000,
 		currentPSUStatus:    &fsmPSUStatus{},
 		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 	}
 	fsm.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
@@ -159,6 +165,7 @@ func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
 		state:               fsmStateWaiting,
 		started:             1000,
 		psuController:       psu,
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 		currentPSUStatus:    &fsmPSUStatus{},
 		currentTemperatures: &fsmTemperatures{},
 	}
@@ -167,9 +174,9 @@ func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
 		fsmStateFailed:  &failedStateHandler{fsm: fsm},
 	}
 	// No valid reading has ever arrived and the threshold has passed.
-	fsm.currentTemperatures.updated = 1000 + maxInvalidTemperatureSeconds + 1
+	fsm.currentTemperatures.updated = 1000 + testSensorTimeoutSeconds + 1
 
-	fsm.executeTickAt(fsm.started + maxInvalidTemperatureSeconds + 1)
+	fsm.executeTickAt(fsm.started + testSensorTimeoutSeconds + 1)
 
 	if fsm.state != fsmStateFailed {
 		t.Fatalf("state = %q, want %q", fsm.state, fsmStateFailed)

@@ -29,9 +29,17 @@ const shellyTestConfig = `{
     "tick_length": "%s",
     "network_interface": "enp4s0",
     "defaults": {
-      "pid_settings": {"acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5}},
-      "max_delta_heating": 10.0,
-      "min_delta_heating": 5.0
+      "deltas": {
+        "heating": {"min_delta": 5.0, "max_delta": 10.0},
+        "acclimate": {"min_delta": -1.0, "max_delta": 3.0}
+      },
+      "fan_power": 0,
+      "steam_power": 0,
+      "max_target_temperature": 200,
+      "preheat_fan_power": 50,
+      "steam_ceiling": 100,
+      "sensor_timeout": "120s",
+      "execution_log_interval": "60s"
     }
   },
   "power_unit": {

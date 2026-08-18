@@ -104,7 +104,8 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 
 	// Capture start time once to ensure ExecutionLogWriter and FSM use the same timestamp
 	startTime := time.Now().Unix()
-	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName, 60, startTime)
+	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName,
+		runner.defaults.ExecutionLogIntervalSeconds, startTime)
 	return &runner, nil
 }
 
@@ -121,10 +122,7 @@ func requestSensorRead(commands chan<- string) bool {
 }
 
 func (runner *programRunner) Run() {
-	tickLength, err := time.ParseDuration(runner.halkoConfig.ControlUnitConfig.TickLength)
-	if err != nil {
-		log.Fatal("Invalid tick_length in configuration: %v", err)
-	}
+	tickLength := runner.halkoConfig.ControlUnitConfig.TickDuration
 	log.Info("Program runner using tick length: %v", tickLength)
 	ticker := time.NewTicker(tickLength)
 	defer ticker.Stop()
