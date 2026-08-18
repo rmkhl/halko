@@ -484,15 +484,20 @@ install-webapp: build-webapp
 	@echo ""
 	@echo "Access the webapp at http://localhost/ or http://your-server-ip/"
 
-.PHONY: fmt-changed
-fmt-changed:
+# Formatting is not scoped to changed files. golangci-lint analyses whole
+# packages, and an edit in one file changes what is valid in the others - a
+# partial-package run reports symbols from the untouched files as undefined and
+# aborts before fixing anything. Running everything is also fast enough not to
+# be worth the machinery.
+.PHONY: fmt
+fmt:
 	@for mod in $(GO_MODULES); do \
 		if [ -f $$mod/go.mod ]; then \
-			echo "Formatting changed files in $$mod..."; \
-			(cd $$mod && git diff --name-only master...HEAD | grep '\.go$$' | xargs -r golangci-lint run --fix -v || true); \
+			echo "Formatting $$mod..."; \
+			(cd $$mod && golangci-lint run --fix ./... || true); \
 		fi; \
 	done
-	@echo "Reformatted changed Go files compared to main branch using golangci-lint."
+	@echo "Reformatted Go files using golangci-lint."
 
 # Tests live beside the code they cover, so each module gets its own target
 # generated from GO_MODULES: "make test" runs them all, "make test-controlunit"
@@ -658,7 +663,7 @@ help:
 	@echo "  lint-webapp                Run ESLint on webapp TypeScript/React code."
 	@echo "  lint-ci                    As 'lint-golang', but fails the build on any issue."
 	@echo "  lint-markdown-ci           As 'lint-markdown', but fails the build on any issue."
-	@echo "  fmt-changed                Reformat changed Go files compared to main branch."
+	@echo "  fmt                        Reformat all Go files."
 	@echo "  go-tidy                    Run go mod tidy on all modules."
 	@echo "  update-modules             Update all go.mod dependencies and tidy them."
 	@echo ""

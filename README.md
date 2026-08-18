@@ -65,7 +65,7 @@ make systemd-units
 make install-webapp
 
 # Reformat changed Go files
-make fmt-changed
+make fmt
 
 # WebApp development and deployment
 make run-webapp          # Start development server on :1234 with hot reload
