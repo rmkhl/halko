@@ -27,6 +27,10 @@ type (
 		PidSettings     map[StepType]*PidSettings `json:"pid_settings"`
 		MaxDeltaHeating float32                   `json:"max_delta_heating"`
 		MinDeltaHeating float32                   `json:"min_delta_heating"`
+		// Acclimate deltas are offsets from the step target, not the material,
+		// so the floor is negative and the ceiling positive.
+		MaxDeltaAcclimate float32 `json:"max_delta_acclimate"`
+		MinDeltaAcclimate float32 `json:"min_delta_acclimate"`
 	}
 
 	ControlUnitConfig struct {

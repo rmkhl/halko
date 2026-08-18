@@ -52,13 +52,11 @@ export const Step: React.FC<Props> = (props) => {
         max_delta: defaults.max_delta_heating,
       };
     } else if (type === "acclimate") {
-      const pidSettings = defaults.pid_settings["acclimate"];
-      if (pidSettings) {
-        return {
-          type: "pid",
-          pid: pidSettings,
-        };
-      }
+      return {
+        type: "delta",
+        min_delta: defaults.min_delta_acclimate,
+        max_delta: defaults.max_delta_acclimate,
+      };
     } else if (type === "cooling") {
       return {
         type: "simple",
@@ -82,6 +80,24 @@ export const Step: React.FC<Props> = (props) => {
   const steamDeltaDefaults = defaults
     ? { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
     : undefined;
+
+  // Heating and cooling each accept exactly one heater control method, so
+  // there is nothing to choose. An acclimate holds the kiln at its target and
+  // accepts either controller that regulates against a setpoint.
+  const heaterControlTypes: PowerSettingType[] =
+    type === "cooling" ? ["simple"] : type === "acclimate" ? ["delta", "pid"] : ["delta"];
+
+  // An acclimate bands the kiln around the step target; a heating step bands it
+  // around the material. Same two fields, different reference.
+  const isAcclimate = type === "acclimate";
+  const heaterDeltaDefaults = defaults
+    ? isAcclimate
+      ? { min_delta: defaults.min_delta_acclimate, max_delta: defaults.max_delta_acclimate }
+      : { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
+    : undefined;
+  const heaterDeltaLabels = isAcclimate
+    ? { min: "Kiln floor vs target (°C)", max: "Kiln ceiling vs target (°C)" }
+    : { min: "Min Δ vs material (°C)", max: "Max Δ vs material (°C)" };
 
   // Determine current heater power control type
   const getHeaterControlType = (): string => {
@@ -203,6 +219,9 @@ export const Step: React.FC<Props> = (props) => {
               title="Heater"
               settings={displayHeater}
               onChange={handleChange("heater")}
+              allowedTypes={heaterControlTypes}
+              defaultDelta={heaterDeltaDefaults}
+              deltaLabels={heaterDeltaLabels}
             />
 
             <Stack direction="row" gap={2} alignItems="center">
