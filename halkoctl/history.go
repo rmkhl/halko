@@ -407,8 +407,5 @@ func formatPowerControl(power *types.PowerPidSettings) string {
 	if power.MinDelta != nil && power.MaxDelta != nil {
 		return fmt.Sprintf("Delta (min: %.1f°C, max: %.1f°C)", *power.MinDelta, *power.MaxDelta)
 	}
-	if power.Pid != nil {
-		return fmt.Sprintf("PID (Kp: %.2f, Ki: %.2f, Kd: %.2f)", power.Pid.Kp, power.Pid.Ki, power.Pid.Kd)
-	}
 	return "Not specified"
 }

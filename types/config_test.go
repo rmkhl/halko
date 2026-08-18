@@ -21,14 +21,6 @@ func TestConfigReading(t *testing.T) {
 	if config.ControlUnitConfig.Defaults.MaxDeltaHeating <= config.ControlUnitConfig.Defaults.MinDeltaHeating {
 		t.Error("MaxDeltaHeating should be greater than MinDeltaHeating")
 	}
-
-	// Check that acclimate PID settings exist and have reasonable values
-	acclimate, exists := config.ControlUnitConfig.Defaults.PidSettings[StepTypeAcclimate]
-	if exists && acclimate != nil {
-		if acclimate.Kp <= 0 || acclimate.Ki <= 0 || acclimate.Kd < 0 {
-			t.Error("PID values should be positive (Kp, Ki > 0, Kd >= 0)")
-		}
-	}
 }
 
 func TestConfigStructure(t *testing.T) {
@@ -49,11 +41,6 @@ func TestConfigStructure(t *testing.T) {
 	if defaults.MinDeltaHeating < 0.1 || defaults.MinDeltaHeating > 50.0 {
 		t.Errorf("MinDeltaHeating value %f seems unreasonable for temperature control", defaults.MinDeltaHeating)
 	}
-
-	// Verify PID settings structure contains expected step types
-	if len(defaults.PidSettings) == 0 {
-		t.Error("PID settings should contain at least one step type configuration")
-	}
 }
 
 // Test configuration data - represents a complete valid Halko configuration
@@ -64,13 +51,6 @@ var testConfigData = `{
     "tick_length": "6s",
     "network_interface": "enp4s0",
     "defaults": {
-      "pid_settings": {
-        "acclimate": {
-          "kp": 2.0,
-          "ki": 1.0,
-          "kd": 0.5
-        }
-      },
       "max_delta_heating": 10.0,
       "min_delta_heating": 5.0
     }

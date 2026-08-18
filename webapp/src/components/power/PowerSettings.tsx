@@ -5,7 +5,6 @@ import { Stack, Typography, TextField, MenuItem, Select, FormControl, InputLabel
 const typeLabels: Record<PowerSettingType, string> = {
   simple: "Simple",
   delta: "Delta",
-  pid: "PID",
 };
 
 const noSpinnerSx = {
@@ -45,7 +44,7 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     title,
     settings,
     onChange,
-    allowedTypes = ["simple", "delta", "pid"],
+    allowedTypes = ["simple", "delta"],
     defaultDelta = { min_delta: -5, max_delta: 5 },
     deltaLabels = { min: "Min Δ (°C)", max: "Max Δ (°C)" },
   } = props;
@@ -55,8 +54,6 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
       onChange({ type: "simple", power: 50 });
     } else if (type === "delta") {
       onChange({ type: "delta", ...defaultDelta });
-    } else if (type === "pid") {
-      onChange({ type: "pid", pid: { kp: 2.0, ki: 1.0, kd: 0.5 } });
     }
   };
 
@@ -72,11 +69,6 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     }
   };
 
-  const handlePidChange = (field: "kp" | "ki" | "kd", value: number) => {
-    if (settings?.pid) {
-      onChange({ ...settings, pid: { ...settings.pid, [field]: value } });
-    }
-  };
 
   // Determine control type from settings (matching backend validation logic)
   const getControlType = (): string => {
@@ -86,7 +78,6 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     if (settings.type) return settings.type;
 
     // Infer from fields
-    if (settings.pid) return "pid";
     if (settings.min_delta !== undefined || settings.max_delta !== undefined) return "delta";
     if (settings.power !== undefined) return "simple";
 
@@ -101,9 +92,6 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
     }
     if (controlType === "delta") {
       return `${deltaLabels.min} ${settings?.min_delta}, ${deltaLabels.max} ${settings?.max_delta}`;
-    }
-    if (controlType === "pid" && settings?.pid) {
-      return `PID: Kp=${settings.pid.kp}, Ki=${settings.pid.ki}, Kd=${settings.pid.kd}`;
     }
     return "Not configured";
   };
@@ -162,34 +150,6 @@ export const PowerSettingsComponent: React.FC<Props> = (props) => {
             </>
           )}
 
-          {controlType === "pid" && settings?.pid && (
-            <>
-              <TextField
-                label="Kp"
-                type="number"
-                size="small"
-                value={settings.pid.kp}
-                onChange={(e) => handlePidChange("kp", Number(e.target.value))}
-                sx={{ width: 80, ...noSpinnerSx }}
-              />
-              <TextField
-                label="Ki"
-                type="number"
-                size="small"
-                value={settings.pid.ki}
-                onChange={(e) => handlePidChange("ki", Number(e.target.value))}
-                sx={{ width: 80, ...noSpinnerSx }}
-              />
-              <TextField
-                label="Kd"
-                type="number"
-                size="small"
-                value={settings.pid.kd}
-                onChange={(e) => handlePidChange("kd", Number(e.target.value))}
-                sx={{ width: 80, ...noSpinnerSx }}
-              />
-            </>
-          )}
         </>
       ) : (
         <Typography variant="body2" color="text.secondary">

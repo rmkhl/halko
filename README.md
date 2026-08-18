@@ -188,8 +188,8 @@ Contains systemd service templates and configuration samples. See [templates/REA
 
 #### `/example`
 
-Example drying programs (delta and PID acclimation) that pass validation and
-can be sent with `halkoctl send`.
+An example drying program that passes validation and can be sent with
+`halkoctl send`.
 
 #### `/types`
 
@@ -222,9 +222,6 @@ example configuration:
     "tick_length": "6s",
     "network_interface": "eth0",
     "defaults": {
-      "pid_settings": {
-        "acclimate": {"kp": 2.0, "ki": 1.0, "kd": 0.5}
-      },
       "max_delta_heating": 10.0,
       "min_delta_heating": 5.0,
       "max_delta_acclimate": 3.0,
@@ -289,8 +286,6 @@ and `/engine` (execution management). There is no separate storage service.
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
 - **`defaults`**: Default configuration settings
-  - **`pid_settings`**: PID controller parameters. No step type accepts PID
-    control any more, so these are unused.
   - **`max_delta_heating`** / **`min_delta_heating`**: the band a heating step
     holds the kiln in, measured from the **material** temperature. Both positive.
   - **`max_delta_acclimate`** / **`min_delta_acclimate`**: the band an acclimate

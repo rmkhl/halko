@@ -81,11 +81,11 @@ export const Step: React.FC<Props> = (props) => {
     ? { min_delta: defaults.min_delta_heating, max_delta: defaults.max_delta_heating }
     : undefined;
 
-  // Heating and cooling each accept exactly one heater control method, so
-  // there is nothing to choose. An acclimate holds the kiln at its target and
-  // accepts either controller that regulates against a setpoint.
+  // Each step type accepts exactly one heater control method, so there is
+  // nothing to choose: delta while heating or acclimating, constant while
+  // cooling.
   const heaterControlTypes: PowerSettingType[] =
-    type === "cooling" ? ["simple"] : type === "acclimate" ? ["delta", "pid"] : ["delta"];
+    type === "cooling" ? ["simple"] : ["delta"];
 
   // An acclimate bands the kiln around the step target; a heating step bands it
   // around the material. Same two fields, different reference.
@@ -113,9 +113,7 @@ export const Step: React.FC<Props> = (props) => {
     // Explicit type is set
     if (effectiveHeater.type === "simple") controlType = "constant";
     else if (effectiveHeater.type === "delta") controlType = "delta";
-    else if (effectiveHeater.type === "pid") controlType = "PID";
     // Infer from fields (matching backend validation logic)
-    else if (effectiveHeater.pid) controlType = "PID";
     else if (effectiveHeater.min_delta !== undefined || effectiveHeater.max_delta !== undefined) controlType = "delta";
     else if (effectiveHeater.power !== undefined) controlType = "constant";
     else return "not configured";

@@ -1,26 +1,11 @@
-// Implements simple, per-phase delta, and PID based power controllers.
+// Implements simple and per-step delta based power controllers.
 package engine
 
 import (
-	"time"
-
 	"github.com/rmkhl/halko/types"
 )
 
 type (
-	// PidControllerState holds mutable state for a PidController.
-	PidControllerState struct {
-		CurrentError           float32
-		CurrentErrorIntegral   float32
-		CurrentErrorDerivative float32
-		PreviousUpdate         int64
-	}
-
-	PidController struct {
-		Config *types.PidSettings
-		State  PidControllerState
-	}
-
 	// PowerController decides the power percentage from the latest temperature
 	// readings. Implementations own whatever state they need; the returned value
 	// is re-commanded to the power unit on every reading.
@@ -29,42 +14,6 @@ type (
 	}
 )
 
-func NewPidController(config *types.PidSettings) *PidController {
-	return &PidController{
-		Config: config,
-	}
-}
-
-// Update the controller state.
-func (c *PidController) Update(reference float32, actual float32) float32 {
-	now := time.Now().Unix()
-	if c.State.PreviousUpdate == 0 {
-		c.State.PreviousUpdate = now
-		return 0
-	}
-	// The clock has to advance on every update. Leaving it at the first call
-	// makes sampleInterval time-since-start rather than the tick interval, so
-	// the integral accumulates against an ever-growing weight and saturates.
-	sampleInterval := now - c.State.PreviousUpdate
-	if sampleInterval <= 0 {
-		// Two updates inside the same second: no elapsed time to integrate or
-		// differentiate over, and dividing by it would poison the state with
-		// Inf or NaN. Ask for no change instead.
-		return 0
-	}
-	previousError := c.State.CurrentError
-	c.State.CurrentError = reference - actual
-	c.State.CurrentErrorDerivative = (c.State.CurrentError - previousError) / float32(sampleInterval)
-	c.State.CurrentErrorIntegral += c.State.CurrentError * float32(sampleInterval)
-	c.State.PreviousUpdate = now
-	return c.Config.Kp*c.State.CurrentError +
-		c.Config.Ki*c.State.CurrentErrorIntegral +
-		c.Config.Kd*c.State.CurrentErrorDerivative
-}
-
-// NewPowerController selects the controller implementation for a program
-// step. Unresolvable settings yield a 0% simple controller so the heater
-// stays off (fail-safe).
 func NewPowerController(stepType types.StepType, targetTemperature float32, settings *types.PowerPidSettings) PowerController {
 	failSafe := &simplePowerController{power: 0}
 	if settings == nil {
@@ -90,12 +39,6 @@ func NewPowerController(stepType types.StepType, targetTemperature float32, sett
 		default:
 			return failSafe
 		}
-
-	case types.PowerSettingTypePid:
-		if settings.Pid == nil {
-			return failSafe
-		}
-		return &pidPowerController{pid: NewPidController(settings.Pid), target: targetTemperature}
 
 	default:
 		return failSafe
@@ -172,18 +115,4 @@ type simplePowerController struct {
 
 func (c *simplePowerController) Update(_, _ float32) uint8 {
 	return c.power
-}
-
-// pidPowerController adjusts its own previous output by the PID delta,
-// clamped to 0-100. PID error is computed on kiln temperature vs target.
-type pidPowerController struct {
-	pid       *PidController
-	target    float32
-	lastPower uint8
-}
-
-func (c *pidPowerController) Update(kilnTemperature, _ float32) uint8 {
-	powerDelta := c.pid.Update(c.target, kilnTemperature)
-	c.lastPower = uint8(min(100, max(int(float32(c.lastPower)+powerDelta), 0)))
-	return c.lastPower
 }

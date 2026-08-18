@@ -44,10 +44,6 @@ func TestProgramValidation(t *testing.T) {
 			name:     "Delta Program",
 			filename: "example-program-delta.json",
 		},
-		{
-			name:     "Defaults Program",
-			filename: "example-program-defaults.json",
-		},
 	}
 
 	for _, tt := range tests {
@@ -100,7 +96,7 @@ func TestSteamDeltaControlAcceptedOnlyInHeatingSteps(t *testing.T) {
 				StepType:          StepTypeAcclimate,
 				TargetTemperature: 100,
 				Runtime:           &oneHour,
-				Heater:            &PowerPidSettings{Pid: &PidSettings{Kp: 1}},
+				Heater:            &PowerPidSettings{MinDelta: f32(-1), MaxDelta: f32(3)},
 				Fan:               &PowerPidSettings{Power: u8(100)},
 				Steam:             steamDelta(),
 			},
@@ -198,9 +194,8 @@ func steamAcclimateStep(target uint8, steam *PowerPidSettings) ProgramStep {
 	}
 }
 
-// Only delta control bounds the kiln/material delta during heating: simple runs
-// the heater open-loop and PID regulates the kiln to target while ignoring the
-// material entirely, so either lets the kiln run arbitrarily far ahead.
+// Only delta control bounds the kiln/material delta during heating; simple runs
+// the heater open-loop and lets the kiln run arbitrarily far ahead.
 func TestHeatingStepRequiresDeltaControlledHeater(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -209,7 +204,6 @@ func TestHeatingStepRequiresDeltaControlledHeater(t *testing.T) {
 	}{
 		{"delta accepted", &PowerPidSettings{MinDelta: f32(5), MaxDelta: f32(10)}, false},
 		{"simple rejected", &PowerPidSettings{Power: u8(100)}, true},
-		{"pid rejected", &PowerPidSettings{Pid: &PidSettings{Kp: 1}}, true},
 	}
 
 	for _, tt := range tests {
@@ -451,9 +445,6 @@ func TestAcclimateStepRequiresTargetReferencedDeltaBand(t *testing.T) {
 		{"zero max_delta rejected", &PowerPidSettings{MinDelta: f32(-1), MaxDelta: f32(0)}, true},
 		{"negative max_delta rejected", &PowerPidSettings{MinDelta: f32(-3), MaxDelta: f32(-1)}, true},
 		{"simple rejected", &PowerPidSettings{Power: u8(100)}, true},
-		// PID regulates the kiln to target, which is what an acclimate wants;
-		// the delta band bounds the same variable with hysteresis instead.
-		{"pid accepted", &PowerPidSettings{Pid: &PidSettings{Kp: 1}}, false},
 	}
 
 	for _, tt := range tests {
@@ -499,8 +490,7 @@ func TestDeltaBandRequiresMinBelowMax(t *testing.T) {
 }
 
 // An acclimate with no heater block must come out of ApplyDefaults with a
-// target-referenced delta band. It used to default to PID, which regulates the
-// kiln while ignoring the material entirely and is no longer valid here.
+// target-referenced delta band.
 func TestApplyDefaultsGivesAcclimateADeltaBand(t *testing.T) {
 	config, err := LoadConfig("../templates/halko.cfg")
 	if err != nil {
@@ -512,9 +502,6 @@ func TestApplyDefaultsGivesAcclimateADeltaBand(t *testing.T) {
 	program.ApplyDefaults(config.ControlUnitConfig.Defaults)
 
 	heater := program.ProgramSteps[0].Heater
-	if heater.Pid != nil {
-		t.Fatal("acclimate heater defaulted to PID")
-	}
 	if heater.MinDelta == nil || heater.MaxDelta == nil {
 		t.Fatal("acclimate heater did not default to a delta band")
 	}

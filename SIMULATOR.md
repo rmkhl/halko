@@ -335,7 +335,7 @@ Set to 0 to disable status logging (recommended for production-like testing).
 ## Development Tips
 
 1. **Start with Simple**: Use `simple` engine first to verify program logic
-2. **Tune with Differential**: Use `differential` to tune PID/delta parameters
+2. **Tune with Differential**: Use `differential` to tune delta parameters
 3. **Validate with Thermodynamic**: Final testing with `thermodynamic` before hardware deployment
 4. **Automatic Timing**: Simulator automatically uses `controlunit.tick_length` from `halko.cfg` for realistic timing
 5. **Realistic Initial Conditions**: Set `initial_*_temp` to room temperature (20°C) for realistic startup

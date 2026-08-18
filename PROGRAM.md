@@ -87,7 +87,8 @@ Maintains constant power output.
 
 ### Delta Control
 
-Maintains temperature difference between kiln and wood.
+Bands the kiln temperature. What the band is measured against depends on the
+step type.
 
 ```json
 {
@@ -96,37 +97,27 @@ Maintains temperature difference between kiln and wood.
 }
 ```
 
-- **max_delta**: Maximum temperature difference (kiln - wood) in degrees
-- **min_delta**: Minimum temperature difference (kiln - wood) in degrees
-- **Usage**: Heater and steam. Required for the heater in heating steps;
-  allowed for the heater in acclimate steps; allowed for steam in heating
-  steps only
-- **Behavior**:
-  - Full power (100%) when kiln temperature is below calculated target
-  - Zero power (0%) when kiln temperature is above calculated target
-  - Target kiln temperature = min(program_target, wood_temp + max_delta,
-    max(wood_temp + min_delta))
+**Heating steps** band the kiln against the **wood**: the heater runs while the
+kiln is at or below `wood + min_delta` and stops at `wood + max_delta`. Both
+values are positive. This is the bound that keeps the kiln from running far
+enough ahead of the wood to cause checking and case-hardening.
 
-### PID Control
+**Acclimate steps** band the kiln against whichever job the heater is doing, so
+their deltas straddle zero:
 
-Uses PID algorithm for precise temperature control.
+| Condition | Kiln banded in | Job |
+|-----------|----------------|-----|
+| `wood >= target` | `[target + min_delta, target]` | holding the kiln at target |
+| `wood < target` | `[wood, wood + max_delta]` | driving heat into the wood |
 
-```json
-{
-  "pid": {
-    "kp": 2.0,
-    "ki": 1.0,
-    "kd": 0.5
-  }
-}
-```
+Here `min_delta` is negative — how far the kiln may sag below target before the
+heater fires — and `max_delta` is positive, how far the kiln may lead the wood.
+The two bands meet at the target, so when the wood arrives a kiln still up in
+the heating band is above its new one and the heater stops.
 
-- **kp**: Proportional gain coefficient
-- **ki**: Integral gain coefficient
-- **kd**: Derivative gain coefficient
-- **Usage**: Heater in acclimate steps only. Heating steps require delta and
-  cooling steps require simple, so acclimate is the only place PID is accepted
-- **Behavior**: Calculates power adjustments based on temperature error
+- **Usage**: heater in heating and acclimate steps; steam in heating steps only
+- **Behavior**: full power (100%) at or below the band's lower bound, zero
+  power (0%) at or above its upper bound, and the previous state in between
 
 ## Runtime Format
 
@@ -167,16 +158,15 @@ Each component must define exactly one control method per step.
 | Step | Heater | Fan | Steam |
 |------|--------|-----|-------|
 | heating | delta (required) | simple | simple or delta; simple must be 0% below the steam ceiling |
-| acclimate | simple, delta or PID | simple | simple; must be 0% when the target is below the steam ceiling |
+| acclimate | delta (required) | simple | simple; must be 0% when the target is below the steam ceiling |
 | cooling | simple (required) | simple | simple, and must be 0% |
 
 ### Why the Heater Must Be Delta
 
-In a heating step the heater is restricted to delta control because only delta
-bounds the gap between the kiln and the wood. Simple control runs the heater
-open-loop, and PID regulates the kiln to its target while ignoring the material
-entirely — both let the kiln run arbitrarily far ahead of the wood, which is
-what causes checking and case-hardening.
+Heating and acclimate steps both restrict the heater to delta control, because
+only delta bounds the gap between the kiln and the wood. Simple control runs the
+heater open-loop and lets the kiln run arbitrarily far ahead of the wood, which
+is what causes checking and case-hardening.
 
 ### The Steam Ceiling
 
@@ -278,56 +268,6 @@ constant 50%.
 }
 ```
 
-### PID Control Program
-
-Stays below the steam ceiling throughout, so steam is off in every step. The
-heater still has to be delta while heating; PID appears only in the acclimate.
-
-```json
-{
-  "name": "PID Controlled Drying",
-  "steps": [
-    {
-      "name": "Heat Up",
-      "type": "heating",
-      "temperature_target": 80,
-      "heater": {
-        "min_delta": 10.0,
-        "max_delta": 20.0
-      },
-      "fan": {"power": 100},
-      "steam": {"power": 0}
-    },
-    {
-      "name": "PID Acclimation",
-      "type": "acclimate",
-      "temperature_target": 80,
-      "runtime": "8h",
-      "heater": {
-        "pid": {
-          "kp": 2.0,
-          "ki": 1.0,
-          "kd": 0.5
-        }
-      },
-      "fan": {"power": 50},
-      "steam": {"power": 0}
-    },
-    {
-      "name": "Cool Down",
-      "type": "cooling",
-      "temperature_target": 30,
-      "runtime": "8h",
-      "heater": {"power": 0},
-      "fan": {"power": 100},
-      "steam": {"power": 0}
-    }
-  ]
-}
-```
-
-## Control Logic Details
-
 ### Delta Control Algorithm
 
 The delta control method maintains the temperature difference between kiln and
@@ -342,21 +282,6 @@ wood within specified bounds:
    - If kiln temperature < target: 100% power
    - If kiln temperature ≥ target: 0% power
 
-### PID Control Algorithm
-
-The PID controller calculates power adjustments based on temperature error:
-
-1. **Error calculation**: `error = target_temp - actual_temp`
-
-2. **PID terms**:
-   - Proportional: `kp * error`
-   - Integral: `ki * accumulated_error`
-   - Derivative: `kd * error_rate_of_change`
-
-3. **Power adjustment**: `current_power + (proportional + integral + derivative)`
-
-4. **Clamping**: Final power limited to 0-100% range
-
 ## Default Settings
 
 The system applies default settings for components when not specified in the program:
@@ -365,7 +290,7 @@ The system applies default settings for components when not specified in the pro
 - **Steam power**: 0% (off)
 - **Heater settings**: Based on step type
   - Heating steps: Use configured delta defaults
-  - Acclimate steps: Use configured PID defaults
+  - Acclimate steps: Use configured acclimate delta defaults
   - Cooling steps: 0% power
 
 These defaults are defined in the main configuration file under `controlunit.defaults`.

@@ -44,7 +44,7 @@ const formatTimestamp = (timestamp: string): string => {
 };
 
 const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
-  if (!power) return "Default PID";
+  if (!power) return "Default";
 
   // Check explicit type first
   if (power.type === "simple" && power.power !== undefined) {
@@ -53,14 +53,8 @@ const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
   if (power.type === "delta" && power.min_delta !== undefined && power.max_delta !== undefined) {
     return `Delta (${power.min_delta}–${power.max_delta}°C)`;
   }
-  if (power.type === "pid") {
-    return "PID";
-  }
 
   // Infer from fields (matching backend validation logic)
-  if (power.pid) {
-    return "PID";
-  }
   if (power.min_delta !== undefined && power.max_delta !== undefined) {
     return `Delta (${power.min_delta}–${power.max_delta}°C)`;
   }
@@ -68,7 +62,7 @@ const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
     return `${power.power}%`;
   }
 
-  return "Default PID";
+  return "Default";
 };
 
 export const Programs: React.FC = () => {
