@@ -45,17 +45,7 @@ func main() {
 	}
 
 	// Get tick duration from controlunit config
-	var tickDuration time.Duration
-	switch {
-	case config.ControlUnitConfig != nil && config.ControlUnitConfig.TickLength != "":
-		var err error
-		tickDuration, err = time.ParseDuration(config.ControlUnitConfig.TickLength)
-		if err != nil {
-			log.Fatal("Invalid controlunit.tick_length in configuration: %v", err)
-		}
-	default:
-		log.Fatal("controlunit.tick_length not specified in configuration")
-	}
+	tickDuration := config.ControlUnitConfig.TickDuration
 	log.Info("Simulation tick duration: %v (from controlunit.tick_length)", tickDuration)
 
 	// Load simulator-specific configuration (REQUIRED)

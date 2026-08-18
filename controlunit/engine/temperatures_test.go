@@ -95,11 +95,11 @@ func TestInvalidForReportsTheWorseSensor(t *testing.T) {
 
 func TestExecuteTickFailsProgramWhenSensorInvalidTooLong(t *testing.T) {
 	fsm := &programFSMController{
-		state:                fsmStateWaiting,
-		started:              1000,
-		currentPSUStatus:     &fsmPSUStatus{},
-		currentTemperatures:  &fsmTemperatures{},
-		sensorTimeoutSeconds: testSensorTimeoutSeconds,
+		state:               fsmStateWaiting,
+		started:             1000,
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 	}
 	fsm.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
@@ -117,11 +117,11 @@ func TestExecuteTickFailsProgramWhenSensorInvalidTooLong(t *testing.T) {
 
 func TestExecuteTickKeepsRunningWhileReadingsAreValid(t *testing.T) {
 	fsm := &programFSMController{
-		state:                fsmStateWaiting,
-		started:              1000,
-		currentPSUStatus:     &fsmPSUStatus{},
-		currentTemperatures:  &fsmTemperatures{},
-		sensorTimeoutSeconds: testSensorTimeoutSeconds,
+		state:               fsmStateWaiting,
+		started:             1000,
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 	}
 	fsm.stateHandlers = map[fsmState]fsmStateHandler{
 		fsmStateWaiting: &waitingStateHandler{fsm: fsm},
@@ -165,6 +165,7 @@ func TestExecuteTickFailsafeCutsAllPower(t *testing.T) {
 		state:               fsmStateWaiting,
 		started:             1000,
 		psuController:       psu,
+		defaults:            &types.Defaults{SensorTimeoutSeconds: testSensorTimeoutSeconds},
 		currentPSUStatus:    &fsmPSUStatus{},
 		currentTemperatures: &fsmTemperatures{},
 	}

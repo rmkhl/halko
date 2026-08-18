@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/rmkhl/halko/types"
 )
@@ -86,5 +87,85 @@ func TestHeatUpModulatesDeltaSteam(t *testing.T) {
 	// Inside the band the controller holds its previous state.
 	if got := steamAt(57, 50); got != 100 {
 		t.Errorf("steam at delta 7 = %d%%, want 100%% (hysteresis holds)", got)
+	}
+}
+
+// stepDuration builds the Runtime a time-limited step carries.
+func stepDuration(seconds int) *types.StepDuration {
+	return &types.StepDuration{Duration: time.Duration(seconds) * time.Second}
+}
+
+// A time-limited step ends when its runtime has elapsed and not before. The
+// handlers resolve that runtime when the step is entered rather than on every
+// tick, so entering the state is what has to make the value available.
+func TestTimedStepsEndOnTheirRuntime(t *testing.T) {
+	tests := []struct {
+		name    string
+		state   fsmState
+		step    types.ProgramStep
+		handler func(*programFSMController) fsmStateHandler
+	}{
+		{
+			name:  "acclimate",
+			state: fsmStateAcclimate,
+			step: types.ProgramStep{
+				Name: "hold", StepType: types.StepTypeAcclimate, TargetTemperature: 100,
+				Runtime: stepDuration(600),
+				Heater:  &types.PowerPidSettings{Type: types.PowerSettingTypeDelta, MinDelta: f32(-1), MaxDelta: f32(3)},
+				Fan:     &types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(100)},
+				Steam:   &types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(0)},
+			},
+			handler: func(f *programFSMController) fsmStateHandler { return &acclimateStateHandler{fsm: f} },
+		},
+		{
+			name:  "cooling",
+			state: fsmStateCoolDown,
+			step: types.ProgramStep{
+				Name: "cool", StepType: types.StepTypeCooling, TargetTemperature: 30,
+				Runtime: stepDuration(600),
+				Heater:  &types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(0)},
+				Fan:     &types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(100)},
+				Steam:   &types.PowerPidSettings{Type: types.PowerSettingTypeSimple, Power: u8(0)},
+			},
+			handler: func(f *programFSMController) fsmStateHandler { return &coolDownStateHandler{fsm: f} },
+		},
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsm := &programFSMController{
+				state:               tt.state,
+				program:             &types.Program{ProgramSteps: []types.ProgramStep{tt.step}},
+				psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+				currentPSUStatus:    &fsmPSUStatus{},
+				currentTemperatures: &fsmTemperatures{},
+			}
+			// Material stays above a cooling target and below an acclimate one,
+			// so only the runtime can end either step.
+			fsm.temperatures.reading.Material = 50
+			handler := tt.handler(fsm)
+
+			fsm.stepStarted = time.Now().Unix()
+			handler.enterState()
+			if got := handler.executeState(); got != tt.state {
+				t.Fatalf("step ended immediately: %v", got)
+			}
+
+			fsm.stepStarted = time.Now().Unix() - 599
+			if got := handler.executeState(); got != tt.state {
+				t.Fatalf("step ended one second early: %v", got)
+			}
+
+			fsm.stepStarted = time.Now().Unix() - 600
+			if got := handler.executeState(); got != fsmStateNextProgramStep {
+				t.Fatalf("step did not end on its runtime: %v", got)
+			}
+		})
 	}
 }

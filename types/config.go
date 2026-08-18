@@ -56,6 +56,12 @@ type (
 		SensorTimeout string `json:"sensor_timeout"`
 		// How often a running program appends a line to its execution log.
 		ExecutionLogInterval string `json:"execution_log_interval"`
+
+		// Resolved from the strings above once, while loading. Both are
+		// compared against second counts, so they are carried as seconds
+		// rather than durations.
+		SensorTimeoutSeconds        int64 `json:"-"`
+		ExecutionLogIntervalSeconds int64 `json:"-"`
 	}
 
 	ControlUnitConfig struct {
@@ -63,6 +69,9 @@ type (
 		TickLength       string    `json:"tick_length"`
 		NetworkInterface string    `json:"network_interface"`
 		Defaults         *Defaults `json:"defaults"`
+
+		// Resolved from TickLength once, while loading.
+		TickDuration time.Duration `json:"-"`
 	}
 
 	PowerUnit struct {
@@ -70,6 +79,10 @@ type (
 		CycleLength   string         `json:"cycle_length"`
 		PowerMapping  map[string]int `json:"power_mapping"`
 		MaxIdleTime   string         `json:"max_idle_time"`
+
+		// Resolved from the strings above once, while loading.
+		CycleDuration   time.Duration `json:"-"`
+		MaxIdleDuration time.Duration `json:"-"`
 	}
 
 	SensorUnitConfig struct {
@@ -235,6 +248,8 @@ func LoadConfig(configPath string) (*HalkoConfig, error) {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	config.resolveDurations()
+
 	log.Info("Configuration loaded successfully from: %s", configPath)
 	return config, nil
 }
@@ -322,6 +337,21 @@ func readHalkoConfig(path string) (*HalkoConfig, error) {
 	}
 
 	return &config, nil
+}
+
+// resolveDurations turns the duration strings into the forms their consumers
+// actually use, once, so nothing downstream has to parse them again. Safe to do
+// without error handling because ValidateRequired has already rejected anything
+// unparseable.
+func (c *HalkoConfig) resolveDurations() {
+	c.ControlUnitConfig.TickDuration, _ = time.ParseDuration(c.ControlUnitConfig.TickLength)
+	c.PowerUnit.CycleDuration, _ = time.ParseDuration(c.PowerUnit.CycleLength)
+	c.PowerUnit.MaxIdleDuration, _ = time.ParseDuration(c.PowerUnit.MaxIdleTime)
+
+	sensorTimeout, _ := time.ParseDuration(c.ControlUnitConfig.Defaults.SensorTimeout)
+	c.ControlUnitConfig.Defaults.SensorTimeoutSeconds = int64(sensorTimeout.Seconds())
+	logInterval, _ := time.ParseDuration(c.ControlUnitConfig.Defaults.ExecutionLogInterval)
+	c.ControlUnitConfig.Defaults.ExecutionLogIntervalSeconds = int64(logInterval.Seconds())
 }
 
 func (c *HalkoConfig) ValidateRequired() error {
