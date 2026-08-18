@@ -14,7 +14,6 @@ const (
 
 	PowerSettingTypeSimple PowerSettingType = "simple"
 	PowerSettingTypeDelta  PowerSettingType = "delta"
-	PowerSettingTypePid    PowerSettingType = "pid"
 
 	// steamCeilingCelsius is the temperature steam cannot heat the kiln past.
 	// Above it steam is thermally neutral, since it must itself be raised to
@@ -31,18 +30,11 @@ type (
 		time.Duration
 	}
 
-	PidSettings struct {
-		Kp float32 `json:"kp"`
-		Ki float32 `json:"ki"`
-		Kd float32 `json:"kd"`
-	}
-
 	PowerPidSettings struct {
 		Type     PowerSettingType `json:"type,omitempty"`
 		MinDelta *float32         `json:"min_delta,omitempty"`
 		MaxDelta *float32         `json:"max_delta,omitempty"`
 		Power    *uint8           `json:"power,omitempty"`
-		Pid      *PidSettings     `json:"pid,omitempty"`
 	}
 
 	ProgramStep struct {
@@ -113,13 +105,8 @@ func (p *PowerPidSettings) Validate(component string) error {
 		controlMethods++
 		p.Type = PowerSettingTypeDelta
 	}
-	if p.Pid != nil {
-		controlMethods++
-		p.Type = PowerSettingTypePid
-	}
-
 	if controlMethods != 1 {
-		return errors.New(component + " must define exactly one control method: power, min/max deltas, or PID")
+		return errors.New(component + " must define exactly one control method: power or min/max deltas")
 	}
 
 	if hasDeltas && (p.MinDelta == nil || p.MaxDelta == nil) {
@@ -205,9 +192,8 @@ func (p *ProgramStep) validateHeatingStep() error {
 	if err := p.Heater.Validate("heater"); err != nil {
 		return err
 	}
-	// Only delta control bounds the kiln/material delta. Simple runs the heater
-	// open-loop, and PID regulates the kiln to target while ignoring the
-	// material entirely, so both let the kiln run arbitrarily far ahead.
+	// Only delta control bounds the kiln/material delta; simple runs the heater
+	// open-loop and lets the kiln run arbitrarily far ahead.
 	if p.Heater.Type != PowerSettingTypeDelta {
 		return errors.New("heating step heater must use delta power control")
 	}
@@ -229,12 +215,8 @@ func (p *ProgramStep) validateAcclimateStep() error {
 	if err := p.Heater.Validate("heater"); err != nil {
 		return err
 	}
-	// An acclimate holds the kiln at its target, so both controllers that
-	// regulate against a setpoint are accepted: delta bounds the kiln with
-	// hysteresis, PID drives it continuously. Simple is open-loop and regulates
-	// nothing, so it cannot hold anything.
-	if p.Heater.Type == PowerSettingTypeSimple {
-		return errors.New("acclimate step heater must use delta or pid power control")
+	if p.Heater.Type != PowerSettingTypeDelta {
+		return errors.New("acclimate step heater must use delta power control")
 	}
 	// Unlike every other step type, an acclimate's deltas are offsets from the
 	// step target rather than from the material: the controller holds the kiln
@@ -243,13 +225,11 @@ func (p *ProgramStep) validateAcclimateStep() error {
 	// target. A zero min_delta puts the floor on the stop point and chatters; a
 	// zero max_delta leaves the heater unable to drive the air above target,
 	// which is the only way it can pull the wood back up.
-	if p.Heater.Type == PowerSettingTypeDelta {
-		if *p.Heater.MinDelta >= 0 {
-			return errors.New("acclimate step heater min delta must be negative, the kiln floor below target")
-		}
-		if *p.Heater.MaxDelta <= 0 {
-			return errors.New("acclimate step heater max delta must be positive, the kiln ceiling above target")
-		}
+	if *p.Heater.MinDelta >= 0 {
+		return errors.New("acclimate step heater min delta must be negative, the kiln floor below target")
+	}
+	if *p.Heater.MaxDelta <= 0 {
+		return errors.New("acclimate step heater max delta must be positive, the kiln ceiling above target")
 	}
 	return nil
 }
@@ -283,7 +263,7 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 			step.Heater = &PowerPidSettings{}
 		}
 
-		if step.Heater.Pid == nil && step.Heater.Power == nil &&
+		if step.Heater.Power == nil &&
 			step.Heater.MinDelta == nil && step.Heater.MaxDelta == nil {
 			switch step.StepType {
 			case StepTypeAcclimate:
@@ -310,7 +290,7 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		// Only fill in a constant power when the step named no control method
 		// at all; a step asking for delta steam must keep Power unset, or it
 		// ends up defining two methods and fails validation.
-		if step.Steam.Pid == nil && step.Steam.Power == nil &&
+		if step.Steam.Power == nil &&
 			step.Steam.MinDelta == nil && step.Steam.MaxDelta == nil {
 			step.Steam.Power = &zeroPower
 		}

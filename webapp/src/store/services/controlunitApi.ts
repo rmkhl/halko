@@ -7,7 +7,6 @@ const runningProgramTag = "runningProgram";
 const defaultsTag = "defaults";
 
 export interface EngineDefaults {
-  pid_settings: Record<string, { kp: number; ki: number; kd: number }>;
   max_delta_heating: number;
   min_delta_heating: number;
   max_delta_acclimate: number;

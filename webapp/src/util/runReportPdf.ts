@@ -62,9 +62,6 @@ const mean = (values: number[]): number =>
 
 const describePower = (settings?: PowerSettings): string => {
   if (!settings) return "-";
-  if (settings.pid) {
-    return `PID kp=${settings.pid.kp} ki=${settings.pid.ki} kd=${settings.pid.kd}`;
-  }
   if (settings.min_delta !== undefined && settings.max_delta !== undefined) {
     return `delta ${settings.min_delta} to ${settings.max_delta} °C`;
   }

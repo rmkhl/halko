@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/rmkhl/halko/types"
 )
@@ -76,28 +75,6 @@ func TestSimplePowerControllerReturnsFixedPower(t *testing.T) {
 	})
 }
 
-func TestPidPowerControllerTracksItsOwnOutput(t *testing.T) {
-	c := &pidPowerController{
-		pid:    NewPidController(&types.PidSettings{Kp: 10}),
-		target: 100,
-	}
-	// Backdate the PID state so Update sees a 1-second sample interval
-	// (the first PidController.Update call otherwise just initializes state).
-	c.pid.State.PreviousUpdate = time.Now().Unix() - 1
-
-	// error = 100-90 = 10, Kp*10 = +100 applied to lastPower 0, clamped to 100
-	if got := c.Update(90, 0); got != 100 {
-		t.Fatalf("first Update = %d, want 100", got)
-	}
-
-	c.pid.State.PreviousUpdate = time.Now().Unix() - 1
-	// error = 100-200 = -100, Kp*-100 = -1000 applied to lastPower 100, clamped to 0.
-	// This fails if the implementation uses anything but its own last output as base.
-	if got := c.Update(200, 0); got != 0 {
-		t.Fatalf("second Update = %d, want 0", got)
-	}
-}
-
 func f32(v float32) *float32 { return &v }
 func u8(v uint8) *uint8      { return &v }
 
@@ -120,9 +97,6 @@ func TestNewPowerControllerSelection(t *testing.T) {
 			&simplePowerController{}},
 		{"heating delta", types.StepTypeHeating, 80, deltaSettings, &heatingDeltaController{}},
 		{"acclimate delta", types.StepTypeAcclimate, 80, deltaSettings, &acclimateDeltaController{}},
-		{"pid", types.StepTypeAcclimate, 80,
-			&types.PowerPidSettings{Type: types.PowerSettingTypePid, Pid: &types.PidSettings{Kp: 1}},
-			&pidPowerController{}},
 		// fail-safes: anything unresolvable heats at 0%
 		{"delta on cooling step", types.StepTypeCooling, 0, deltaSettings, &simplePowerController{}},
 		{"nil settings", types.StepTypeHeating, 80, nil, &simplePowerController{}},
@@ -244,31 +218,4 @@ func TestAcclimateFiresOnKilnSagNotMaterialSag(t *testing.T) {
 		{kiln: 149.5, material: 151.0, want: 0},   // still inside the kiln band
 		{kiln: 148.5, material: 150.8, want: 100}, // sagged past target-1, heat
 	})
-}
-
-func TestPidControllerAdvancesItsSampleClock(t *testing.T) {
-	c := NewPidController(&types.PidSettings{Kp: 1, Ki: 1})
-	start := time.Now().Unix() - 60
-	c.State.PreviousUpdate = start
-
-	c.Update(100, 90)
-
-	if c.State.PreviousUpdate == start {
-		t.Fatal("PreviousUpdate did not advance: sampleInterval grows without bound")
-	}
-}
-
-// Two updates inside the same second leave no elapsed time to differentiate
-// over. Dividing by it yields Inf or NaN, and converting that to int is
-// undefined in Go, so the controller must decline to act instead.
-func TestPidControllerIgnoresSubSecondUpdates(t *testing.T) {
-	c := NewPidController(&types.PidSettings{Kp: 1, Ki: 1, Kd: 1})
-	c.State.PreviousUpdate = time.Now().Unix()
-
-	if got := c.Update(100, 90); got != 0 {
-		t.Fatalf("Update within the same second = %v, want 0", got)
-	}
-	if d := c.State.CurrentErrorDerivative; d != d || d > 1e30 || d < -1e30 {
-		t.Fatalf("derivative poisoned: %v", d)
-	}
 }

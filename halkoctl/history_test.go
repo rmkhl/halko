@@ -44,11 +44,6 @@ func TestFormatPowerControl(t *testing.T) {
 			&types.PowerPidSettings{MinDelta: &minDelta, MaxDelta: &maxDelta},
 			"Delta (min: 2.5°C, max: 8.0°C)",
 		},
-		{
-			"pid",
-			&types.PowerPidSettings{Pid: &types.PidSettings{Kp: 1.5, Ki: 0.25, Kd: 0.1}},
-			"PID (Kp: 1.50, Ki: 0.25, Kd: 0.10)",
-		},
 		{"nothing set", &types.PowerPidSettings{}, "Not specified"},
 	}
 

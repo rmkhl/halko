@@ -11,7 +11,7 @@ interface Props {
 }
 
 // Left without a heater on purpose: the control unit applies the default that
-// suits the step type (delta for heating, PID for acclimate, off for cooling),
+// suits the step type (delta for heating and acclimate, off for cooling),
 // and Step renders that default until it is overridden. Naming one here would
 // duplicate the configured deltas and go wrong as soon as the type is changed.
 //

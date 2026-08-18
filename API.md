@@ -542,11 +542,8 @@ be off below 100 °C:
       "temperature_target": 60,
       "runtime": "6h",
       "heater": {
-        "pid": {
-          "kp": 2.0,
-          "ki": 1.0,
-          "kd": 0.5
-        }
+        "min_delta": -1.0,
+        "max_delta": 3.0
       },
       "fan": {
         "power": 75
