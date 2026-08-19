@@ -343,6 +343,22 @@ Validate a program with custom config and verbose output:
 halkoctl --config /path/to/halko.cfg validate my-program.json --verbose
 ```
 
+### version
+
+Prints the Halko version this binary was built from.
+
+```bash
+halkoctl version
+```
+
+Like `config`, it is dispatched before the configuration is loaded, so it
+answers even when `halko.cfg` is missing or broken — which is exactly when you
+want to know what version a deployment is running. It contacts no service.
+
+The version comes from `types.Version`, the same constant every service reports
+on its status endpoint, so a mismatch between this and a running service means
+the binaries on the host were not all updated together.
+
 ## API Endpoints
 
 halkoctl interacts with various ControlUnit and SensorUnit endpoints:
