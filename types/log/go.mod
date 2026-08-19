@@ -1,3 +1,3 @@
 module github.com/rmkhl/halko/types/log
 
-go 1.21.0
+go 1.26.2
