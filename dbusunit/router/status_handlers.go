@@ -28,6 +28,7 @@ func getStatus(manager *dbus.Manager) http.HandlerFunc {
 
 		response := types.ServiceStatusResponse{
 			Status:  status,
+			Version: types.Version,
 			Service: "dbusunit",
 			Details: details,
 		}

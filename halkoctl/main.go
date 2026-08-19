@@ -80,6 +80,9 @@ func main() {
 			case "config":
 				showConfigHelp()
 				os.Exit(exitSuccess)
+			case "version":
+				showVersionHelp()
+				os.Exit(exitSuccess)
 			}
 		}
 	}
@@ -89,6 +92,12 @@ func main() {
 	// instead of the explanation.
 	if command == "config" {
 		handleConfigCommand(globalOpts.ConfigPath)
+		os.Exit(exitSuccess)
+	}
+
+	// Reporting the version must not depend on a loadable configuration.
+	if command == "version" {
+		handleVersionCommand()
 		os.Exit(exitSuccess)
 	}
 

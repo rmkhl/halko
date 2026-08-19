@@ -25,7 +25,7 @@ func main() {
 	log.Trace("Global options parsed successfully")
 
 	opts.ApplyLogLevel()
-	log.Info("Sensorunit service starting")
+	log.Info("Starting sensorunit %s", types.Version)
 
 	halkoConfig, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {

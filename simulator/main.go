@@ -37,6 +37,7 @@ func main() {
 		log.Fatal("Failed to parse global options: %v", err)
 	}
 	opts.ApplyLogLevel()
+	log.Info("Starting simulator %s", types.Version)
 
 	// Load main halko configuration (needed for tick_length)
 	config, err := types.LoadConfig(opts.ConfigPath)

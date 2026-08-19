@@ -23,6 +23,7 @@ func main() {
 
 	// Apply the log level from the parsed options
 	opts.ApplyLogLevel()
+	log.Info("Starting powerunit %s", types.Version)
 	log.Trace("Starting powerunit application")
 	log.Debug("Parsed global options: config=%s, loglevel=%d, verbose=%t", opts.ConfigPath, opts.LogLevel, opts.Verbose)
 

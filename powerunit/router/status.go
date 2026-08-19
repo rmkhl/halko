@@ -25,6 +25,7 @@ func getStatus(p *power.Controller) http.HandlerFunc {
 
 		response := types.ServiceStatusResponse{
 			Status:  status,
+			Version: types.Version,
 			Service: types.ServiceNamePowerUnit,
 			Details: details,
 		}

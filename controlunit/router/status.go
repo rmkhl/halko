@@ -10,6 +10,7 @@ func getStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		response := types.ServiceStatusResponse{
 			Status:  types.ServiceStatusHealthy,
+			Version: types.Version,
 			Service: types.ServiceNameControlUnit,
 		}
 

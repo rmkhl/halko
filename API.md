@@ -23,6 +23,7 @@ All services implement a `/status` endpoint that returns health information usin
 {
   "data": {
     "status": "healthy",
+    "version": "1.0.0",
     "service": "controlunit",
     "details": {
       // Service-specific status details
@@ -30,6 +31,10 @@ All services implement a `/status` endpoint that returns health information usin
   }
 }
 ```
+
+`version` is the Halko release the responding service was built from. Services
+are deployed by hand and not always together, so two services reporting
+different versions means a partially updated install.
 
 **Status Values:**
 
@@ -114,6 +119,7 @@ Checks the connection status of the sensor unit. Follows the standard status end
 {
   "data": {
     "status": "healthy",
+    "version": "1.0.0",
     "service": "sensorunit",
     "details": {
       "sensor_connected": true
@@ -166,6 +172,7 @@ Gets the health status of the PowerUnit service. Follows the standard status end
 {
   "data": {
     "status": "healthy",
+    "version": "1.0.0",
     "service": "powerunit",
     "details": {
       "controller_initialized": true
@@ -299,6 +306,7 @@ Gets the health status of the ControlUnit service. Follows the standard status e
 {
   "data": {
     "status": "healthy",
+    "version": "1.0.0",
     "service": "controlunit",
     "details": {
       "program_running": true,
@@ -871,6 +879,7 @@ Follows the standard status endpoint format.
 {
   "data": {
     "status": "healthy",
+    "version": "1.0.0",
     "service": "dbusunit",
     "details": {
       "dbus_connected": true

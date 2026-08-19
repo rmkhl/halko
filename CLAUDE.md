@@ -145,6 +145,18 @@ Config: `.golangci.yaml`. Enabled linters include `bodyclose`, `errchkjson`, `go
 
 During development, the services read config from `halko.cfg` in the **workspace root** (not `/etc/opt/halko.cfg`). File storage (running programs, history) is written to `fsdb/` in the **workspace root** (not `/var/opt/halko/`). Both are git-ignored and must be created manually if missing.
 
+## Versioning
+
+`types.Version` in `types/version.go` is the single source of truth. Services
+report it on their status endpoints and log it at startup, `halkoctl version`
+prints it, and the webapp shows it per service.
+
+Every PR bumps it: patch for bug fixes, minor for added or changed
+functionality, major for invalidating an API endpoint, a config key, or the
+program format. CI fails a PR that leaves it unchanged unless the PR carries
+the `no-release` label. The `vX.Y.Z` git tag is created by the `Release tag`
+workflow after the merge — never tag by hand. See `CONTRIBUTING.md`.
+
 ## Deployment
 
 ```bash

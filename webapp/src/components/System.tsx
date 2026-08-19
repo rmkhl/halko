@@ -65,9 +65,21 @@ export const System: React.FC = () => {
           marginBottom: 3,
         }}
       >
-        <SubsystemStatusCard name="controlunit" isHealthy={systemStatus.services.controlunit.status === "healthy"} />
-        <SubsystemStatusCard name="powerunit" isHealthy={systemStatus.services.powerunit.status === "healthy"} />
-        <SubsystemStatusCard name="sensorunit" isHealthy={systemStatus.services.sensorunit.status === "healthy"} />
+        <SubsystemStatusCard
+          name="controlunit"
+          isHealthy={systemStatus.services.controlunit.status === "healthy"}
+          version={systemStatus.services.controlunit.version}
+        />
+        <SubsystemStatusCard
+          name="powerunit"
+          isHealthy={systemStatus.services.powerunit.status === "healthy"}
+          version={systemStatus.services.powerunit.version}
+        />
+        <SubsystemStatusCard
+          name="sensorunit"
+          isHealthy={systemStatus.services.sensorunit.status === "healthy"}
+          version={systemStatus.services.sensorunit.version}
+        />
         {hardwareStatus && !isLoadingHardware && (
           <>
             <ModuleStatusCard name="Shelly" isConnected={hardwareStatus.shelly.reachable} />

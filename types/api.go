@@ -64,7 +64,11 @@ type (
 
 	// ServiceStatusResponse defines the standard status response for all services
 	ServiceStatusResponse struct {
-		Status  ServiceStatus          `json:"status"`
+		Status ServiceStatus `json:"status"`
+		// Version is the reporting service's build version. Services are
+		// deployed by hand and not always together, so a mismatch between
+		// two services here is a real signal, not noise.
+		Version string                 `json:"version"`
 		Service string                 `json:"service"`
 		Details map[string]interface{} `json:"details,omitempty"`
 	}
