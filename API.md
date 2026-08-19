@@ -7,7 +7,7 @@ component of the Halko wood drying kiln control system.
 
 All Halko services use a consistent JSON response structure:
 
-```json
+```jsonc
 {
   "data": {
     // Service-specific data
@@ -19,7 +19,7 @@ All Halko services use a consistent JSON response structure:
 
 All services implement a `/status` endpoint that returns health information using this format:
 
-```json
+```jsonc
 {
   "data": {
     "status": "healthy",
@@ -331,7 +331,7 @@ timeout) and reads memory, disk, and uptime information from the host.
 
 **Response Format:**
 
-```json
+```jsonc
 {
   "data": {
     "services": {
@@ -414,7 +414,7 @@ Gets details of a specific completed program execution.
 
 **Response Format:**
 
-```json
+```jsonc
 {
   "data": {
     "name": "Standard Drying@2024-01-15T10:30:00Z",
@@ -609,7 +609,7 @@ be off below 100 °C:
 
 **Response Format:**
 
-```json
+```jsonc
 {
   "data": {
     "name": "Custom Drying Program",
@@ -792,7 +792,7 @@ Gets a specific stored program template by name.
 
 **Response Format:**
 
-```json
+```jsonc
 {
   "data": {
     "name": "Standard Drying",
@@ -814,7 +814,7 @@ Creates a new stored program template.
 
 **Request Body:**
 
-```json
+```jsonc
 {
   "name": "New Program",
   "steps": [ /* program steps */ ]
@@ -836,7 +836,7 @@ Updates an existing stored program template.
 
 **Request Body:**
 
-```json
+```jsonc
 {
   "name": "Updated Program",
   "steps": [ /* updated program steps */ ]

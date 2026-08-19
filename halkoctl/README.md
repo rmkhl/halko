@@ -370,10 +370,10 @@ program definition as the request body. The program is sent unwrapped,
 consistent with the storage endpoints — the file's contents go on the wire
 as-is:
 
-```json
+```jsonc
 {
   "name": "Program Name",
-  "steps": [...]
+  "steps": [ /* ... */ ]
 }
 ```
 
@@ -383,7 +383,7 @@ Sends a GET request to `/engine/running` and displays the current execution stat
 
 **Response when program is running:**
 
-```json
+```jsonc
 {
   "data": {
     "program": { /* program definition */ },

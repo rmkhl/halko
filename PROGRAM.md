@@ -8,7 +8,7 @@ targets, timing, and power control strategies.
 
 A kiln drying program is defined as a JSON file with the following structure:
 
-```json
+```jsonc
 {
   "name": "Program Name",
   "steps": [
