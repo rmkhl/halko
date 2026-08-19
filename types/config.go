@@ -108,8 +108,12 @@ type (
 	SensorUnitEndpoints struct {
 		Endpoint     `json:",inline"`
 		Temperatures string `json:"temperatures"`
-		Display      string `json:"display"`
-		Status       string `json:"status"`
+		// DieTemperatures serves the cold junction readings the thermocouple
+		// values are referenced to, kept apart from the temperatures the
+		// system controls on.
+		DieTemperatures string `json:"die_temperatures"`
+		Display         string `json:"display"`
+		Status          string `json:"status"`
 	}
 
 	PowerUnitEndpoints struct {
@@ -218,6 +222,10 @@ func (e *ControlUnitEndpoints) GetEngineURL() string {
 // SensorUnitEndpoints methods
 func (e *SensorUnitEndpoints) GetTemperaturesURL() string {
 	return e.URL + e.Temperatures
+}
+
+func (e *SensorUnitEndpoints) GetDieTemperaturesURL() string {
+	return e.URL + e.DieTemperatures
 }
 
 func (e *SensorUnitEndpoints) GetDisplayURL() string {
@@ -481,6 +489,9 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if c.APIEndpoints.SensorUnit.Temperatures == "" {
 		return errors.New("sensorunit endpoints temperatures path is required")
+	}
+	if c.APIEndpoints.SensorUnit.DieTemperatures == "" {
+		return errors.New("sensorunit endpoints die_temperatures path is required")
 	}
 	if c.APIEndpoints.SensorUnit.Display == "" {
 		return errors.New("sensorunit endpoints display path is required")

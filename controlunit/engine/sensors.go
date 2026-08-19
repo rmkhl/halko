@@ -33,6 +33,11 @@ type (
 	temperatureReadings struct {
 		Material float32
 		Kiln     float32
+		// Cold junction temperatures, carried through for the execution log
+		// only. Nothing controls on them.
+		MaterialDie      float32
+		KilnPrimaryDie   float32
+		KilnSecondaryDie float32
 	}
 
 	sensorReader struct {
@@ -48,6 +53,10 @@ type (
 	temperatureSensorReader struct {
 		sensorReader
 		runner chan<- temperatureReadings
+		// dieURL serves the cold junction readings, which are logged but
+		// never controlled on, so failing to fetch them does not fail a
+		// temperature read.
+		dieURL string
 	}
 
 	psuSensorReader struct {
@@ -91,10 +100,61 @@ func (controller *temperatureSensorReader) readTemperatures() (*temperatureReadi
 		return nil, err
 	}
 
-	return &temperatureReadings{
-		Material: readingOrInvalid(dataResponse.Data, "material"),
-		Kiln:     readingOrInvalid(dataResponse.Data, "kiln"),
-	}, nil
+	readings := temperatureReadings{
+		Material:         readingOrInvalid(dataResponse.Data, "material"),
+		Kiln:             readingOrInvalid(dataResponse.Data, "kiln"),
+		MaterialDie:      types.InvalidTemperatureReading,
+		KilnPrimaryDie:   types.InvalidTemperatureReading,
+		KilnSecondaryDie: types.InvalidTemperatureReading,
+	}
+
+	// The cold junctions come from their own endpoint and only reach the
+	// execution log, so losing them costs a diagnostic column rather than
+	// the reading the run depends on.
+	dies, err := controller.readDieTemperatures()
+	if err != nil {
+		log.Warning("Failed to read cold junction temperatures: %v", err)
+		return &readings, nil
+	}
+	readings.MaterialDie = readingOrInvalid(dies, "material_die")
+	readings.KilnPrimaryDie = readingOrInvalid(dies, "kiln_primary_die")
+	readings.KilnSecondaryDie = readingOrInvalid(dies, "kiln_secondary_die")
+
+	return &readings, nil
+}
+
+// readDieTemperatures fetches the cold junction readings the sensor unit
+// recorded on its last device read.
+func (controller *temperatureSensorReader) readDieTemperatures() (map[string]float32, error) {
+	var dataResponse temperatureResponse
+
+	request, err := http.NewRequest("GET", controller.dieURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Add("Content-Type", "application/json")
+	response, err := controller.client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("cannot read cold junctions (%s)", response.Status)
+	}
+
+	if err := json.Unmarshal(body, &dataResponse); err != nil {
+		return nil, err
+	}
+
+	return dataResponse.Data, nil
 }
 
 // readingOrInvalid returns the named temperature, or the invalid sentinel
@@ -108,7 +168,7 @@ func readingOrInvalid(data map[string]float32, name string) float32 {
 	return value
 }
 
-func newTemperatureSensorReader(url string, commands <-chan string, responses chan<- temperatureReadings, shutdown <-chan struct{}) (*temperatureSensorReader, error) {
+func newTemperatureSensorReader(url, dieURL string, commands <-chan string, responses chan<- temperatureReadings, shutdown <-chan struct{}) (*temperatureSensorReader, error) {
 	controller := temperatureSensorReader{
 		sensorReader: sensorReader{
 			client:    &http.Client{},
@@ -117,6 +177,7 @@ func newTemperatureSensorReader(url string, commands <-chan string, responses ch
 			shutdown:  shutdown,
 		},
 		runner: responses,
+		dieURL: dieURL,
 	}
 
 	// verify we can read from the sensors

@@ -12,6 +12,25 @@ import (
 	"github.com/rmkhl/halko/types/log"
 )
 
+// ExecutionLogColumns is the execution log's CSV header, shared with the
+// websocket stream that serves the same rows live so the two cannot drift
+// apart. The die columns are appended rather than placed beside the readings
+// they belong to, so logs written before them stay readable against the same
+// code.
+var ExecutionLogColumns = []string{
+	"time",
+	"step",
+	"steptime",
+	"material",
+	"kiln",
+	"heater",
+	"fan",
+	"steam",
+	"material_die",
+	"kiln_primary_die",
+	"kiln_secondary_die",
+}
+
 type (
 	ExecutionLogWriter struct {
 		storage    *ExecutorFileStorage
@@ -43,16 +62,7 @@ func NewExecutionLogWriter(fileStorage *ExecutorFileStorage, name string, resolu
 		lastStep:   "",
 		startedAt:  startedAt,
 	}
-	_ = writer.csvWriter.Write([]string{
-		"time",
-		"step",
-		"steptime",
-		"material",
-		"kiln",
-		"heater",
-		"fan",
-		"steam",
-	})
+	_ = writer.csvWriter.Write(ExecutionLogColumns)
 	writer.csvWriter.Flush()
 	log.Debug("Successfully created execution log writer for program '%s'", name)
 	return &writer
@@ -92,6 +102,9 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		strconv.Itoa(int(status.PowerStatus.Heater)),
 		strconv.Itoa(int(status.PowerStatus.Fan)),
 		strconv.Itoa(int(status.PowerStatus.Steam)),
+		fmt.Sprintf("%.1f", status.Temperatures.MaterialDie),
+		fmt.Sprintf("%.1f", status.Temperatures.KilnPrimaryDie),
+		fmt.Sprintf("%.1f", status.Temperatures.KilnSecondaryDie),
 	})
 	writer.csvWriter.Flush()
 	writer.lastUpdate = now

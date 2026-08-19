@@ -22,7 +22,8 @@ func validReading(value float32) bool {
 }
 
 // observe records a sample, keeping the previous value for any sensor that
-// reported an invalid reading.
+// reported an invalid reading. The cold junction readings are the exception:
+// they are logged, never controlled or failsafed on.
 func (t *fsmTemperatures) observe(sample temperatureReadings, now int64) {
 	if validReading(sample.Kiln) {
 		t.reading.Kiln = sample.Kiln
@@ -32,6 +33,12 @@ func (t *fsmTemperatures) observe(sample temperatureReadings, now int64) {
 		t.reading.Material = sample.Material
 		t.materialValidAt = now
 	}
+	// Copied straight through rather than held: a stale cold junction value
+	// would mask the very drift the reading is here to expose, and nothing
+	// controls on it.
+	t.reading.MaterialDie = sample.MaterialDie
+	t.reading.KilnPrimaryDie = sample.KilnPrimaryDie
+	t.reading.KilnSecondaryDie = sample.KilnSecondaryDie
 }
 
 // invalidFor names the sensor that has gone longest without a valid reading

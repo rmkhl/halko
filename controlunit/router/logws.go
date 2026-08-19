@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rmkhl/halko/controlunit/engine"
+	"github.com/rmkhl/halko/controlunit/storagefs"
 	"github.com/rmkhl/halko/types/log"
 )
 
@@ -41,7 +42,7 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 		// Write CSV header (same as ExecutionLogWriter)
 		var buf bytes.Buffer
 		csvWriter := csv.NewWriter(&buf)
-		if err := csvWriter.Write([]string{"time", "step", "steptime", "material", "kiln", "heater", "fan", "steam"}); err != nil {
+		if err := csvWriter.Write(storagefs.ExecutionLogColumns); err != nil {
 			log.Warning("CSV header write error: %v", err)
 		}
 		csvWriter.Flush()
@@ -107,6 +108,9 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 					strconv.Itoa(int(status.PowerStatus.Heater)),
 					strconv.Itoa(int(status.PowerStatus.Fan)),
 					strconv.Itoa(int(status.PowerStatus.Steam)),
+					fmt.Sprintf("%.1f", status.Temperatures.MaterialDie),
+					fmt.Sprintf("%.1f", status.Temperatures.KilnPrimaryDie),
+					fmt.Sprintf("%.1f", status.Temperatures.KilnSecondaryDie),
 				}); err != nil {
 					log.Warning("CSV line write error: %v", err)
 					continue

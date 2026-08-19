@@ -51,7 +51,7 @@ const shellyTestConfig = `{
   "sensorunit": {"serial_device": "%s", "baud_rate": 9600},
   "api_endpoints": {
     "controlunit": {"url": "http://localhost:8090", "status": "/status", "programs": "/programs", "engine": "/engine"},
-    "sensorunit": {"url": "http://localhost:8093", "status": "/status", "temperatures": "/temperatures", "display": "/display"},
+    "sensorunit": {"url": "http://localhost:8093", "status": "/status", "temperatures": "/temperatures", "die_temperatures": "/temperatures/die", "display": "/display"},
     "powerunit": {"url": "http://localhost:8092", "status": "/status", "power": "/power"}
   }
 }`
