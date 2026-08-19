@@ -27,7 +27,9 @@ minor bump, not a major one.
 
 The `Version bump` CI job fails a pull request whose `types/version.go` is
 unchanged. For a PR that ships nothing runnable — documentation, CI, editor
-config — add the **`no-release`** label and the check is skipped.
+config — add the **`no-release`** label and the check is skipped. The check
+re-runs whenever the label is added or removed, so adding it to a PR that has
+already gone red is enough; there is no need to push a commit to clear it.
 
 ### The tag is created for you
 
