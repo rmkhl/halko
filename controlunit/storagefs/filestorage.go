@@ -70,6 +70,9 @@ func NewExecutorFileStorage(basePath string) (*ExecutorFileStorage, error) {
 
 func (storage *ExecutorFileStorage) UpdateState(name string, status types.ProgramState) error {
 	log.Debug("Updating state for program '%s' to '%s'", name, status)
+	if err := types.ValidateStorageName(name); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.statusPath, name+".txt")
 
 	statusFile, err := os.Create(filePath)
@@ -90,6 +93,9 @@ func (storage *ExecutorFileStorage) UpdateState(name string, status types.Progra
 
 func (storage *ExecutorFileStorage) LoadState(name string) (types.ProgramState, int64, error) {
 	log.Debug("Loading state for program '%s'", name)
+	if err := types.ValidateStorageName(name); err != nil {
+		return types.ProgramStateUnknown, 0, err
+	}
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
 
 	fileStatus, err := os.Stat(statusFilePath)
@@ -108,21 +114,33 @@ func (storage *ExecutorFileStorage) LoadState(name string) (types.ProgramState, 
 }
 
 func (storage *ExecutorFileStorage) MaybeDeleteState(name string) {
+	if err := types.ValidateStorageName(name); err != nil {
+		return
+	}
 	statusFilePath := filepath.Join(storage.statusPath, name+".txt")
 	os.Remove(statusFilePath)
 }
 
 func (storage *ExecutorFileStorage) MaybeDeleteExecutionLog(name string) {
+	if err := types.ValidateStorageName(name); err != nil {
+		return
+	}
 	filePath := filepath.Join(storage.logPath, name+".csv")
 	os.Remove(filePath)
 }
 
-func (storage *ExecutorFileStorage) GetLogPath(name string) string {
-	return filepath.Join(storage.logPath, name+".csv")
+func (storage *ExecutorFileStorage) GetLogPath(name string) (string, error) {
+	if err := types.ValidateStorageName(name); err != nil {
+		return "", err
+	}
+	return filepath.Join(storage.logPath, name+".csv"), nil
 }
 
-func (storage *ExecutorFileStorage) GetRunningLogPath(name string) string {
-	return filepath.Join(storage.runningPath, name+".csv")
+func (storage *ExecutorFileStorage) GetRunningLogPath(name string) (string, error) {
+	if err := types.ValidateStorageName(name); err != nil {
+		return "", err
+	}
+	return filepath.Join(storage.runningPath, name+".csv"), nil
 }
 
 func (storage *ExecutorFileStorage) ListExecutedPrograms() ([]string, error) {
@@ -131,11 +149,17 @@ func (storage *ExecutorFileStorage) ListExecutedPrograms() ([]string, error) {
 }
 
 func (storage *ExecutorFileStorage) LoadExecutedProgram(programName string) (*types.Program, error) {
+	if err := types.ValidateStorageName(programName); err != nil {
+		return nil, err
+	}
 	filePath := filepath.Join(storage.executedProgramsPath, programName+".json")
 	return storage.LoadProgram(filePath)
 }
 
 func (storage *ExecutorFileStorage) CreateExecutedProgram(programName string, program *types.Program) error {
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.runningPath, programName+".json")
 
 	_, err := os.Stat(filePath)
@@ -151,6 +175,9 @@ func (storage *ExecutorFileStorage) CreateExecutedProgram(programName string, pr
 
 func (storage *ExecutorFileStorage) DeleteExecutedProgram(programName string) error {
 	log.Info("Deleting executed program '%s' and all associated files", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	var errors []string
 
 	// Delete the program file
@@ -192,6 +219,9 @@ func (storage *ExecutorFileStorage) DeleteExecutedProgram(programName string) er
 
 func (storage *ExecutorFileStorage) MoveToHistory(programName string) error {
 	log.Info("Moving program '%s' from running to history", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	var errors []string
 
 	// Move program JSON file

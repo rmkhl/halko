@@ -127,7 +127,7 @@ func TestMoveToHistoryMovesEveryFile(t *testing.T) {
 	if err := writer.UpdateState(types.ProgramStateRunning); err != nil {
 		t.Fatalf("failed to write state: %v", err)
 	}
-	if err := os.WriteFile(storage.GetRunningLogPath(runName), []byte("time,step\n"), 0o644); err != nil {
+	if err := os.WriteFile(runningLogPathOf(t, storage, runName), []byte("time,step\n"), 0o644); err != nil {
 		t.Fatalf("failed to write log: %v", err)
 	}
 
@@ -143,7 +143,7 @@ func TestMoveToHistoryMovesEveryFile(t *testing.T) {
 		t.Fatalf("expected [run-1] in history, got %v", executed)
 	}
 
-	mustContain(t, storage.GetLogPath(runName), "time,step\n")
+	mustContain(t, logPathOf(t, storage, runName), "time,step\n")
 
 	running, err := storage.ListRunningPrograms()
 	if err != nil {
@@ -152,7 +152,7 @@ func TestMoveToHistoryMovesEveryFile(t *testing.T) {
 	if len(running) != 0 {
 		t.Fatalf("expected running to be empty, got %v", running)
 	}
-	mustNotExist(t, storage.GetRunningLogPath(runName))
+	mustNotExist(t, runningLogPathOf(t, storage, runName))
 }
 
 // A run that failed before writing a log still has to be filed away.
@@ -244,7 +244,7 @@ func TestDeleteExecutedProgramRemovesEveryFile(t *testing.T) {
 	if err := writer.UpdateState(types.ProgramStateCompleted); err != nil {
 		t.Fatalf("failed to write state: %v", err)
 	}
-	if err := os.WriteFile(storage.GetRunningLogPath(runName), []byte("time,step\n"), 0o644); err != nil {
+	if err := os.WriteFile(runningLogPathOf(t, storage, runName), []byte("time,step\n"), 0o644); err != nil {
 		t.Fatalf("failed to write log: %v", err)
 	}
 	if err := storage.MoveToHistory(runName); err != nil {
@@ -256,7 +256,7 @@ func TestDeleteExecutedProgramRemovesEveryFile(t *testing.T) {
 	}
 
 	mustNotExist(t, filepath.Join(storage.executedProgramsPath, runName+".json"))
-	mustNotExist(t, storage.GetLogPath(runName))
+	mustNotExist(t, logPathOf(t, storage, runName))
 	mustNotExist(t, filepath.Join(storage.statusPath, runName+".txt"))
 }
 

@@ -72,6 +72,9 @@ func (storage *ProgramStorage) ListStoredProgramsWithInfo() ([]types.StoredProgr
 
 func (storage *ProgramStorage) LoadStoredProgram(programName string) (*types.Program, error) {
 	log.Debug("Loading stored program: %s", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return nil, err
+	}
 	filePath := filepath.Join(storage.programPath, programName+".json")
 	program, err := storage.LoadProgram(filePath)
 	if err != nil {
@@ -83,12 +86,18 @@ func (storage *ProgramStorage) LoadStoredProgram(programName string) (*types.Pro
 }
 
 func (storage *ProgramStorage) SaveStoredProgram(programName string, program *types.Program) error {
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.programPath, programName+".json")
 	return storage.SaveProgram(filePath, program)
 }
 
 func (storage *ProgramStorage) CreateStoredProgram(programName string, program *types.Program) error {
 	log.Info("Creating stored program: %s", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.programPath, programName+".json")
 
 	_, err := os.Stat(filePath)
@@ -112,6 +121,9 @@ func (storage *ProgramStorage) CreateStoredProgram(programName string, program *
 
 func (storage *ProgramStorage) UpdateStoredProgram(programName string, program *types.Program) error {
 	log.Info("Updating stored program: %s", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.programPath, programName+".json")
 
 	_, err := os.Stat(filePath)
@@ -131,6 +143,9 @@ func (storage *ProgramStorage) UpdateStoredProgram(programName string, program *
 
 func (storage *ProgramStorage) DeleteStoredProgram(programName string) error {
 	log.Info("Deleting stored program: %s", programName)
+	if err := types.ValidateStorageName(programName); err != nil {
+		return err
+	}
 	filePath := filepath.Join(storage.programPath, programName+".json")
 	err := storage.DeleteProgram(filePath)
 	if err != nil {

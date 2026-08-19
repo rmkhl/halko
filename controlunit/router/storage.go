@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/rmkhl/halko/types"
@@ -46,6 +47,10 @@ func createStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 		}
 
 		err = storage.CreateStoredProgram(program.ProgramName, &program)
+		if errors.Is(err, types.ErrInvalidStorageName) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if err != nil {
 			writeError(w, http.StatusConflict, err.Error())
 			return
@@ -69,6 +74,10 @@ func updateStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 		program.ProgramName = programName
 
 		err = storage.UpdateStoredProgram(programName, &program)
+		if errors.Is(err, types.ErrInvalidStorageName) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if err != nil {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
@@ -83,6 +92,10 @@ func deleteStoredProgram(storage types.ProgramStorage) http.HandlerFunc {
 		programName := r.PathValue("name")
 
 		err := storage.DeleteStoredProgram(programName)
+		if errors.Is(err, types.ErrInvalidStorageName) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if err != nil {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
