@@ -21,6 +21,7 @@ func main() {
 	}
 
 	opts.ApplyLogLevel()
+	log.Info("Starting dbusunit %s", types.Version)
 	log.Trace("Starting dbusunit application")
 	log.Debug("Parsed global options: config=%s, loglevel=%d, verbose=%t", opts.ConfigPath, opts.LogLevel, opts.Verbose)
 

@@ -4,6 +4,9 @@ import { API_ENDPOINTS } from "../../config/api";
 // Service status types
 export interface ServiceStatus {
   status: "healthy" | "degraded" | "unavailable";
+  // Reported by each service independently. Services are deployed by hand, so
+  // two of these disagreeing means a partially updated install.
+  version: string;
   service: string;
   details: Record<string, unknown>;
 }

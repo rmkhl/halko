@@ -34,6 +34,7 @@ func showHelp() {
 	fmt.Println("  programs              Manage stored programs")
 	fmt.Println("  nginx                 Generate nginx proxy configuration")
 	fmt.Println("  config                Check the configuration and show what it resolves to")
+	fmt.Println("  version               Print the Halko version this binary was built from")
 	fmt.Println()
 	fmt.Println("Command Help:")
 	fmt.Printf("  %s <command> --help   Show help for a specific command\n", os.Args[0])

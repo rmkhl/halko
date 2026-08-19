@@ -41,6 +41,7 @@ func main() {
 
 	// Apply the log level from the parsed options
 	opts.ApplyLogLevel()
+	log.Printf("Starting controlunit %s", types.Version)
 
 	configuration, err := types.LoadConfig(opts.ConfigPath)
 	if err != nil {

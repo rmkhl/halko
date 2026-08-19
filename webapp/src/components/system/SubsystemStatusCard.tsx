@@ -4,6 +4,7 @@ import { Paper, Typography, Chip, Box } from "@mui/material";
 interface Props {
   name: string;
   isHealthy: boolean;
+  version?: string;
 }
 
 const formatName = (name: string): string => {
@@ -14,13 +15,18 @@ const formatName = (name: string): string => {
     .join(" ");
 };
 
-export const SubsystemStatusCard: React.FC<Props> = ({ name, isHealthy }) => {
+export const SubsystemStatusCard: React.FC<Props> = ({ name, isHealthy, version }) => {
   return (
     <Paper sx={{ padding: 3, height: "100%" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="h6">{formatName(name)}</Typography>
         <Chip label={isHealthy ? "Healthy" : "Unavailable"} color={isHealthy ? "success" : "error"} size="small" />
       </Box>
+      {version && (
+        <Typography variant="caption" color="text.secondary">
+          v{version}
+        </Typography>
+      )}
     </Paper>
   );
 };
