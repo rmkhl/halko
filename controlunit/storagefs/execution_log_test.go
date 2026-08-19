@@ -44,7 +44,7 @@ func TestExecutionLogWritesItsHeaderOnCreation(t *testing.T) {
 	}
 	defer writer.Close()
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 1 {
 		t.Fatalf("expected only a header row, got %d rows", len(rows))
 	}
@@ -73,7 +73,7 @@ func TestExecutionLogSkipsNonRunningSteps(t *testing.T) {
 		writer.AddLine(statusAt(step, 50, 40))
 	}
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 1 {
 		t.Fatalf("expected nothing but the header, got %v", rows)
 	}
@@ -94,7 +94,7 @@ func TestExecutionLogWritesOnEveryStepChange(t *testing.T) {
 	writer.AddLine(statusAt("Acclimate", 53, 43))
 	writer.AddLine(statusAt("Cooling", 54, 44))
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 
 	// Header plus one row per step change.
 	if len(rows) != 4 {
@@ -118,7 +118,7 @@ func TestExecutionLogWritesWithinTheSameStepOnceTheResolutionElapses(t *testing.
 	writer.AddLine(statusAt(stepHeating, 51, 41))
 	writer.AddLine(statusAt(stepHeating, 52, 42))
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 4 {
 		t.Fatalf("expected a header and 3 rows, got %d rows: %v", len(rows), rows)
 	}
@@ -133,7 +133,7 @@ func TestExecutionLogRecordsTemperaturesAndPower(t *testing.T) {
 
 	writer.AddLine(statusAt(stepHeating, 55.57, 44.42))
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 2 {
 		t.Fatalf("expected a header and one row, got %v", rows)
 	}
@@ -177,7 +177,7 @@ func TestExecutionLogIsSafeAfterClose(t *testing.T) {
 	writer.AddLine(statusAt(stepHeating, 51, 41))
 	writer.Close()
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 2 {
 		t.Fatalf("expected the log to stop at 2 rows, got %v", rows)
 	}
@@ -211,7 +211,7 @@ func TestExecutionLogWritesDieTemperatures(t *testing.T) {
 	status.Temperatures.KilnSecondaryDie = 28.12
 	writer.AddLine(status)
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows) != 2 {
 		t.Fatalf("expected a header and one row, got %v", rows)
 	}
@@ -238,7 +238,7 @@ func TestExecutionLogRowMatchesHeaderWidth(t *testing.T) {
 
 	writer.AddLine(statusAt(stepHeating, 55.57, 44.42))
 
-	rows := readLog(t, storage.GetRunningLogPath(runName))
+	rows := readLog(t, runningLogPathOf(t, storage, runName))
 	if len(rows[1]) != len(rows[0]) {
 		t.Fatalf("row has %d columns, header has %d", len(rows[1]), len(rows[0]))
 	}

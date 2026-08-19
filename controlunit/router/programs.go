@@ -97,7 +97,11 @@ func deleteRun(storage types.ExecutionStorage) http.HandlerFunc {
 func getRunLog(storage types.ExecutionStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		programName := r.PathValue("name")
-		logPath := storage.GetLogPath(programName)
+		logPath, err := storage.GetLogPath(programName)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		content, err := os.ReadFile(logPath)
 		if err != nil {
@@ -119,7 +123,12 @@ func getRunningLog(storage types.ExecutionStorage, engine *engine.ControlEngine)
 			return
 		}
 
-		logPath := storage.GetRunningLogPath(programName)
+		logPath, err := storage.GetRunningLogPath(programName)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		content, err := os.ReadFile(logPath)
 		if err != nil {
 			writeError(w, http.StatusNotFound, "Log file not found")

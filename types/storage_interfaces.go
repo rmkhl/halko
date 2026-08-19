@@ -7,8 +7,8 @@ type ExecutionStorage interface {
 	LoadExecutedProgram(programName string) (*Program, error)
 	DeleteExecutedProgram(programName string) error
 	LoadState(programName string) (ProgramState, int64, error)
-	GetLogPath(programName string) string
-	GetRunningLogPath(programName string) string
+	GetLogPath(programName string) (string, error)
+	GetRunningLogPath(programName string) (string, error)
 
 	// System resource operations
 	GetAvailableSpaceMB() int64
