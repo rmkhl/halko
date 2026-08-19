@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/rmkhl/halko/types"
 )
 
 // waitForReader fails the test unless the reader goroutine has returned. A
@@ -99,7 +101,7 @@ func TestTemperatureReaderStopsWhileWaitingForACommand(t *testing.T) {
 	server := temperatureServer(t, nil)
 
 	shutdown := make(chan struct{})
-	reader, err := newTemperatureSensorReader(server.URL, make(chan string), make(chan temperatureReadings), shutdown)
+	reader, err := newTemperatureSensorReader(server.URL, temperatureServer(t, nil).URL, make(chan string), make(chan temperatureReadings), shutdown)
 	if err != nil {
 		t.Fatalf("newTemperatureSensorReader() returned error: %v", err)
 	}
@@ -121,7 +123,7 @@ func TestTemperatureReaderStopsWhileBlockedPublishingAReading(t *testing.T) {
 	commands := make(chan string)
 	shutdown := make(chan struct{})
 	// Unbuffered and never received from: the runner has already gone away.
-	reader, err := newTemperatureSensorReader(server.URL, commands, make(chan temperatureReadings), shutdown)
+	reader, err := newTemperatureSensorReader(server.URL, temperatureServer(t, nil).URL, commands, make(chan temperatureReadings), shutdown)
 	if err != nil {
 		t.Fatalf("newTemperatureSensorReader() returned error: %v", err)
 	}
@@ -146,7 +148,7 @@ func TestTemperatureReaderStopsWhenShutdownArrivesDuringARead(t *testing.T) {
 
 	commands := make(chan string)
 	shutdown := make(chan struct{})
-	reader, err := newTemperatureSensorReader(server.URL, commands, make(chan temperatureReadings), shutdown)
+	reader, err := newTemperatureSensorReader(server.URL, temperatureServer(t, nil).URL, commands, make(chan temperatureReadings), shutdown)
 	if err != nil {
 		t.Fatalf("newTemperatureSensorReader() returned error: %v", err)
 	}
@@ -182,4 +184,72 @@ func TestPSUReaderStopsWhileBlockedPublishingAReading(t *testing.T) {
 	commands <- sensorRead
 	close(shutdown)
 	waitForReader(t, &wg, "blocked publishing a reading")
+}
+
+// The cold junctions come from their own endpoint, so the reader has to go
+// and get them rather than find them in the temperature response.
+func TestReadTemperaturesFetchesDieReadingsFromTheirOwnEndpoint(t *testing.T) {
+	dieServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"material_die":41.875,"kiln_primary_die":27.5,"kiln_secondary_die":28.125}}`))
+	}))
+	defer dieServer.Close()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+	}))
+	defer server.Close()
+
+	reader := temperatureSensorReader{
+		sensorReader: sensorReader{client: server.Client(), sensorURL: server.URL},
+		dieURL:       dieServer.URL,
+	}
+
+	readings, err := reader.readTemperatures()
+	if err != nil {
+		t.Fatalf("readTemperatures() returned error: %v", err)
+	}
+
+	if readings.MaterialDie != 41.875 {
+		t.Errorf("MaterialDie = %v, want 41.875", readings.MaterialDie)
+	}
+	if readings.KilnPrimaryDie != 27.5 {
+		t.Errorf("KilnPrimaryDie = %v, want 27.5", readings.KilnPrimaryDie)
+	}
+	if readings.KilnSecondaryDie != 28.125 {
+		t.Errorf("KilnSecondaryDie = %v, want 28.125", readings.KilnSecondaryDie)
+	}
+}
+
+// Losing the diagnostic endpoint must cost the diagnostic columns and nothing
+// else: the run depends on the kiln and material readings in the same call.
+func TestReadTemperaturesSurvivesAFailingDieEndpoint(t *testing.T) {
+	dieServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer dieServer.Close()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+	}))
+	defer server.Close()
+
+	reader := temperatureSensorReader{
+		sensorReader: sensorReader{client: server.Client(), sensorURL: server.URL},
+		dieURL:       dieServer.URL,
+	}
+
+	readings, err := reader.readTemperatures()
+	if err != nil {
+		t.Fatalf("readTemperatures() returned error: %v", err)
+	}
+
+	if readings.Kiln != 28.5 || readings.Material != 22.25 {
+		t.Errorf("kiln/material = %v/%v, want 28.5/22.25", readings.Kiln, readings.Material)
+	}
+	if readings.MaterialDie != types.InvalidTemperatureReading {
+		t.Errorf("MaterialDie = %v, want the invalid sentinel", readings.MaterialDie)
+	}
 }

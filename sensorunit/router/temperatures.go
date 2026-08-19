@@ -52,6 +52,13 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		kilnPrimary := float32(types.InvalidTemperatureReading)
 		kilnSecondary := float32(types.InvalidTemperatureReading)
 
+		// Cold junction values ride along on the same read but stay out of
+		// this response: they are diagnostics about the measurement, not
+		// temperatures the system controls on. They are kept per chip rather
+		// than folded into one value because whether they moved together is
+		// what says a shift is the board and not the kiln.
+		dies := make(types.TemperatureResponse, dieSensorCount)
+
 		for _, temp := range temperatures {
 			switch temp.Name {
 			case "KilnPrimary":
@@ -60,10 +67,19 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 				kilnSecondary = temp.Value
 			case "Wood":
 				response["material"] = temp.Value
+			case "KilnPrimaryDie":
+				dies["kiln_primary_die"] = temp.Value
+			case "KilnSecondaryDie":
+				dies["kiln_secondary_die"] = temp.Value
+			case "WoodDie":
+				dies["material_die"] = temp.Value
 			}
 		}
-		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C",
-			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"])
+		api.storeDieReadings(dies)
+
+		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C, dies %.2f/%.2f/%.2f°C",
+			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"],
+			dies["kiln_primary_die"], dies["kiln_secondary_die"], dies["material_die"])
 
 		// Check if all readings are invalid
 		allInvalid := (kilnPrimary == types.InvalidTemperatureReading &&
@@ -99,4 +115,20 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+}
+
+// dieSensorCount is how many cold junctions the unit reports, one per chip.
+const dieSensorCount = 3
+
+// getDieTemperatures serves the cold junction readings recorded by the last
+// temperature read. It deliberately does not trigger a read of its own: the
+// values move with the sensor board, not the kiln, so a poll-old value says
+// the same thing as a fresh one and the serial link stays free for the
+// readings the run depends on.
+func (api *API) getDieTemperatures(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Processing die temperature request from %s", r.RemoteAddr)
+
+	writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
+		Data: api.dieReadings(),
+	})
 }

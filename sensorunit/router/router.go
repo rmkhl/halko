@@ -28,6 +28,13 @@ type API struct {
 	kilnStatus    kilnSensorStatus
 	kilnSelect    kilnSelector
 	materialValid bool
+
+	// Cold junction readings arrive on the same device read as the
+	// thermocouple values and are kept here for their own endpoint. Serving
+	// them without a fresh read means they can be one poll behind, which the
+	// board's thermal time constant makes immaterial.
+	dieMu   sync.Mutex
+	dieRead types.TemperatureResponse
 }
 
 // selectKilnTemperature applies hysteresis-based kiln sensor selection,
@@ -42,7 +49,32 @@ func NewAPI(sensorUnit *serial.SensorUnit) *API {
 	return &API{
 		sensorUnit:    sensorUnit,
 		materialValid: true,
+		dieRead:       make(types.TemperatureResponse),
 	}
+}
+
+// storeDieReadings records the cold junction values from a device read so the
+// die endpoint can serve them without one of its own.
+func (api *API) storeDieReadings(readings types.TemperatureResponse) {
+	api.dieMu.Lock()
+	defer api.dieMu.Unlock()
+
+	for name, value := range readings {
+		api.dieRead[name] = value
+	}
+}
+
+// dieReadings returns a copy of the last cold junction values seen, so the
+// caller cannot hold the map while another read updates it.
+func (api *API) dieReadings() types.TemperatureResponse {
+	api.dieMu.Lock()
+	defer api.dieMu.Unlock()
+
+	readings := make(types.TemperatureResponse, len(api.dieRead))
+	for name, value := range api.dieRead {
+		readings[name] = value
+	}
+	return readings
 }
 
 // updateKilnStatus logs a message when the set of usable kiln temperature

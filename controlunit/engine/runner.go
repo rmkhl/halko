@@ -77,7 +77,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	}
 	runner.psuSensorReader = psuSensorReader
 
-	temperatureSensorReader, err := newTemperatureSensorReader(endpoints.SensorUnit.GetTemperaturesURL(), runner.temperatureSensorCommands, runner.temperatureSensorResponses, runner.sensorShutdown)
+	temperatureSensorReader, err := newTemperatureSensorReader(endpoints.SensorUnit.GetTemperaturesURL(), endpoints.SensorUnit.GetDieTemperaturesURL(), runner.temperatureSensorCommands, runner.temperatureSensorResponses, runner.sensorShutdown)
 	if err != nil {
 		return nil, err
 	}

@@ -181,6 +181,16 @@ func main() {
 		probes = append(probes, esp32.Probe{Name: name, Sensor: sensor})
 	}
 
+	// The cold junction probes report ambient. There is no thermal model of
+	// the sensor board here, so this exercises the reporting path without
+	// pretending to reproduce the drift that makes the readings worth having.
+	// They sit outside faults.SensorNames deliberately: a thermocouple
+	// dropout leaves the chip's own temperature readable, as in the firmware.
+	ambient := elements.NewAmbient(float32(simConfig.EnvironmentTemp))
+	for _, name := range []string{"KilnPrimaryDie", "KilnSecondaryDie", "WoodDie"} {
+		probes = append(probes, esp32.Probe{Name: name, Sensor: ambient})
+	}
+
 	responder := esp32.NewResponder(probes, faultInjector, resetter)
 
 	shellySrv := &http.Server{

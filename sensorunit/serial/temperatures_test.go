@@ -6,8 +6,13 @@ import (
 	"github.com/rmkhl/halko/types"
 )
 
+// dieSuffix is the cold junction half of a read response, appended to the
+// thermocouple half in tests that do not care about its contents.
+const dieSuffix = ",KilnPrimaryDie=27.5C,KilnSecondaryDie=28.125C,WoodDie=41.875C"
+
 func TestParseTemperatureResponseValid(t *testing.T) {
-	got, err := parseTemperatureResponse("KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.25C")
+	got, err := parseTemperatureResponse(
+		"KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.25C" + dieSuffix)
 	if err != nil {
 		t.Fatalf("parseTemperatureResponse() error = %v", err)
 	}
@@ -15,6 +20,9 @@ func TestParseTemperatureResponseValid(t *testing.T) {
 		{Name: "KilnPrimary", Value: 20.5, Unit: "C"},
 		{Name: "KilnSecondary", Value: 21.0, Unit: "C"},
 		{Name: "Wood", Value: 19.25, Unit: "C"},
+		{Name: "KilnPrimaryDie", Value: 27.5, Unit: "C"},
+		{Name: "KilnSecondaryDie", Value: 28.125, Unit: "C"},
+		{Name: "WoodDie", Value: 41.875, Unit: "C"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %d readings, want %d", len(got), len(want))
@@ -35,12 +43,12 @@ func TestParseTemperatureResponseNaN(t *testing.T) {
 	}{
 		{
 			name:     "one sensor failed",
-			response: "KilnPrimary=20.5C,KilnSecondary=NaN,Wood=19.0C",
+			response: "KilnPrimary=20.5C,KilnSecondary=NaN,Wood=19.0C" + dieSuffix,
 			want:     [3]float32{20.5, types.InvalidTemperatureReading, 19.0},
 		},
 		{
 			name:     "all sensors failed",
-			response: "KilnPrimary=NaN,KilnSecondary=NaN,Wood=NaN",
+			response: "KilnPrimary=NaN,KilnSecondary=NaN,Wood=NaN" + dieSuffix,
 			want: [3]float32{
 				types.InvalidTemperatureReading,
 				types.InvalidTemperatureReading,
@@ -54,8 +62,8 @@ func TestParseTemperatureResponseNaN(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parseTemperatureResponse() error = %v", err)
 			}
-			if len(got) != 3 {
-				t.Fatalf("got %d readings, want 3", len(got))
+			if len(got) != expectedReadings {
+				t.Fatalf("got %d readings, want %d", len(got), expectedReadings)
 			}
 			for i, want := range tt.want {
 				if got[i].Value != want {
@@ -66,6 +74,26 @@ func TestParseTemperatureResponseNaN(t *testing.T) {
 	}
 }
 
+// A thermocouple faults independently of the chip reporting it, so NaN in
+// one half of the line says nothing about the other.
+func TestParseTemperatureResponseDieFailsIndependently(t *testing.T) {
+	got, err := parseTemperatureResponse(
+		"KilnPrimary=131.75C,KilnSecondary=NaN,Wood=122.75C," +
+			"KilnPrimaryDie=27.5C,KilnSecondaryDie=28.125C,WoodDie=NaN")
+	if err != nil {
+		t.Fatalf("parseTemperatureResponse() error = %v", err)
+	}
+	if got[1].Value != types.InvalidTemperatureReading {
+		t.Errorf("failed thermocouple = %v, want invalid", got[1].Value)
+	}
+	if got[4].Value != 28.125 {
+		t.Errorf("die reading beside a failed thermocouple = %v, want 28.125", got[4].Value)
+	}
+	if got[5].Value != types.InvalidTemperatureReading {
+		t.Errorf("failed die reading = %v, want invalid", got[5].Value)
+	}
+}
+
 // A corrupted line is not salvageable: rejecting it lets the caller retry
 // rather than inventing a value for the sensor that went missing.
 func TestParseTemperatureResponseRejectsCorruption(t *testing.T) {
@@ -73,11 +101,12 @@ func TestParseTemperatureResponseRejectsCorruption(t *testing.T) {
 		name     string
 		response string
 	}{
-		{"unparseable value", "KilnPrimary=20.5C,KilnSecondary=1x.5C,Wood=19.0C"},
-		{"missing equals", "KilnPrimary=20.5C,KilnSecondary,Wood=19.0C"},
-		{"empty value", "KilnPrimary=20.5C,KilnSecondary=,Wood=19.0C"},
-		{"too few fields", "KilnPrimary=20.5C,Wood=19.0C"},
-		{"too many fields", "KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.0C,Extra=1.0C"},
+		{"unparseable value", "KilnPrimary=20.5C,KilnSecondary=1x.5C,Wood=19.0C" + dieSuffix},
+		{"missing equals", "KilnPrimary=20.5C,KilnSecondary,Wood=19.0C" + dieSuffix},
+		{"empty value", "KilnPrimary=20.5C,KilnSecondary=,Wood=19.0C" + dieSuffix},
+		{"thermocouples only", "KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.0C"},
+		{"truncated die group", "KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.0C,KilnPrimaryDie=27.5C"},
+		{"too many fields", "KilnPrimary=20.5C,KilnSecondary=21.0C,Wood=19.0C" + dieSuffix + ",Extra=1.0C"},
 		{"empty response", ""},
 	}
 	for _, tt := range tests {

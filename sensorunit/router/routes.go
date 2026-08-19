@@ -27,8 +27,10 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func SetupRoutes(mux *http.ServeMux, api *API, endpoints *types.APIEndpoints) {
 	mux.HandleFunc("GET "+endpoints.SensorUnit.Temperatures, corsMiddleware(api.getTemperatures))
+	mux.HandleFunc("GET "+endpoints.SensorUnit.DieTemperatures, corsMiddleware(api.getDieTemperatures))
 	mux.HandleFunc("GET "+endpoints.SensorUnit.Status, corsMiddleware(api.getStatus))
 	mux.HandleFunc("POST "+endpoints.SensorUnit.Display, corsMiddleware(api.setDisplay))
-	log.Info("HTTP API initialized with 3 endpoints: %s, %s, %s",
-		endpoints.SensorUnit.Temperatures, endpoints.SensorUnit.Status, endpoints.SensorUnit.Display)
+	log.Info("HTTP API initialized with 4 endpoints: %s, %s, %s, %s",
+		endpoints.SensorUnit.Temperatures, endpoints.SensorUnit.DieTemperatures,
+		endpoints.SensorUnit.Status, endpoints.SensorUnit.Display)
 }
