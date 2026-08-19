@@ -43,7 +43,7 @@ The simulator searches for `simulator.conf` in:
 
 ## Simulator Configuration Structure
 
-```json
+```jsonc
 {
   "status_interval": 10,
   "initial_kiln_temp": 20.0,

@@ -212,76 +212,32 @@ behavior parameters, and hardware settings.
 
 ### Main Configuration File (`halko.cfg`)
 
-The main configuration file contains settings for all components. Here's an
-example configuration:
+The complete configuration lives in [`templates/halko.cfg`](templates/halko.cfg),
+which `make install` installs to `/etc/opt/halko.cfg`. That file is the one to
+read and copy — it is the template the installer actually uses, so it cannot
+fall out of step with what the services expect.
 
-```json
-{
-  "controlunit": {
-    "base_path": "/var/opt/halko",
-    "tick_length": "6s",
-    "network_interface": "eth0",
-    "defaults": {
-      "deltas": {
-        "heating": {"min_delta": 5.0, "max_delta": 10.0},
-        "acclimate": {"min_delta": -1.0, "max_delta": 3.0}
-      },
-      "fan_power": 0,
-      "steam_power": 0,
-      "preheat_fan_power": 50,
-      "max_target_temperature": 200,
-      "steam_ceiling": 100,
-      "sensor_timeout": "120s",
-      "execution_log_interval": "60s"
-    }
-  },
-  "power_unit": {
-    "shelly_address": "http://localhost:8088",
-    "cycle_length": "60s",
-    "max_idle_time": "70s",
-    "power_mapping": {
-      "heater": 0,
-      "steam": 1,
-      "fan": 2
-    }
-  },
-  "sensorunit": {
-    "serial_device": "/dev/ttyUSB0",
-    "baud_rate": 9600
-  },
-  "dbusunit": {
-    "system_bus_socket": "/var/run/dbus/system_bus_socket"
-  },
-  "api_endpoints": {
-    "controlunit": {
-      "url": "http://localhost:8090",
-      "engine": "/engine",
-      "programs": "/programs",
-      "status": "/status"
-    },
-    "sensorunit": {
-      "url": "http://localhost:8093",
-      "temperatures": "/temperatures",
-      "display": "/display",
-      "status": "/status"
-    },
-    "powerunit": {
-      "url": "http://localhost:8092",
-      "status": "/status",
-      "power": "/power"
-    },
-    "dbusunit": {
-      "url": "http://localhost:8094",
-      "vpn": "/vpn",
-      "power": "/power",
-      "status": "/status"
-    }
-  }
-}
-```
+Three settings have to match your hardware before the services will run
+usefully:
+
+- **`controlunit.network_interface`** — the interface whose IP is shown on the
+  sensor unit display
+- **`sensorunit.serial_device`** — the ESP32's device path
+- **`power_unit.shelly_address`** — the Shelly smart switch's address
+
+[`templates/README.md`](templates/README.md) explains each of them, with the
+values to use for a Raspberry Pi deployment.
+
+During development the services read `halko.cfg` from the workspace root
+instead, and it differs from the template in exactly three values:
+`base_path` points at `fsdb/`, `serial_device` at a path the simulator may
+create (for example `/tmp/esp32-halko`), and `system_bus_socket` at wherever
+the host bus is exposed.
 
 **Note**: Storage endpoints are served by the controlunit service at `/programs` (stored program templates)
 and `/engine` (execution management). There is no separate storage service.
+
+The option groups below describe what each setting does.
 
 ### ControlUnit Configuration Options
 

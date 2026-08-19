@@ -63,13 +63,13 @@ For production, change this to your actual Shelly smart switch IP address:
 
 **Standard network setup:**
 
-```json
+```text
 "shelly_address": "http://192.168.1.50"
 ```
 
 **Raspberry Pi production setup** (direct Ethernet connection):
 
-```json
+```text
 "shelly_address": "http://192.168.10.2"
 ```
 
@@ -92,7 +92,7 @@ location is used.
 Override it when the socket is not at the standard path, e.g. when running
 inside a container (distrobox/toolbox) where the host bus is exposed at:
 
-```json
+```text
 "dbusunit": {
   "system_bus_socket": "/run/host/run/dbus/system_bus_socket"
 }
@@ -102,49 +102,49 @@ inside a container (distrobox/toolbox) where the host bus is exposed at:
 
 **Standard Linux server:**
 
-```json
+```jsonc
 {
   "controlunit": {
     "base_path": "/var/opt/halko",
     "tick_length": "6s",
     "network_interface": "enp0s3",  // ← Change to your interface
-    "defaults": { ... }
+    "defaults": { /* ... */ }
   },
   "power_unit": {
     "shelly_address": "http://192.168.1.50",  // ← Change to your Shelly IP
     "cycle_length": "60s",
     "max_idle_time": "70s",
-    "power_mapping": { ... }
+    "power_mapping": { /* ... */ }
   },
   "sensorunit": {
     "serial_device": "/dev/ttyUSB0",  // ← Verify your sensor unit path
     "baud_rate": 9600
   },
-  "api_endpoints": { ... }
+  "api_endpoints": { /* ... */ }
 }
 ```
 
 **Raspberry Pi 3B (dual interface setup):**
 
-```json
+```jsonc
 {
   "controlunit": {
     "base_path": "/var/opt/halko",
     "tick_length": "6s",
     "network_interface": "wlan0",  // WiFi for display IP
-    "defaults": { ... }
+    "defaults": { /* ... */ }
   },
   "power_unit": {
     "shelly_address": "http://192.168.10.2",  // Shelly on eth0 static network
     "cycle_length": "60s",
     "max_idle_time": "70s",
-    "power_mapping": { ... }
+    "power_mapping": { /* ... */ }
   },
   "sensorunit": {
     "serial_device": "/dev/ttyUSB0",  // or /dev/ttyACM0
     "baud_rate": 9600
   },
-  "api_endpoints": { ... }
+  "api_endpoints": { /* ... */ }
 }
 ```
 

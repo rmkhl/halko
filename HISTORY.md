@@ -64,6 +64,12 @@ sensing. This file summarizes how the project got to release
   crash fixes, configurable D-Bus socket, refreshed integration tests,
   temperature-focused execution charts, and CSV and PDF export of run
   reports.
+- **August 2026 — 1.0.0 released** — Cold junction reporting from the
+  MAX31855 boards, a differential simulator fitted against a real run,
+  and the Go modules normalized onto one language version. Versioning
+  became explicit: every service reports its version on its status
+  endpoint and logs it at startup, and the `v1.0.0` tag was cut by the
+  release workflow from the version constant in the source.
 
 ## Credits
 
