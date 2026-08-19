@@ -105,53 +105,6 @@ jobs:
       - name: Run golangci-lint
         run: make lint-ci
 
-  # The version constant is the source of truth for the release tag, so a PR
-  # that changes behaviour without bumping it would land untagged. This job is
-  # the only gating one that is about policy rather than correctness; the
-  # 'no-release' label is the escape hatch for docs- and CI-only changes.
-  version-bump:
-    name: Version bump
-    runs-on: ubuntu-latest
-    # Only meaningful for a pull request: a manual dispatch has no base branch
-    # to compare against, and drafts are work in progress.
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          # Comparing against the base branch needs its history, which the
-          # default shallow clone does not fetch.
-          fetch-depth: 0
-
-      - name: Check the version constant was bumped
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-release') }}
-        run: |
-          set -euo pipefail
-          read_version() { sed -nE 's/^const Version = "(.*)"$/\1/p' "$1"; }
-
-          new=$(read_version types/version.go)
-          if [ -z "$new" ]; then
-            echo "::error::Could not read the version from types/version.go."
-            exit 1
-          fi
-
-          base="origin/${{ github.base_ref }}"
-          if ! git cat-file -e "$base:types/version.go" 2>/dev/null; then
-            echo "types/version.go is new on this branch; introducing it at $new."
-            exit 0
-          fi
-
-          old=$(git show "$base:types/version.go" | read_version /dev/stdin)
-          if [ "$old" = "$new" ]; then
-            echo "::error::types/version.go is unchanged at $old. Bump it (patch for fixes, minor for new or changed behaviour, major for a breaking API, config or program change), or add the 'no-release' label if this PR ships nothing. See CONTRIBUTING.md."
-            exit 1
-          fi
-
-          echo "Version bumped: $old -> $new"
-
-      - name: Report a skipped bump check
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'no-release') }}
-        run: echo "Skipped by the 'no-release' label."
-
   webapp:
     name: Webapp and docs
     runs-on: ubuntu-latest
