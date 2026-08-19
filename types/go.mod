@@ -1,7 +1,7 @@
 module github.com/rmkhl/halko/types
 
-go 1.21.0
+go 1.26.2
 
-require github.com/rmkhl/halko/types/log v0.0.0-20250607062522-bc4262653186
+require github.com/rmkhl/halko/types/log v0.0.0
 
 replace github.com/rmkhl/halko/types/log => ./log
