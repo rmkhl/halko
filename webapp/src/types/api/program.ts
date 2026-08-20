@@ -1,6 +1,13 @@
 import { PowerSettings } from "./phase";
 
-export type StepType = "heating" | "acclimate" | "cooling";
+// The last two are synthesized by the control unit and appear in a running
+// program's step list; the editor never offers them.
+export type StepType =
+  | "heating"
+  | "acclimate"
+  | "cooling"
+  | "equalize"
+  | "steam_prewarm";
 
 export interface Step {
   name: string;
@@ -12,7 +19,13 @@ export interface Step {
   steam?: PowerSettings;
 }
 
+export interface EqualizeSettings {
+  delta?: number;
+  steam_prewarm?: boolean;
+}
+
 export interface Program {
   name: string;
+  equalize?: EqualizeSettings;
   steps: Step[];
 }

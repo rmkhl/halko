@@ -59,10 +59,14 @@ var testConfigData = `{
       "fan_power": 0,
       "steam_power": 0,
       "max_target_temperature": 200,
-      "preheat_fan_power": 50,
       "steam_ceiling": 100,
       "sensor_timeout": "120s",
-      "execution_log_interval": "60s"
+      "execution_log_interval": "60s",
+      "equalize": {
+        "delta": 2.0,
+        "steam_prewarm": false,
+        "steam_prewarm_timeout": "20m"
+      }
     }
   },
   "power_unit": {
@@ -330,19 +334,19 @@ func TestLoadConfigRejectsUnusableDeltaDefaults(t *testing.T) {
 	}{
 		{
 			"acclimate entry missing",
-			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`,
 		},
 		{
 			"heating entry missing",
-			`{"deltas": {"acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+			`{"deltas": {"acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`,
 		},
 		{
 			"collapsed band",
-			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 5.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 5.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`,
 		},
 		{
 			"reversed band",
-			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": 3.0, "max_delta": -1.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`,
+			`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": 3.0, "max_delta": -1.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`,
 		},
 	}
 
@@ -357,7 +361,7 @@ func TestLoadConfigRejectsUnusableDeltaDefaults(t *testing.T) {
 
 func TestLoadConfigAcceptsNestedDeltaDefaults(t *testing.T) {
 	path := writeConfigWithDefaults(t,
-		`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "preheat_fan_power": 50, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"}`)
+		`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`)
 
 	config, err := LoadConfig(path)
 	if err != nil {
@@ -370,5 +374,51 @@ func TestLoadConfigAcceptsNestedDeltaDefaults(t *testing.T) {
 	}
 	if acclimate.MinDelta != -1.0 || acclimate.MaxDelta != 3.0 {
 		t.Fatalf("acclimate defaults = %v/%v, want -1/3", acclimate.MinDelta, acclimate.MaxDelta)
+	}
+}
+
+// The startup steps' band and the steam warm-up's limit are properties of the
+// installation, so both come from the configured defaults and both are
+// required.
+func TestEqualizeDefaultsLoad(t *testing.T) {
+	path := writeConfigWithDefaults(t,
+		`{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s", "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`)
+
+	config, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	defaults := config.ControlUnitConfig.Defaults
+
+	if defaults.Equalize.Delta == nil || *defaults.Equalize.Delta != 2.0 {
+		t.Errorf("equalize.delta = %v, want 2.0", defaults.Equalize.Delta)
+	}
+	if defaults.Equalize.SteamPrewarmTimeoutSeconds != 1200 {
+		t.Errorf("equalize.steam_prewarm_timeout resolved to %ds, want 1200", defaults.Equalize.SteamPrewarmTimeoutSeconds)
+	}
+}
+
+func TestLoadConfigRejectsUnusableEqualizeDefaults(t *testing.T) {
+	const base = `{"deltas": {"heating": {"min_delta": 5.0, "max_delta": 10.0}, "acclimate": {"min_delta": -1.0, "max_delta": 3.0}}, "fan_power": 0, "steam_power": 0, "max_target_temperature": 200, "steam_ceiling": 100, "sensor_timeout": "120s", "execution_log_interval": "60s"`
+
+	tests := []struct {
+		name     string
+		defaults string
+	}{
+		{"equalize block missing", base + `}`},
+		{"delta missing", base + `, "equalize": {"steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`},
+		{"delta zero", base + `, "equalize": {"delta": 0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`},
+		{"delta negative", base + `, "equalize": {"delta": -1.0, "steam_prewarm": false, "steam_prewarm_timeout": "20m"}}`},
+		{"steam_prewarm missing", base + `, "equalize": {"delta": 2.0, "steam_prewarm_timeout": "20m"}}`},
+		{"steam_prewarm_timeout missing", base + `, "equalize": {"delta": 2.0, "steam_prewarm": false}}`},
+		{"steam_prewarm_timeout unparseable", base + `, "equalize": {"delta": 2.0, "steam_prewarm": false, "steam_prewarm_timeout": "soon"}}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := LoadConfig(writeConfigWithDefaults(t, tt.defaults)); err == nil {
+				t.Fatal("expected LoadConfig to fail, got nil")
+			}
+		})
 	}
 }

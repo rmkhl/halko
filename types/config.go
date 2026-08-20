@@ -33,6 +33,23 @@ type (
 		MaxDelta float32 `json:"max_delta"`
 	}
 
+	// EqualizeDefaults carries what the startup steps the control unit runs
+	// before a program's first step need: the band a program falls back to when
+	// it names none of its own, and how long the steam warm-up waits for
+	// evidence the generator is producing.
+	EqualizeDefaults struct {
+		Delta *float32 `json:"delta"`
+		// Whether a program that does not say gets the steam warm-up step.
+		// A pointer so that "absent" is distinguishable from a deliberate
+		// false, which would otherwise be an invented default.
+		SteamPrewarm        *bool  `json:"steam_prewarm"`
+		SteamPrewarmTimeout string `json:"steam_prewarm_timeout"`
+
+		// Resolved from the string above once, while loading. Compared against
+		// a second count, so carried as seconds rather than a duration.
+		SteamPrewarmTimeoutSeconds int64 `json:"-"`
+	}
+
 	// Defaults carries every value the control unit would otherwise have to
 	// invent: the delta band each step type falls back to, the power a program
 	// gets for components it does not name, and the kiln's own ceiling. All of
@@ -44,8 +61,9 @@ type (
 		// that "absent" is distinguishable from a deliberate 0.
 		FanPower   *uint8 `json:"fan_power"`
 		SteamPower *uint8 `json:"steam_power"`
-		// Power the fan runs at while preheating, before the first step.
-		PreheatFanPower *uint8 `json:"preheat_fan_power"`
+		// Everything the startup steps run on, grouped so the block reads as
+		// one concern rather than two loose keys.
+		Equalize *EqualizeDefaults `json:"equalize"`
 		// Highest target any step may ask for.
 		MaxTargetTemperature *uint8 `json:"max_target_temperature"`
 		// Temperature steam cannot heat the kiln past. Above it steam is
@@ -360,6 +378,8 @@ func (c *HalkoConfig) resolveDurations() {
 	c.ControlUnitConfig.Defaults.SensorTimeoutSeconds = int64(sensorTimeout.Seconds())
 	logInterval, _ := time.ParseDuration(c.ControlUnitConfig.Defaults.ExecutionLogInterval)
 	c.ControlUnitConfig.Defaults.ExecutionLogIntervalSeconds = int64(logInterval.Seconds())
+	steamPrewarmTimeout, _ := time.ParseDuration(c.ControlUnitConfig.Defaults.Equalize.SteamPrewarmTimeout)
+	c.ControlUnitConfig.Defaults.Equalize.SteamPrewarmTimeoutSeconds = int64(steamPrewarmTimeout.Seconds())
 }
 
 func (c *HalkoConfig) ValidateRequired() error {
@@ -399,17 +419,24 @@ func (c *HalkoConfig) ValidateRequired() error {
 	if defaults.SteamCeiling == nil || *defaults.SteamCeiling == 0 {
 		return errors.New("controlunit defaults: steam_ceiling is required")
 	}
-	if defaults.PreheatFanPower == nil {
-		return errors.New("controlunit defaults: preheat_fan_power is required")
+	if defaults.Equalize == nil {
+		return errors.New("controlunit defaults: equalize is required")
 	}
-	if *defaults.PreheatFanPower > 100 {
-		return errors.New("controlunit defaults: preheat_fan_power must be a percentage")
+	if defaults.Equalize.Delta == nil {
+		return errors.New("controlunit defaults: equalize.delta is required")
+	}
+	if *defaults.Equalize.Delta <= 0 {
+		return errors.New("controlunit defaults: equalize.delta must be greater than zero")
+	}
+	if defaults.Equalize.SteamPrewarm == nil {
+		return errors.New("controlunit defaults: equalize.steam_prewarm is required")
 	}
 	for _, d := range []struct {
 		name, value string
 	}{
 		{"sensor_timeout", defaults.SensorTimeout},
 		{"execution_log_interval", defaults.ExecutionLogInterval},
+		{"equalize.steam_prewarm_timeout", defaults.Equalize.SteamPrewarmTimeout},
 	} {
 		if d.value == "" {
 			return fmt.Errorf("controlunit defaults: %s is required", d.name)

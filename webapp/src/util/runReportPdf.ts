@@ -39,7 +39,7 @@ export interface RunReportInput {
 
 // Controlunit phases that are not program steps (used only when the
 // executed program is unavailable and matching by step name is impossible).
-const NON_STEP_PHASES = new Set(["Initializing", "Waiting", "Pre-Heat", "Completed"]);
+const NON_STEP_PHASES = new Set(["Waiting", "Completed"]);
 
 const CHART_WIDTH_PX = 900;
 const CHART_HEIGHT_PX = 400;

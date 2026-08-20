@@ -9,7 +9,29 @@ import (
 )
 
 func f32(v float32) *float32 { return &v }
+func b(v bool) *bool         { return &v }
 func u8(v uint8) *uint8      { return &v }
+
+// validProgram builds the smallest program that passes validation: a heating
+// step, an acclimate holding the same target, then a cooling step.
+func validProgram() Program {
+	return Program{ProgramSteps: []ProgramStep{
+		steamHeatingStep(150, steamDelta()),
+		steamAcclimateStep(150, &PowerPidSettings{Power: u8(0)}),
+		steamCoolingStep(30, &PowerPidSettings{Power: u8(0)}),
+	}}
+}
+
+// templateDefaults loads the shipped defaults, the same source the other
+// defaults-driven tests in this file use.
+func templateDefaults(t *testing.T) *Defaults {
+	t.Helper()
+	config, err := LoadConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("Failed to read template config: %v", err)
+	}
+	return config.ControlUnitConfig.Defaults
+}
 
 // steamDelta builds a steam setting that asks for delta control.
 func steamDelta() *PowerPidSettings {
@@ -573,5 +595,124 @@ func TestSteamCeilingComesFromDefaults(t *testing.T) {
 	p.ApplyDefaults(defaults)
 	if err := p.Validate(); err != nil {
 		t.Fatalf("expected acclimate above a lowered ceiling to pass, got %v", err)
+	}
+}
+
+// A program that says nothing about equalization still gets a band, so the
+// customer's existing programs keep working and pick up the installation's
+// configured default.
+func TestEqualizeDeltaFallsBackToDefaults(t *testing.T) {
+	defaults := templateDefaults(t)
+	program := validProgram()
+	program.ApplyDefaults(defaults)
+
+	if program.Equalize == nil {
+		t.Fatal("ApplyDefaults left Equalize nil")
+	}
+	if program.Equalize.Delta == nil || *program.Equalize.Delta != *defaults.Equalize.Delta {
+		t.Errorf("delta = %v, want the configured default %v", program.Equalize.Delta, *defaults.Equalize.Delta)
+	}
+	if program.Equalize.SteamPrewarm == nil || *program.Equalize.SteamPrewarm != *defaults.Equalize.SteamPrewarm {
+		t.Errorf("steam_prewarm = %v, want the configured default %v",
+			program.Equalize.SteamPrewarm, *defaults.Equalize.SteamPrewarm)
+	}
+}
+
+func TestProgramDeltaWinsOverDefaults(t *testing.T) {
+	program := validProgram()
+	program.Equalize = &EqualizeSettings{Delta: f32(0.5), SteamPrewarm: b(true)}
+	program.ApplyDefaults(templateDefaults(t))
+
+	if *program.Equalize.Delta != 0.5 {
+		t.Errorf("delta = %v, want the program's own 0.5", *program.Equalize.Delta)
+	}
+	if program.Equalize.SteamPrewarm == nil || !*program.Equalize.SteamPrewarm {
+		t.Error("the program's own steam_prewarm was dropped")
+	}
+}
+
+// A band of zero or less can never be satisfied, so it is a program that would
+// wait forever rather than one that starts promptly.
+func TestEqualizeDeltaMustBePositive(t *testing.T) {
+	for _, delta := range []float32{0, -1} {
+		program := validProgram()
+		program.Equalize = &EqualizeSettings{Delta: f32(delta)}
+		program.ApplyDefaults(templateDefaults(t))
+
+		if err := program.Validate(); err == nil {
+			t.Errorf("delta %v was accepted, want an error", delta)
+		}
+	}
+}
+
+// The startup steps are the control unit's to create. A program naming them
+// would bypass the rules the authored steps are held to.
+func TestStartupStepTypesCannotBeAuthored(t *testing.T) {
+	for _, stepType := range []StepType{StepTypeEqualize, StepTypeSteamPrewarm} {
+		program := validProgram()
+		program.ProgramSteps[0].StepType = stepType
+		program.ApplyDefaults(templateDefaults(t))
+
+		if err := program.Validate(); err == nil {
+			t.Errorf("step type %q was accepted in an authored program", stepType)
+		}
+	}
+}
+
+func TestPrependStartupSteps(t *testing.T) {
+	tests := []struct {
+		name      string
+		prewarm   bool
+		wantTypes []StepType
+	}{
+		{
+			name:      "without steam prewarm",
+			prewarm:   false,
+			wantTypes: []StepType{StepTypeEqualize, StepTypeHeating},
+		},
+		{
+			name:      "with steam prewarm",
+			prewarm:   true,
+			wantTypes: []StepType{StepTypeEqualize, StepTypeSteamPrewarm, StepTypeHeating},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			program := validProgram()
+			program.Equalize = &EqualizeSettings{SteamPrewarm: b(tt.prewarm)}
+			program.ApplyDefaults(templateDefaults(t))
+			if err := program.Validate(); err != nil {
+				t.Fatalf("the authored program did not validate: %v", err)
+			}
+			authored := len(program.ProgramSteps)
+
+			program.PrependStartupSteps()
+
+			added := len(tt.wantTypes) - 1
+			if len(program.ProgramSteps) != authored+added {
+				t.Fatalf("got %d steps, want %d", len(program.ProgramSteps), authored+added)
+			}
+			for i, want := range tt.wantTypes {
+				if program.ProgramSteps[i].StepType != want {
+					t.Errorf("step %d is %q, want %q", i, program.ProgramSteps[i].StepType, want)
+				}
+			}
+			if program.ProgramSteps[0].Name == "" {
+				t.Error("the synthesized equalize step has no name; status and the execution log key on it")
+			}
+		})
+	}
+}
+
+// Expansion must not be able to rescue a program whose own first step is not a
+// heating step: the rules apply to what the operator authored.
+func TestValidationSeesTheAuthoredProgram(t *testing.T) {
+	program := validProgram()
+	program.ProgramSteps[0] = steamCoolingStep(30, &PowerPidSettings{Power: u8(0)})
+	program.ApplyDefaults(templateDefaults(t))
+
+	if err := program.Validate(); err == nil {
+		t.Fatal("a program starting with a cooling step was accepted")
 	}
 }

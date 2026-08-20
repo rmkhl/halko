@@ -260,8 +260,15 @@ The option groups below describe what each setting does.
     lead the material).
   - **`fan_power`** / **`steam_power`**: the power a step gets for a component
     it does not name.
-  - **`preheat_fan_power`**: the fan power used while preheating, before the
-    first step begins.
+  - **`equalize`**: what the startup steps the control unit runs before a
+    program's first step need.
+    - **`delta`**: how close the kiln and the material must be before that
+      first step begins. A program may name its own; this is the fallback.
+    - **`steam_prewarm`**: whether a program that does not say gets the steam
+      warm-up step. The webapp shows this as the checkbox's state for a program
+      with no preference of its own.
+    - **`steam_prewarm_timeout`**: how long the steam warm-up step waits for
+      evidence the generator is boiling before failing the run.
   - **`max_target_temperature`**: the highest target any step may ask for.
   - **`steam_ceiling`**: the temperature steam cannot heat the kiln past. Above
     it steam is thermally neutral; below it steam outruns the heater, which is

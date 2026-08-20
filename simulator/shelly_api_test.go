@@ -36,10 +36,14 @@ const shellyTestConfig = `{
       "fan_power": 0,
       "steam_power": 0,
       "max_target_temperature": 200,
-      "preheat_fan_power": 50,
       "steam_ceiling": 100,
       "sensor_timeout": "120s",
-      "execution_log_interval": "60s"
+      "execution_log_interval": "60s",
+      "equalize": {
+        "delta": 2.0,
+        "steam_prewarm": false,
+        "steam_prewarm_timeout": "20m"
+      }
     }
   },
   "power_unit": {

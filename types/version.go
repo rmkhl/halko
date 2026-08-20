@@ -7,4 +7,4 @@ package types
 // release-tag workflow creates the matching git tag once a change lands on
 // master. Releasing therefore means bumping this line -- see CONTRIBUTING.md
 // for which component to bump.
-const Version = "1.0.1"
+const Version = "1.1.0"
