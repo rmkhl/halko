@@ -17,6 +17,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation, useLazyGetRunQuery } from "../store/services/controlunitApi";
+import { runStartedAt } from "../util/executionLog";
 import { generateRunReportPdf, NoStepDataError } from "../util/runReportPdf";
 import { ExecutionChart } from "./ExecutionChart";
 
@@ -45,6 +46,10 @@ export const History: React.FC = () => {
     skip: !selectedProgram,
   });
   const [deleteExecution] = useDeleteExecutionMutation();
+  const selectedStartedAt = runStartedAt(
+    history?.find((item) => item.name === selectedProgram)?.started_at,
+    selectedProgram ?? undefined
+  );
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [fetchRun] = useLazyGetRunQuery();
 
@@ -202,6 +207,7 @@ export const History: React.FC = () => {
             csvData={logData}
             title={`${selectedProgram.split("@")[0]} - Execution Chart`}
             isLoading={isLoadingLog}
+            startedAt={selectedStartedAt}
             headerAction={
               logData ? (
                 <Box>

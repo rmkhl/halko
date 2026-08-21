@@ -69,3 +69,28 @@ export const segmentBySteps = (rows: LogRow[]): StepSegment[] => {
   }
   return segments;
 };
+
+// Wall clock time of an execution log row, formatted for a chart axis: local
+// hours and minutes, no seconds. Runs spanning midnight are left to read as
+// "23:00 ... 01:14" -- the wrap is obvious enough without a date on the tick.
+export const formatClock = (epochSeconds: number): string =>
+  new Date(epochSeconds * 1000).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+// Unix start time of a run, needed to turn the log's elapsed seconds into wall
+// clock time. Prefers the timestamp the API reports and falls back to the one
+// the controlunit embeds in the run name ("<program>@<RFC3339>"). Undefined
+// when neither is available, in which case charts stay on elapsed minutes.
+export const runStartedAt = (startedAt?: number, runName?: string): number | undefined => {
+  if (startedAt) {
+    return startedAt;
+  }
+  const stamp = runName?.split("@")[1];
+  if (!stamp) {
+    return undefined;
+  }
+  const parsed = Date.parse(stamp);
+  return isNaN(parsed) ? undefined : parsed / 1000;
+};

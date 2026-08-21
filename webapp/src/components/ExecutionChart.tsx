@@ -12,7 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { Box, Paper, Typography, CircularProgress } from "@mui/material";
-import { parseExecutionLog } from "../util/executionLog";
+import { formatClock, parseExecutionLog } from "../util/executionLog";
 
 // Register Chart.js components
 ChartJS.register(
@@ -32,6 +32,9 @@ interface ExecutionChartProps {
   isLive?: boolean;
   temperatureRange?: { min: number; max: number };
   headerAction?: React.ReactNode;
+  // Unix start time of the run, resolved by the caller with runStartedAt.
+  // Undefined keeps the X-axis on minutes elapsed since the run started.
+  startedAt?: number;
 }
 
 // Static CSV data from ,run.csv (used as fallback)
@@ -87,7 +90,8 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
   isLoading = false,
   isLive = false,
   temperatureRange,
-  headerAction
+  headerAction,
+  startedAt
 }) => {
   const dataPoints = parseExecutionLog(csvData || defaultCsvData);
 
@@ -128,10 +132,13 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
     );
   }
 
-  // Convert time from seconds to minutes for X-axis
-  const timeLabels = dataPoints.map((point) =>
-    (point.time / 60).toFixed(1)
-  );
+  // Label the X-axis with wall clock time, falling back to minutes elapsed
+  // when the run's start time is unknown.
+  const formatTick = (seconds: number) =>
+    startedAt ? formatClock(startedAt + seconds) : (seconds / 60).toFixed(1);
+  const formatTooltipTime = (seconds: number) =>
+    startedAt ? formatClock(startedAt + seconds) : `Time: ${(seconds / 60).toFixed(1)} min`;
+  const timeLabels = dataPoints.map((point) => formatTick(point.time));
 
   const chartData = {
     labels: timeLabels,
@@ -177,7 +184,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
           title: (context) => {
             const index = context[0].dataIndex;
             const point = dataPoints[index];
-            return `Time: ${(point.time / 60).toFixed(1)} min | Step: ${point.step}`;
+            return `${formatTooltipTime(point.time)} | Step: ${point.step}`;
           },
         },
       },
@@ -187,7 +194,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         display: true,
         title: {
           display: true,
-          text: "Time (minutes)",
+          text: startedAt ? "Time" : "Time (minutes)",
         },
         ticks: {
           maxTicksLimit: 15,
