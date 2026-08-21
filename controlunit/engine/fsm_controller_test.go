@@ -171,16 +171,73 @@ func TestTimedStepsEndOnTheirRuntime(t *testing.T) {
 }
 
 // equalizeProgram builds a program carrying the startup steps the engine
-// synthesizes, with the given band.
+// synthesizes, with the given band. The heating step is the one the equalize
+// step reads its upper bound from, so it carries the deltas a real one would.
 func equalizeProgram(delta float32, prewarm bool) *types.Program {
 	steps := []types.ProgramStep{{Name: "Equalize", StepType: types.StepTypeEqualize}}
 	if prewarm {
 		steps = append(steps, types.ProgramStep{Name: "Steam warm-up", StepType: types.StepTypeSteamPrewarm})
 	}
+	minDelta, maxDelta := float32(5), float32(10)
+	steps = append(steps, types.ProgramStep{
+		Name:              "Heating",
+		StepType:          types.StepTypeHeating,
+		TargetTemperature: 100,
+		Heater: &types.PowerPidSettings{
+			Type: types.PowerSettingTypeDelta, MinDelta: &minDelta, MaxDelta: &maxDelta,
+		},
+	})
 	return &types.Program{
 		ProgramName:  "equalize",
 		Equalize:     &types.EqualizeSettings{Delta: &delta, SteamPrewarm: &prewarm},
 		ProgramSteps: steps,
+	}
+}
+
+// A kiln already at the gap the first heating step starts heating from needs no
+// equalizing: handing over there lets that step begin its work immediately,
+// where cooling all the way to the equalization band only delays it. Below the
+// material the equalization delta still applies.
+func TestEqualizeAcceptsAGapTheFirstStepWouldHold(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	tests := []struct {
+		name           string
+		kiln, material float32
+		want           fsmState
+	}{
+		{"inside the equalization band", 21, 20, fsmStateNextProgramStep},
+		{"between the band and the heating step's min delta", 24, 20, fsmStateNextProgramStep},
+		{"exactly the heating step's min delta", 25, 20, fsmStateNextProgramStep},
+		{"above the gap the heating step starts from", 26, 20, fsmStateEqualize},
+		{"below the material, inside the band", 19, 20, fsmStateNextProgramStep},
+		{"further below the material than the band", 17, 20, fsmStateEqualize},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsm := &programFSMController{
+				state:               fsmStateEqualize,
+				program:             equalizeProgram(2, false),
+				psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+				currentPSUStatus:    &fsmPSUStatus{},
+				currentTemperatures: &fsmTemperatures{},
+				defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{}},
+			}
+			fsm.currentTemperatures.reading.Kiln = tt.kiln
+			fsm.currentTemperatures.reading.Material = tt.material
+
+			handler := &equalizeStateHandler{fsm: fsm}
+			handler.enterState()
+
+			if got := handler.executeState(); got != tt.want {
+				t.Errorf("state = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -214,7 +271,7 @@ func TestEqualizeDrivesTheRightChannels(t *testing.T) {
 		wantFan, wantHeater uint8
 		wantSteam           uint8
 	}{
-		{"kiln above the band", 30, 20, fsmStateEqualize, 100, 0, 0},
+		{"kiln above the band", 35, 20, fsmStateEqualize, 100, 0, 0},
 		{"kiln below the band", 20, 30, fsmStateEqualize, 0, 0, 0},
 		{"inside the band", 21, 20, fsmStateNextProgramStep, 0, 0, 0},
 		{"inside the band, kiln low", 19, 20, fsmStateNextProgramStep, 0, 0, 0},
@@ -269,14 +326,24 @@ func TestSteamPrewarmProvesTheGeneratorIsProducing(t *testing.T) {
 	}))
 	defer server.Close()
 
+	// The rise is measured from the gap the step was entered with, so each case
+	// gives the readings at entry and the readings one tick later.
 	tests := []struct {
-		name           string
-		kiln, material float32
-		want           fsmState
+		name                     string
+		entryKiln, entryMaterial float32
+		kiln, material           float32
+		want                     fsmState
 	}{
-		{"still inside the band", 21, 20, fsmStateSteamPrewarm},
-		{"exactly at the top of the band", 22, 20, fsmStateSteamPrewarm},
-		{"climbing past the band", 22.5, 20, fsmStateNextProgramStep},
+		{"no rise yet", 20, 20, 21, 20, fsmStateSteamPrewarm},
+		{"exactly the required rise", 20, 20, 22, 20, fsmStateSteamPrewarm},
+		{"risen past the required amount", 20, 20, 22.5, 20, fsmStateNextProgramStep},
+		// Entering with the kiln already well above the material must not pass
+		// on its own: nothing has been proved about the generator yet.
+		{"entered high, no rise", 27, 20, 27, 20, fsmStateSteamPrewarm},
+		{"entered high, then rises", 27, 20, 29.5, 20, fsmStateNextProgramStep},
+		// A material warmer than the kiln is just a negative entry gap; the
+		// same rise still proves the generator.
+		{"entered below the material, then rises", 20, 25, 22.5, 25, fsmStateNextProgramStep},
 	}
 
 	for _, tt := range tests {
@@ -289,12 +356,15 @@ func TestSteamPrewarmProvesTheGeneratorIsProducing(t *testing.T) {
 				currentTemperatures: &fsmTemperatures{},
 				defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{SteamPrewarmTimeoutSeconds: 1200}},
 			}
-			fsm.currentTemperatures.reading.Kiln = tt.kiln
-			fsm.currentTemperatures.reading.Material = tt.material
+			fsm.currentTemperatures.reading.Kiln = tt.entryKiln
+			fsm.currentTemperatures.reading.Material = tt.entryMaterial
 
 			handler := &steamPrewarmStateHandler{fsm: fsm}
 			fsm.stepStarted = time.Now().Unix()
 			handler.enterState()
+
+			fsm.currentTemperatures.reading.Kiln = tt.kiln
+			fsm.currentTemperatures.reading.Material = tt.material
 
 			if got := handler.executeState(); got != tt.want {
 				t.Errorf("state = %v, want %v", got, tt.want)
