@@ -150,8 +150,8 @@ and testing without requiring actual hardware. It emulates the Shelly devices
 over HTTP, and the ESP32 sensor unit at the serial level over a
 pseudo-terminal, so the real `sensorunit` service runs against it unmodified.
 
-The simulator uses physics-based simulation engines (simple, differential, thermodynamic)
-configured via `simulator.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
+The simulator uses physics-based simulation engines (differential, thermodynamic)
+configured via `simulator-*.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
 configuration options and physics engine descriptions.
 
 #### `/dbusunit`
@@ -418,7 +418,7 @@ sudo nano /etc/opt/halko.cfg
 For development, you can run the simulator instead of connecting to real hardware:
 
 ```bash
-./bin/simulator -c halko.cfg -s simulator.conf
+./bin/simulator -c halko.cfg -s simulator-fast.conf
 ```
 
 The webapp can be run in development mode from the `/webapp` directory:

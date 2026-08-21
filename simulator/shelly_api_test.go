@@ -60,20 +60,45 @@ const shellyTestConfig = `{
   }
 }`
 
+// The simulator also needs its own configuration. The physics is irrelevant to
+// the Shelly API, so this is the smallest engine config that validates rather
+// than a copy of any shipped one - the test must not depend on a checked-in
+// fixture it does not control.
+const shellySimulatorConfig = `{
+  "status_interval": 0,
+  "initial_kiln_temp": 20.0,
+  "initial_material_temp": 20.0,
+  "environment_temp": 20.0,
+  "simulation_engine": "differential",
+  "engine_config": {
+    "heater_power": 3.0,
+    "heat_loss_coefficient": 0.015,
+    "heat_transfer_coefficient": 0.010,
+    "kiln_thermal_mass": 3.0,
+    "material_thermal_mass": 0.2,
+    "steam_power": 0.0
+  }
+}`
+
 // writeTestConfig writes a halko config into a temporary directory. The
 // simulator creates the serial device it emulates, so the config must name a
 // path it may create rather than real hardware.
-func writeTestConfig(t *testing.T) string {
+func writeTestConfig(t *testing.T) (halkoPath, simulatorPath string) {
 	t.Helper()
 
 	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_halko.cfg")
+	halkoPath = filepath.Join(tempDir, "test_halko.cfg")
 	config := fmt.Sprintf(shellyTestConfig, tempDir, testTickLength, filepath.Join(tempDir, "esp32"))
 
-	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
+	if err := os.WriteFile(halkoPath, []byte(config), 0o644); err != nil {
 		t.Fatalf("Failed to create test config file: %v", err)
 	}
-	return configPath
+
+	simulatorPath = filepath.Join(tempDir, "test_simulator.conf")
+	if err := os.WriteFile(simulatorPath, []byte(shellySimulatorConfig), 0o644); err != nil {
+		t.Fatalf("Failed to create test simulator config file: %v", err)
+	}
+	return halkoPath, simulatorPath
 }
 
 func TestShellyAPI(t *testing.T) {
@@ -82,7 +107,7 @@ func TestShellyAPI(t *testing.T) {
 	port := "8088"
 	baseURL := "http://localhost:" + port
 
-	configPath := writeTestConfig(t)
+	configPath, simConfigPath := writeTestConfig(t)
 
 	// Build the simulator and run the binary directly: signals must reach the
 	// simulator process itself so Wait() only returns once it has fully shut
@@ -93,7 +118,7 @@ func TestShellyAPI(t *testing.T) {
 	}
 
 	t.Log("Starting simulator...")
-	cmd := exec.Command(simBinary, "-c", configPath, "-s", "simulator.conf")
+	cmd := exec.Command(simBinary, "-c", configPath, "-s", simConfigPath)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

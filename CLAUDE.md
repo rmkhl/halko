@@ -17,7 +17,7 @@ types/log/    — logging (nested module, imported by types and every service)
 controlunit/  — kiln control logic and program execution
 powerunit/    — Shelly smart switch control
 sensorunit/   — ESP32/Arduino serial bridge
-simulator/    — hardware emulator (physics engines: simple/differential/thermodynamic)
+simulator/    — hardware emulator (physics engines: differential/thermodynamic)
 dbusunit/     — systemd D-Bus integration
 halkoctl/     — CLI management tool
 ```
@@ -52,7 +52,7 @@ make run-webapp       # dev server on :1234 with hot reload
 # Development environment
 make tmux-debug-run   # all services + simulator in tmux
 LOGLEVEL=4 make tmux-debug-run  # verbose logging (0=ERROR … 4=TRACE)
-SIMULATOR=thermodynamic make tmux-debug-run
+SIMULATOR=tuning make tmux-debug-run
 make tmux-debug-fail-run  # same, but the simulator injects escalating sensor failures
 LOG_DIR=/tmp/halko-logs make tmux-debug-run  # write the log files elsewhere
 ```

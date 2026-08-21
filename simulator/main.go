@@ -77,6 +77,14 @@ func main() {
 		}
 	}
 
+	// Inject the steam cutoff from the control unit's steam ceiling. The rule
+	// and the physics are the same belief - steam stops heating once the kiln
+	// is hot enough that the steam must itself be raised to kiln temperature -
+	// so they read the same number rather than drifting apart.
+	steamCutoff := float64(*config.ControlUnitConfig.Defaults.SteamCeiling)
+	simConfig.EngineConfig["steam_cutoff_temp"] = steamCutoff
+	log.Info("Steam cutoff temperature set to %.0f°C (from controlunit.defaults.steam_ceiling)", steamCutoff)
+
 	// Create physics simulation engine
 	physicsEngine, err := physics.NewSimulationEngine(simConfig.SimulationEngine, simConfig.EngineConfig)
 	if err != nil {
