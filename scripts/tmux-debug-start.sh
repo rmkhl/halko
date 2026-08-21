@@ -100,13 +100,3 @@ echo "✓ Session '$SESSION' created with windows: simulator, powerunit, sensoru
 echo "  Log level: $LOGLEVEL (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)"
 echo "  Log files: $LOG_DIR/<window>.log (overwritten on every start)"
 echo "  Simulator: $SIM_CONFIG"
-echo ""
-
-echo "To start with different settings:"
-echo "  LOGLEVEL=4 make tmux-debug-run                          # TRACE level"
-echo "  LOGLEVEL=2 make tmux-debug-run                          # INFO level"
-echo "  SIMULATOR=tuning make tmux-debug-run                    # Fitted coefficients"
-echo "  SIMULATOR=equalize make tmux-debug-run                  # Kiln starts hot"
-echo "  LOGLEVEL=4 SIMULATOR=tuning make tmux-debug-run         # Both options"
-echo "  make tmux-debug-fail-run                                # Inject sensor failures"
-echo ""
