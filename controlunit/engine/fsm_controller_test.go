@@ -169,3 +169,275 @@ func TestTimedStepsEndOnTheirRuntime(t *testing.T) {
 		})
 	}
 }
+
+// equalizeProgram builds a program carrying the startup steps the engine
+// synthesizes, with the given band. The heating step is the one the equalize
+// step reads its upper bound from, so it carries the deltas a real one would.
+func equalizeProgram(delta float32, prewarm bool) *types.Program {
+	steps := []types.ProgramStep{{Name: "Equalize", StepType: types.StepTypeEqualize}}
+	if prewarm {
+		steps = append(steps, types.ProgramStep{Name: "Steam warm-up", StepType: types.StepTypeSteamPrewarm})
+	}
+	minDelta, maxDelta := float32(5), float32(10)
+	steps = append(steps, types.ProgramStep{
+		Name:              "Heating",
+		StepType:          types.StepTypeHeating,
+		TargetTemperature: 100,
+		Heater: &types.PowerPidSettings{
+			Type: types.PowerSettingTypeDelta, MinDelta: &minDelta, MaxDelta: &maxDelta,
+		},
+	})
+	return &types.Program{
+		ProgramName:  "equalize",
+		Equalize:     &types.EqualizeSettings{Delta: &delta, SteamPrewarm: &prewarm},
+		ProgramSteps: steps,
+	}
+}
+
+// A kiln already at the gap the first heating step starts heating from needs no
+// equalizing: handing over there lets that step begin its work immediately,
+// where cooling all the way to the equalization band only delays it. Below the
+// material the equalization delta still applies.
+func TestEqualizeAcceptsAGapTheFirstStepWouldHold(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	tests := []struct {
+		name           string
+		kiln, material float32
+		want           fsmState
+	}{
+		{"inside the equalization band", 21, 20, fsmStateNextProgramStep},
+		{"between the band and the heating step's min delta", 24, 20, fsmStateNextProgramStep},
+		{"exactly the heating step's min delta", 25, 20, fsmStateNextProgramStep},
+		{"above the gap the heating step starts from", 26, 20, fsmStateEqualize},
+		{"below the material, inside the band", 19, 20, fsmStateNextProgramStep},
+		{"further below the material than the band", 17, 20, fsmStateEqualize},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsm := &programFSMController{
+				state:               fsmStateEqualize,
+				program:             equalizeProgram(2, false),
+				psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+				currentPSUStatus:    &fsmPSUStatus{},
+				currentTemperatures: &fsmTemperatures{},
+				defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{}},
+			}
+			fsm.currentTemperatures.reading.Kiln = tt.kiln
+			fsm.currentTemperatures.reading.Material = tt.material
+
+			handler := &equalizeStateHandler{fsm: fsm}
+			handler.enterState()
+
+			if got := handler.executeState(); got != tt.want {
+				t.Errorf("state = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// The equalization step never adds heat. A kiln above the band is cooled with
+// the fan; a kiln below it is left alone, because the wood warms the air on its
+// own. Both cases command every channel on every tick - the power unit's idle
+// watchdog zeroes anything it has not heard about within max_idle_time, which
+// is how the old preheat state silently lost its fan partway through.
+func TestEqualizeDrivesTheRightChannels(t *testing.T) {
+	var mu sync.Mutex
+	commanded := map[string][]uint8{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		psuName := strings.TrimPrefix(r.URL.Path, "/")
+		var cmd PowerCommand
+		if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+			t.Errorf("decoding power command for %q: %v", psuName, err)
+		}
+		mu.Lock()
+		commanded[psuName] = append(commanded[psuName], cmd.Percent)
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	tests := []struct {
+		name                string
+		kiln, material      float32
+		wantState           fsmState
+		wantFan, wantHeater uint8
+		wantSteam           uint8
+	}{
+		{"kiln above the band", 35, 20, fsmStateEqualize, 100, 0, 0},
+		{"kiln below the band", 20, 30, fsmStateEqualize, 0, 0, 0},
+		{"inside the band", 21, 20, fsmStateNextProgramStep, 0, 0, 0},
+		{"inside the band, kiln low", 19, 20, fsmStateNextProgramStep, 0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mu.Lock()
+			commanded = map[string][]uint8{}
+			mu.Unlock()
+
+			fsm := &programFSMController{
+				state:               fsmStateEqualize,
+				program:             equalizeProgram(2, false),
+				psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+				currentPSUStatus:    &fsmPSUStatus{},
+				currentTemperatures: &fsmTemperatures{},
+			}
+			fsm.currentTemperatures.reading.Kiln = tt.kiln
+			fsm.currentTemperatures.reading.Material = tt.material
+
+			handler := &equalizeStateHandler{fsm: fsm}
+			handler.enterState()
+			if got := handler.executeState(); got != tt.wantState {
+				t.Fatalf("state = %v, want %v", got, tt.wantState)
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			for psu, want := range map[string]uint8{psuFan: tt.wantFan, psuOven: tt.wantHeater, psuSteam: tt.wantSteam} {
+				got := commanded[psu]
+				if len(got) == 0 {
+					t.Errorf("%s was never commanded; the watchdog will zero it", psu)
+					continue
+				}
+				if got[len(got)-1] != want {
+					t.Errorf("%s = %d%%, want %d%%", psu, got[len(got)-1], want)
+				}
+			}
+		})
+	}
+}
+
+// Nothing measures the steam reservoir, so the step infers it from the kiln.
+// With the heater and the fan off, the wood can push the air up to its own
+// temperature and no further - so a kiln climbing past the top of the band has
+// to be receiving heat from the only other thing switched on, the steam.
+func TestSteamPrewarmProvesTheGeneratorIsProducing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	// The rise is measured from the gap the step was entered with, so each case
+	// gives the readings at entry and the readings one tick later.
+	tests := []struct {
+		name                     string
+		entryKiln, entryMaterial float32
+		kiln, material           float32
+		want                     fsmState
+	}{
+		{"no rise yet", 20, 20, 21, 20, fsmStateSteamPrewarm},
+		{"exactly the required rise", 20, 20, 22, 20, fsmStateSteamPrewarm},
+		{"risen past the required amount", 20, 20, 22.5, 20, fsmStateNextProgramStep},
+		// Entering with the kiln already well above the material must not pass
+		// on its own: nothing has been proved about the generator yet.
+		{"entered high, no rise", 27, 20, 27, 20, fsmStateSteamPrewarm},
+		{"entered high, then rises", 27, 20, 29.5, 20, fsmStateNextProgramStep},
+		// A material warmer than the kiln is just a negative entry gap; the
+		// same rise still proves the generator.
+		{"entered below the material, then rises", 20, 25, 22.5, 25, fsmStateNextProgramStep},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsm := &programFSMController{
+				state:               fsmStateSteamPrewarm,
+				program:             equalizeProgram(2, true),
+				psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+				currentPSUStatus:    &fsmPSUStatus{},
+				currentTemperatures: &fsmTemperatures{},
+				defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{SteamPrewarmTimeoutSeconds: 1200}},
+			}
+			fsm.currentTemperatures.reading.Kiln = tt.entryKiln
+			fsm.currentTemperatures.reading.Material = tt.entryMaterial
+
+			handler := &steamPrewarmStateHandler{fsm: fsm}
+			fsm.stepStarted = time.Now().Unix()
+			handler.enterState()
+
+			fsm.currentTemperatures.reading.Kiln = tt.kiln
+			fsm.currentTemperatures.reading.Material = tt.material
+
+			if got := handler.executeState(); got != tt.want {
+				t.Errorf("state = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// An empty reservoir or a dead element produces no rise at all. The step fails
+// the run rather than waiting forever with the element energised - and it does
+// so before the program reaches a step that depends on steam.
+func TestSteamPrewarmFailsOnItsTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	fsm := &programFSMController{
+		state:               fsmStateSteamPrewarm,
+		program:             equalizeProgram(2, true),
+		psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{SteamPrewarmTimeoutSeconds: 1200}},
+	}
+	fsm.currentTemperatures.reading.Kiln = 20
+	fsm.currentTemperatures.reading.Material = 20
+
+	handler := &steamPrewarmStateHandler{fsm: fsm}
+	fsm.stepStarted = time.Now().Unix()
+	handler.enterState()
+
+	if got := handler.executeState(); got != fsmStateSteamPrewarm {
+		t.Fatalf("state = %v, want the step to still be waiting", got)
+	}
+
+	fsm.stepStarted = time.Now().Unix() - 1199
+	if got := handler.executeState(); got != fsmStateSteamPrewarm {
+		t.Fatalf("state = %v, want the step to still be waiting one second before the timeout", got)
+	}
+
+	fsm.stepStarted = time.Now().Unix() - 1200
+	if got := handler.executeState(); got != fsmStateFailed {
+		t.Fatalf("state = %v, want the run to fail on the timeout", got)
+	}
+}
+
+// The equalization step has no timeout on purpose: it never adds heat, so an
+// unbounded wait is safe and the operator can cancel the run.
+func TestEqualizeHasNoTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	fsm := &programFSMController{
+		state:               fsmStateEqualize,
+		program:             equalizeProgram(2, false),
+		psuController:       &psuController{client: server.Client(), powerControlURL: server.URL},
+		currentPSUStatus:    &fsmPSUStatus{},
+		currentTemperatures: &fsmTemperatures{},
+		defaults:            &types.Defaults{Equalize: &types.EqualizeDefaults{SteamPrewarmTimeoutSeconds: 1200}},
+	}
+	fsm.currentTemperatures.reading.Kiln = 50
+	fsm.currentTemperatures.reading.Material = 20
+
+	handler := &equalizeStateHandler{fsm: fsm}
+	handler.enterState()
+	fsm.stepStarted = time.Now().Unix() - 100000
+
+	if got := handler.executeState(); got != fsmStateEqualize {
+		t.Errorf("state = %v, want the step to keep waiting regardless of elapsed time", got)
+	}
+}

@@ -20,7 +20,7 @@ func TestDescribeConfigShowsResolvedDefaults(t *testing.T) {
 
 	for _, want := range []string{
 		"heating", "acclimate",
-		"fan_power", "steam_power", "preheat_fan_power",
+		"fan_power", "steam_power", "equalize", "delta", "steam_prewarm", "steam_prewarm_timeout",
 		"max_target_temperature", "steam_ceiling",
 		"sensor_timeout", "execution_log_interval",
 	} {

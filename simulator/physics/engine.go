@@ -7,7 +7,6 @@ import (
 // Names of the available simulation engines, as written in the simulator
 // configuration's simulation_engine field.
 const (
-	engineSimple        = "simple"
 	engineDifferential  = "differential"
 	engineThermodynamic = "thermodynamic"
 )
@@ -49,8 +48,6 @@ func NewSimulationEngine(engineName string, config map[string]interface{}) (Simu
 	var engine SimulationEngine
 
 	switch engineName {
-	case engineSimple:
-		engine = &SimpleSimulation{}
 	case engineDifferential:
 		engine = &DifferentialSimulation{}
 	case engineThermodynamic:

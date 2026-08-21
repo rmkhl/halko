@@ -13,7 +13,20 @@ import { emptyProgram } from "./templates";
 import { useFormData } from "../../hooks/useFormData";
 import { Steps } from "./Steps";
 import { useParams, useNavigate } from "react-router-dom";
-import { Stack, Paper, Typography, Button, Divider, Alert, Box } from "@mui/material";
+import {
+  Stack,
+  Paper,
+  Typography,
+  Button,
+  Divider,
+  Alert,
+  Box,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
+import { useTranslation } from "react-i18next";
+import { useGetDefaultsQuery } from "../../store/services/controlunitApi";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 
@@ -39,6 +52,11 @@ const getValidationErrors = (editProgram: ApiProgram | null, nameUsed: boolean):
     errors.push("Invalid program name (avoid reserved words: new, latest, current)");
   }
 
+  const delta = editProgram.equalize?.delta;
+  if (delta !== undefined && delta <= 0) {
+    errors.push("Equalize delta must be greater than zero");
+  }
+
   if (!steps || steps.length === 0) {
     errors.push("At least one step is required");
   } else {
@@ -59,6 +77,8 @@ const getValidationErrors = (editProgram: ApiProgram | null, nameUsed: boolean):
 };
 
 export const Program: React.FC = () => {
+  const { t } = useTranslation();
+  const { data: engineDefaults } = useGetDefaultsQuery();
 
   // All hooks and variables declared once at the top
   const { name } = useParams();
@@ -250,6 +270,49 @@ export const Program: React.FC = () => {
                   name={editProgram?.name}
                   handleChange={updateName}
                 />
+              </Paper>
+            )}
+
+            {editing && engineDefaults && (
+              <Paper variant="outlined" sx={{ padding: 2 }}>
+                <Typography variant="subtitle1" sx={{ marginBottom: 2, fontWeight: "bold" }}>
+                  {t("programs.equalize.title")}
+                </Typography>
+                <Stack gap={2}>
+                  <TextField
+                    label={t("programs.equalize.delta")}
+                    helperText={`${t("programs.equalize.deltaHelp")} ${t("programs.equalize.deltaHelpDefault", { delta: engineDefaults.equalize.delta })}`}
+                    type="number"
+                    size="small"
+                    value={editProgram?.equalize?.delta ?? ""}
+                    onChange={(e) =>
+                      updateEdited("equalize")({
+                        ...editProgram?.equalize,
+                        delta:
+                          e.currentTarget.value === ""
+                            ? undefined
+                            : Number(e.currentTarget.value),
+                      })
+                    }
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={
+                          editProgram?.equalize?.steam_prewarm ??
+                          engineDefaults.equalize.steam_prewarm
+                        }
+                        onChange={(e) =>
+                          updateEdited("equalize")({
+                            ...editProgram?.equalize,
+                            steam_prewarm: e.currentTarget.checked,
+                          })
+                        }
+                      />
+                    }
+                    label={t("programs.equalize.steamPrewarm")}
+                  />
+                </Stack>
               </Paper>
             )}
 

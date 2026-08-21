@@ -13,7 +13,7 @@ import {
   Legend,
 } from "chart.js";
 import { ExecutedProgram } from "../store/services/controlunitApi";
-import { PowerSettings } from "../types/api";
+import { PowerSettings, Step, StepType } from "../types/api";
 import { LogRow, StepSegment, parseExecutionLog, segmentBySteps } from "./executionLog";
 
 // Registered separately from ExecutionChart.tsx's identical call (Chart.js
@@ -39,10 +39,29 @@ export interface RunReportInput {
 
 // Controlunit phases that are not program steps (used only when the
 // executed program is unavailable and matching by step name is impossible).
-const NON_STEP_PHASES = new Set(["Initializing", "Waiting", "Pre-Heat", "Completed"]);
+const NON_STEP_PHASES = new Set(["Waiting", "Completed"]);
+
+// The control unit synthesizes these in front of the authored program, so they
+// appear in the stored program like any other step. They are not something the
+// operator wrote, so the report shows them by name without a step number and
+// starts the numbering at the first authored step.
+const STARTUP_STEP_TYPES = new Set<StepType>(["equalize", "steam_prewarm"]);
 
 const CHART_WIDTH_PX = 900;
 const CHART_HEIGHT_PX = 400;
+
+// Pairs each step with the number the report shows for it: authored steps count
+// from 1, the control unit's synthesized startup steps get a dash.
+const numberedProgramSteps = (steps: Step[]): [Step, string][] => {
+  let number = 0;
+  return steps.map((step) => {
+    if (STARTUP_STEP_TYPES.has(step.type)) {
+      return [step, "-"];
+    }
+    number += 1;
+    return [step, String(number)];
+  });
+};
 
 const formatDuration = (seconds: number): string => {
   const s = Math.max(0, Math.round(seconds));
@@ -174,7 +193,9 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
   });
   y = lastAutoTableY(doc) + 20;
 
-  // One section per program step
+  // One section per program step. Startup steps are unnumbered, so the counter
+  // advances only for authored ones.
+  let stepNumber = 0;
   stepSegments.forEach((segment, index) => {
     // Rough estimate of the section height for the page-break decision
     const sectionEstimate = 24 + 60 + chartHeight;
@@ -184,7 +205,11 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
     }
 
     const programStep = program?.steps.find((step) => step.name === segment.step);
-    let heading = `Step ${index + 1}: ${segment.step}`;
+    const isStartup = programStep ? STARTUP_STEP_TYPES.has(programStep.type) : false;
+    if (!isStartup) {
+      stepNumber += 1;
+    }
+    let heading = isStartup ? segment.step : `Step ${stepNumber}: ${segment.step}`;
     if (programStep) {
       heading += ` (${programStep.type}`;
       if (programStep.temperature_target) {
@@ -252,8 +277,8 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 3 },
       head: [["#", "Name", "Type", "Target (°C)", "Runtime", "Heater", "Fan", "Steam"]],
-      body: program.steps.map((step, index) => [
-        String(index + 1),
+      body: numberedProgramSteps(program.steps).map(([step, number]) => [
+        number,
         step.name,
         step.type,
         step.temperature_target ? String(step.temperature_target) : "-",

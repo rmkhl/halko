@@ -15,6 +15,8 @@ const (
 	keyHeatTransferCoefficient = "heat_transfer_coefficient"
 	keyKilnThermalMass         = "kiln_thermal_mass"
 	keyMaterialThermalMass     = "material_thermal_mass"
+	keySteamPower              = "steam_power"
+	keySteamCutoffTemp         = "steam_cutoff_temp"
 )
 
 type DifferentialSimulation struct {
@@ -23,6 +25,8 @@ type DifferentialSimulation struct {
 	heatTransferCoefficient float32 // Heat transfer rate between kiln and material
 	kilnThermalMass         float32 // Heat capacity of kiln (energy needed to raise 1°C)
 	materialThermalMass     float32 // Heat capacity of material
+	steamPower              float32 // Energy per tick when steam is on and the kiln is below the cutoff
+	steamCutoffTemp         float32 // Kiln temperature at which steam stops contributing heat
 }
 
 func (d *DifferentialSimulation) Name() string {
@@ -61,14 +65,30 @@ func (d *DifferentialSimulation) Initialize(config map[string]interface{}) error
 	}
 	d.materialThermalMass = float32(materialMass)
 
-	log.Info("Differential simulation initialized: heater_power=%.2f, heat_loss=%.3f, heat_transfer=%.3f, kiln_mass=%.1f, material_mass=%.1f",
-		d.heaterPower, d.heatLossCoefficient, d.heatTransferCoefficient, d.kilnThermalMass, d.materialThermalMass)
+	steamPower, ok := config[keySteamPower].(float64)
+	if !ok {
+		return errors.New("steam_power must be specified as a number")
+	}
+	d.steamPower = float32(steamPower)
+
+	steamCutoff, ok := config[keySteamCutoffTemp].(float64)
+	if !ok {
+		return errors.New("steam_cutoff_temp must be specified as a number")
+	}
+	d.steamCutoffTemp = float32(steamCutoff)
+
+	log.Info("Differential simulation initialized: heater_power=%.2f, heat_loss=%.5f, heat_transfer=%.3f, kiln_mass=%.1f, material_mass=%.2f, steam_power=%.2f below %.0f°C",
+		d.heaterPower, d.heatLossCoefficient, d.heatTransferCoefficient, d.kilnThermalMass, d.materialThermalMass,
+		d.steamPower, d.steamCutoffTemp)
 
 	return nil
 }
 
 func (d *DifferentialSimulation) ValidateConfig(config map[string]interface{}) error {
-	required := []string{"heater_power", keyHeatLossCoefficient, keyHeatTransferCoefficient, keyKilnThermalMass, "material_thermal_mass"}
+	required := []string{
+		keyHeaterPower, keyHeatLossCoefficient, keyHeatTransferCoefficient,
+		keyKilnThermalMass, keyMaterialThermalMass, keySteamPower, keySteamCutoffTemp,
+	}
 	for _, key := range required {
 		if _, exists := config[key]; !exists {
 			return fmt.Errorf("required configuration parameter missing: %s", key)
@@ -94,6 +114,14 @@ func (d *DifferentialSimulation) ValidateConfig(config map[string]interface{}) e
 	if materialMass := config[keyMaterialThermalMass].(float64); materialMass <= 0 {
 		return errors.New("material_thermal_mass must be positive")
 	}
+	// Zero is meaningful here: it is how a configuration says steam is inert,
+	// which is what the fitted config does until a real run constrains it.
+	if steamPower := config[keySteamPower].(float64); steamPower < 0 {
+		return errors.New("steam_power must not be negative")
+	}
+	if steamCutoff := config[keySteamCutoffTemp].(float64); steamCutoff <= 0 {
+		return errors.New("steam_cutoff_temp must be positive")
+	}
 
 	return nil
 }
@@ -108,6 +136,15 @@ func (d *DifferentialSimulation) Tick(state *SimulationState) {
 		heaterEnergy = d.heaterPower
 	}
 
+	// Steam only heats a kiln below the cutoff. Above it the steam has to be
+	// raised to kiln temperature itself, so it stops contributing - the same
+	// reasoning the control unit's steam ceiling rests on, which is where the
+	// cutoff temperature comes from.
+	var steamEnergy float32
+	if state.SteamIsOn && state.KilnTemp < d.steamCutoffTemp {
+		steamEnergy = d.steamPower
+	}
+
 	// Heat loss to environment (Newton's Law of Cooling)
 	// Higher temperature difference → faster heat loss
 	kilnHeatLoss := d.heatLossCoefficient * (state.KilnTemp - state.EnvironmentTemp)
@@ -118,7 +155,7 @@ func (d *DifferentialSimulation) Tick(state *SimulationState) {
 	kilnMaterialTransfer := d.heatTransferCoefficient * (state.KilnTemp - state.MaterialTemp)
 
 	// Net energy change for kiln
-	kilnNetEnergy := heaterEnergy - kilnHeatLoss - kilnMaterialTransfer
+	kilnNetEnergy := heaterEnergy + steamEnergy - kilnHeatLoss - kilnMaterialTransfer
 
 	// Temperature change = energy / thermal mass
 	kilnTempChange := kilnNetEnergy / d.kilnThermalMass
@@ -131,9 +168,13 @@ func (d *DifferentialSimulation) Tick(state *SimulationState) {
 	state.MaterialTemp = max(state.EnvironmentTemp, state.MaterialTemp+materialTempChange)
 
 	// Log energy flows and temperature changes
+	if steamEnergy > 0 {
+		log.Debug("Simulation[differential]: Steam contributing %.3f (kiln %.1f°C below cutoff %.0f°C)",
+			steamEnergy, oldKilnTemp, d.steamCutoffTemp)
+	}
 	if state.HeaterIsOn {
-		log.Debug("Simulation[differential]: Heater ON - energy=%.3f, kiln_loss=%.3f, transfer=%.3f → kiln: %.1f°C → %.1f°C (Δ%.2f°C)",
-			heaterEnergy, kilnHeatLoss, kilnMaterialTransfer, oldKilnTemp, state.KilnTemp, kilnTempChange)
+		log.Debug("Simulation[differential]: Heater ON - energy=%.3f, steam=%.3f, kiln_loss=%.3f, transfer=%.3f → kiln: %.1f°C → %.1f°C (Δ%.2f°C)",
+			heaterEnergy, steamEnergy, kilnHeatLoss, kilnMaterialTransfer, oldKilnTemp, state.KilnTemp, kilnTempChange)
 	} else if state.KilnTemp != oldKilnTemp {
 		log.Debug("Simulation[differential]: Heater OFF - kiln_loss=%.3f, transfer=%.3f → kiln: %.1f°C → %.1f°C (Δ%.2f°C)",
 			kilnHeatLoss, kilnMaterialTransfer, oldKilnTemp, state.KilnTemp, kilnTempChange)

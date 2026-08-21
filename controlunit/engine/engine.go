@@ -74,6 +74,11 @@ func (engine *ControlEngine) StartEngine(program *types.Program) error {
 		return ErrProgramAlreadyRunning
 	}
 
+	// The startup steps go in front of the program's own before the runner is
+	// built, so the executed-program record written by CreateExecutedProgram
+	// holds the steps that actually ran.
+	program.PrependStartupSteps()
+
 	runner, err := newProgramRunner(engine.halkoConfig, engine.storage, program, engine.endpoints, engine.heartbeatManager)
 	if err != nil {
 		engine.mu.Unlock()

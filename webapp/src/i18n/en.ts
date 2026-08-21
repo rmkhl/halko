@@ -36,6 +36,16 @@ export const en = {
     confirmStopTitle: "Confirm Stop",
     confirmStopBody:
       "Are you sure you want to stop the running program? The run will be marked as canceled and all power switched off. This cannot be undone.",
+    equalize: {
+      title: "Startup",
+      delta: "Equalize delta (°C)",
+      deltaHelp:
+        "How close the kiln and the material must be before the first step begins.",
+      deltaHelpDefault: "Leave empty to use the configured default of {{delta}} °C.",
+      steamPrewarm: "Warm the steam generator before the run",
+      steamPrewarmHelp:
+        "Runs the steam generator until the kiln shows it has reached boiling. Fails the run if it never does.",
+    },
     steps: {
       ...common(),
       add: "Add",

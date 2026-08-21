@@ -90,7 +90,8 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 					log.Debug("Program stopped, closing WebSocket connection")
 					return
 				}
-				// Only skip true initialization (Waiting), stream Pre-Heat, Initializing, and all program steps
+				// Only skip true initialization (Waiting); the startup steps are
+				// ordinary program steps and stream like the rest.
 				if status.CurrentStep == "" || status.CurrentStep == "Waiting" || status.CurrentStep == "Completed" {
 					continue
 				}

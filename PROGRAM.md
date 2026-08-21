@@ -303,15 +303,21 @@ These defaults are defined in the main configuration file under `controlunit.def
 2. **Apply defaults**: Fill in missing component settings
 3. **Validate program**: Check all rules and constraints
 4. **Start execution**: FSM initializes and waits for initial sensor readings
-5. **Pre-heat phase** (automatic):
-   - If material temperature > kiln temperature:
-     - Heater set to 100% power
-     - Fan set to 50% power
-     - Continues until the kiln reaches material temperature
-   - If kiln temperature ≥ material temperature:
-   - Pre-heat phase is skipped
-   - Proceeds directly to first program step
-   **Purpose**: Prevents thermal shock by ensuring the kiln doesn't start colder than the wood
+5. **Startup steps** (added by the control unit, configured by the program's
+   `equalize` block):
+   - **Equalize** — holds until the kiln and the material are within
+     `equalize.delta` of each other, so the program starts from a known state.
+     A kiln above the band is cooled by running the fan, which exhausts warm
+     air and draws in ambient. A kiln below the band is waited out: the wood is
+     the larger thermal mass and warms the air up to meet it. The step never
+     drives the heater and has no timeout — it adds no heat, so waiting is safe.
+   - **Steam warm-up** — only when `equalize.steam_prewarm` is set. Runs the
+     steam generator with the heater and the fan off. The reservoir produces
+     nothing until it boils, and nothing measures it, so the step infers it
+     from the kiln: with the wood unable to push the air past its own
+     temperature, a kiln climbing past the top of the band is being heated by
+     the steam. Fails the run on `equalize.steam_prewarm_timeout`, which catches an
+     empty reservoir or a dead element before the program depends on steam.
 6. **Execute steps sequentially**:
    - Initialize power controllers for current step
    - Monitor temperatures continuously
@@ -326,13 +332,14 @@ The controlunit uses a finite state machine (FSM) with the following states:
 
 1. **start** - Initial state, sets timestamps and initializes
 2. **waiting** - Waits for temperature and PSU status updates before proceeding
-3. **preheat** - Automatic pre-heat if material warmer than kiln (see above)
-4. **next_program_step** - Increments step counter, determines next state from step type
-5. **heat_up** - Execute heating step logic
-6. **acclimate** - Execute acclimation step logic
-7. **cool_down** - Execute cooling step logic
-8. **idle** - Program completed successfully
-9. **failed** - Error state
+3. **next_program_step** - Increments step counter, determines next state from step type
+4. **equalize** - Startup step, holds until the kiln and material are within the band
+5. **steam_prewarm** - Optional startup step, proves the steam generator is producing
+6. **heat_up** - Execute heating step logic
+7. **acclimate** - Execute acclimation step logic
+8. **cool_down** - Execute cooling step logic
+9. **idle** - Program completed successfully
+10. **failed** - Error state
 
 The FSM operates on a tick-based system with the update frequency controlled by
 `controlunit.tick_length` in the configuration file (e.g., "6s").

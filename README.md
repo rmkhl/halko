@@ -150,8 +150,8 @@ and testing without requiring actual hardware. It emulates the Shelly devices
 over HTTP, and the ESP32 sensor unit at the serial level over a
 pseudo-terminal, so the real `sensorunit` service runs against it unmodified.
 
-The simulator uses physics-based simulation engines (simple, differential, thermodynamic)
-configured via `simulator.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
+The simulator uses physics-based simulation engines (differential, thermodynamic)
+configured via `simulator-*.conf`. See [SIMULATOR.md](SIMULATOR.md) for detailed
 configuration options and physics engine descriptions.
 
 #### `/dbusunit`
@@ -260,8 +260,15 @@ The option groups below describe what each setting does.
     lead the material).
   - **`fan_power`** / **`steam_power`**: the power a step gets for a component
     it does not name.
-  - **`preheat_fan_power`**: the fan power used while preheating, before the
-    first step begins.
+  - **`equalize`**: what the startup steps the control unit runs before a
+    program's first step need.
+    - **`delta`**: how close the kiln and the material must be before that
+      first step begins. A program may name its own; this is the fallback.
+    - **`steam_prewarm`**: whether a program that does not say gets the steam
+      warm-up step. The webapp shows this as the checkbox's state for a program
+      with no preference of its own.
+    - **`steam_prewarm_timeout`**: how long the steam warm-up step waits for
+      evidence the generator is boiling before failing the run.
   - **`max_target_temperature`**: the highest target any step may ask for.
   - **`steam_ceiling`**: the temperature steam cannot heat the kiln past. Above
     it steam is thermally neutral; below it steam outruns the heater, which is
@@ -411,7 +418,7 @@ sudo nano /etc/opt/halko.cfg
 For development, you can run the simulator instead of connecting to real hardware:
 
 ```bash
-./bin/simulator -c halko.cfg -s simulator.conf
+./bin/simulator -c halko.cfg -s simulator-fast.conf
 ```
 
 The webapp can be run in development mode from the `/webapp` directory:

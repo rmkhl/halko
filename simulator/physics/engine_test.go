@@ -7,15 +7,9 @@ import (
 	"testing"
 )
 
-// Valid configurations for each engine, matching the shipped .conf files.
-
-func validSimpleConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"heating_rate":  1.5,
-		"cooling_rate":  0.5,
-		"transfer_rate": 0.3,
-	}
-}
+// Hand-written valid configurations, one per engine, for the cases below that
+// need a config that passes validation. They are not copies of the shipped
+// .conf files - those are checked separately by TestShippedConfigsValidate.
 
 func validDifferentialConfig() map[string]interface{} {
 	return map[string]interface{}{
@@ -24,6 +18,8 @@ func validDifferentialConfig() map[string]interface{} {
 		keyHeatTransferCoefficient: 15.0,
 		keyKilnThermalMass:         70000.0,
 		keyMaterialThermalMass:     34000.0,
+		keySteamPower:              50.0,
+		keySteamCutoffTemp:         100.0,
 	}
 }
 
@@ -56,7 +52,6 @@ func validThermodynamicConfig() map[string]interface{} {
 
 func engineConfigs() map[string]func() map[string]interface{} {
 	return map[string]func() map[string]interface{}{
-		engineSimple:        validSimpleConfig,
 		engineDifferential:  validDifferentialConfig,
 		engineThermodynamic: validThermodynamicConfig,
 	}
@@ -203,7 +198,6 @@ func TestValidateConfigRejectsAMissingField(t *testing.T) {
 		engine string
 		config map[string]interface{}
 	}{
-		{engineSimple, map[string]interface{}{"heating_rate": 1.0, "cooling_rate": 1.0}},
 		{engineDifferential, map[string]interface{}{"heater_power": 2000.0}},
 		{engineThermodynamic, map[string]interface{}{sectionKiln: map[string]interface{}{}}},
 	}
@@ -217,8 +211,9 @@ func TestValidateConfigRejectsAMissingField(t *testing.T) {
 	}
 }
 
-// The shipped configs have to keep passing validation. time_step is injected by
-// the simulator from controlunit.tick_length, so it is added here the same way.
+// The shipped configs have to keep passing validation. time_step and
+// steam_cutoff_temp are injected by the simulator from halko.cfg, so they are
+// added here the same way.
 func TestShippedConfigsValidate(t *testing.T) {
 	entries, err := filepath.Glob(filepath.Join("..", "..", "simulator*.conf"))
 	if err != nil {
@@ -249,6 +244,8 @@ func TestShippedConfigsValidate(t *testing.T) {
 			if physics, ok := parsed.EngineConfig[sectionPhysics].(map[string]interface{}); ok {
 				physics[keyTimeStep] = 6.0
 			}
+			// Injected by the simulator from controlunit.defaults.steam_ceiling.
+			parsed.EngineConfig[keySteamCutoffTemp] = 100.0
 
 			if _, err := NewSimulationEngine(parsed.SimulationEngine, parsed.EngineConfig); err != nil {
 				t.Fatalf("%s no longer builds an engine: %v", path, err)
@@ -306,49 +303,6 @@ func TestEnginesHeatTheKilnWhenTheHeaterIsOn(t *testing.T) {
 				t.Fatalf("expected the kiln to warm from %v, got %v", start, state.KilnTemp)
 			}
 		})
-	}
-}
-
-func TestSimpleEngineTransfersHeatTowardsTheMaterial(t *testing.T) {
-	engine, err := NewSimulationEngine(engineSimple, validSimpleConfig())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	state := &SimulationState{KilnTemp: 60, MaterialTemp: 20, EnvironmentTemp: 20}
-	engine.Tick(state)
-
-	// transfer_rate is applied as a fixed step whenever the kiln is warmer.
-	if want := float32(20.3); state.MaterialTemp != want {
-		t.Fatalf("expected material at %v, got %v", want, state.MaterialTemp)
-	}
-}
-
-// Characterisation: the simple engine moves the material by a fixed
-// transfer_rate step rather than by a fraction of the gap, so a gap narrower
-// than the step overshoots instead of converging.
-func TestSimpleEngineOvershootsAGapNarrowerThanItsStep(t *testing.T) {
-	engine, err := NewSimulationEngine(engineSimple, validSimpleConfig())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Tick updates the kiln first: with the heater off it cools by 0.5 to 30.1,
-	// leaving a 0.1° gap above the material.
-	state := &SimulationState{KilnTemp: 30.6, MaterialTemp: 30.0, EnvironmentTemp: 20}
-	engine.Tick(state)
-
-	if !nearly(state.KilnTemp, 30.1) {
-		t.Fatalf("expected the kiln to cool to 30.1, got %v", state.KilnTemp)
-	}
-
-	// The material still moves a full 0.3° step and ends up above the kiln.
-	if !nearly(state.MaterialTemp, 30.3) {
-		t.Fatalf("expected the material at 30.3, got %v", state.MaterialTemp)
-	}
-	if state.MaterialTemp <= state.KilnTemp {
-		t.Fatalf("expected the material (%v) to overshoot the kiln (%v)",
-			state.MaterialTemp, state.KilnTemp)
 	}
 }
 

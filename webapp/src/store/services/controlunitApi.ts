@@ -11,11 +11,18 @@ export interface DeltaBand {
   max_delta: number;
 }
 
+export interface EqualizeDefaults {
+  delta: number;
+  steam_prewarm: boolean;
+  steam_prewarm_timeout: string;
+}
+
 export interface EngineDefaults {
   deltas: Record<string, DeltaBand>;
   fan_power: number;
   steam_power: number;
   max_target_temperature: number;
+  equalize: EqualizeDefaults;
 }
 
 export interface RunHistory {

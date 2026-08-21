@@ -12,7 +12,8 @@ const (
 	fsmStateNextProgramStep fsmState = "next_program_step"
 	fsmStateIdle            fsmState = "idle"
 	fsmStateWaiting         fsmState = "waiting"
-	fsmStatePreHeat         fsmState = "preheat"
+	fsmStateEqualize        fsmState = "equalize"
+	fsmStateSteamPrewarm    fsmState = "steam_prewarm"
 	fsmStateHeatUp          fsmState = "heat_up"
 	fsmStateAcclimate       fsmState = "acclimate"
 	fsmStateCoolDown        fsmState = "cool_down"
@@ -39,8 +40,21 @@ type (
 		fsm *programFSMController
 	}
 
-	preHeatStateHandler struct {
+	equalizeStateHandler struct {
 		fsm *programFSMController
+		// Upper bound on the kiln-material gap, taken from the first heating
+		// step's max delta rather than from the equalization band. See
+		// enterState.
+		upperBound float32
+	}
+
+	steamPrewarmStateHandler struct {
+		fsm *programFSMController
+		// Gap between kiln and material when the step began. The rise that
+		// proves the generator is producing is measured from here rather than
+		// from an absolute threshold, so the step stays meaningful whatever
+		// state it is entered in.
+		entryGap float32
 	}
 
 	heatUpStateHandler struct {
@@ -128,10 +142,10 @@ func (h *waitingStateHandler) executeState() fsmState {
 	sensorsValid := h.fsm.currentTemperatures.kilnValidAt >= h.fsm.started &&
 		h.fsm.currentTemperatures.materialValidAt >= h.fsm.started
 	if h.fsm.currentPSUStatus.updated >= h.fsm.started && sensorsValid {
-		log.Debug("FSM: waiting state - sensors ready (PSU: %s, Temp: %s), transitioning to preheat",
+		log.Debug("FSM: waiting state - sensors ready (PSU: %s, Temp: %s), transitioning to the first step",
 			time.Unix(h.fsm.currentPSUStatus.updated, 0).Format(time.RFC3339),
 			time.Unix(h.fsm.currentTemperatures.updated, 0).Format(time.RFC3339))
-		return fsmStatePreHeat
+		return fsmStateNextProgramStep
 	}
 	log.Trace("FSM: waiting state - waiting for sensors (PSU: %s >= %s: %v, Temp: %s >= %s: %v)",
 		time.Unix(h.fsm.currentPSUStatus.updated, 0).Format(time.RFC3339),
@@ -149,30 +163,119 @@ func (h *waitingStateHandler) enterState() {
 	log.Info("FSM: Entered waiting state - waiting for initial sensor data")
 }
 
-func (h *preHeatStateHandler) executeState() fsmState {
-	// If the material is warmer than the kiln, we start heating the kiln immediately
-	if h.fsm.currentTemperatures.reading.Kiln < h.fsm.currentTemperatures.reading.Material {
-		log.Trace("FSM: preheat state - kiln (%.1f°C) < material (%.1f°C), heating required",
-			h.fsm.currentTemperatures.reading.Kiln, h.fsm.currentTemperatures.reading.Material)
-		if h.fsm.psuStatus.reading.Heater.Percent == 0 {
-			log.Debug("FSM: preheat state - setting heater to 100%%")
-			h.fsm.psuController.setPower(psuOven, 100)
-		}
-		return fsmStatePreHeat
+// The equalization step holds until the kiln and the material are within the
+// program's band, so every program starts from a known state. It never adds
+// heat: a kiln above the band is cooled by exhausting warm air with the fan,
+// and a kiln below it is simply waited out - the wood is the larger thermal
+// mass and warms the air up to meet it.
+func (h *equalizeStateHandler) executeState() fsmState {
+	delta := *h.fsm.program.Equalize.Delta
+	kiln := h.fsm.currentTemperatures.reading.Kiln
+	material := h.fsm.currentTemperatures.reading.Material
+	gap := kiln - material
+
+	fan := uint8(0)
+	next := fsmStateNextProgramStep
+	switch {
+	case gap > h.upperBound:
+		log.Trace("FSM: equalize - kiln (%.1f°C) above material (%.1f°C) by more than %.1f°C, exhausting",
+			kiln, material, h.upperBound)
+		fan = 100
+		next = fsmStateEqualize
+	case gap < -delta:
+		log.Trace("FSM: equalize - kiln (%.1f°C) below material (%.1f°C) by more than %.1f°C, waiting for the wood to warm the air",
+			kiln, material, delta)
+		next = fsmStateEqualize
+	default:
+		log.Info("FSM: equalize - kiln (%.1f°C) and material (%.1f°C) within -%.1f°C..+%.1f°C, program may start",
+			kiln, material, delta, h.upperBound)
 	}
-	// Once the kiln is at the same or higher temperature than the material
-	// we can start the program
-	log.Debug("FSM: preheat state - kiln (%.1f°C) >= material (%.1f°C), ready to start program",
-		h.fsm.currentTemperatures.reading.Kiln, h.fsm.currentTemperatures.reading.Material)
-	return fsmStateNextProgramStep
+
+	// Every channel, every tick. The power unit's idle watchdog zeroes
+	// anything it has not been told about within max_idle_time.
+	h.fsm.psuController.setPower(psuFan, fan)
+	h.fsm.psuController.setPower(psuOven, 0)
+	h.fsm.psuController.setPower(psuSteam, 0)
+
+	return next
 }
 
-func (h *preHeatStateHandler) enterState() {
-	// For preheat we turn on the fan
+// The band is not symmetric. Below the material the equalization delta applies:
+// the wood has to warm the air up to meet it before the program has the known
+// start state it wants.
+//
+// Above the material the bound is the first heating step's *min* delta - the
+// bottom of the gap that step holds, and the point at which its controller
+// switches the heater on. Handing over there means the step begins by heating.
+// Handing over any higher does not save anything: the step would run the heater
+// up to its max delta first, then switch off and cool back down to the min,
+// which is the cooling this step would otherwise have done itself. Waiting for
+// the min delta reaches the same state without the detour.
+//
+// Validation guarantees the first authored step is a heating step under delta
+// control, so the search always finds one.
+func (h *equalizeStateHandler) enterState() {
 	h.fsm.stepStarted = time.Now().Unix()
-	power := *h.fsm.defaults.PreheatFanPower
-	log.Info("FSM: Entered preheat state - setting fan to %d%%", power)
-	h.fsm.psuController.setPower(psuFan, power)
+	for i := range h.fsm.program.ProgramSteps {
+		step := &h.fsm.program.ProgramSteps[i]
+		if step.StepType == types.StepTypeHeating {
+			h.upperBound = *step.Heater.MinDelta
+			break
+		}
+	}
+	log.Info("FSM: Entered equalize state - band -%.1f°C..+%.1f°C",
+		*h.fsm.program.Equalize.Delta, h.upperBound)
+}
+
+// The steam generator is a water reservoir with a heating element: it produces
+// nothing until it boils, several minutes in, and nothing measures it. This
+// step infers the moment it starts producing from the kiln reading. It runs
+// with the heater and the fan off, so the only thing that can drive the kiln
+// up on the material is the steam.
+//
+// The rise is measured from the gap the step was entered with, not from an
+// absolute threshold. Measuring it absolutely only worked while the preceding
+// equalization step guaranteed the two were within its band; a step that may
+// hand over anywhere would let this one pass on tick one without the generator
+// having produced anything, turning a health check into a formality.
+//
+// The step therefore hands over with the kiln a few degrees further above the
+// wood than it started. That is deliberate: the program's first step is a
+// heating step, which bands the kiln above the material anyway.
+func (h *steamPrewarmStateHandler) executeState() fsmState {
+	delta := *h.fsm.program.Equalize.Delta
+	kiln := h.fsm.currentTemperatures.reading.Kiln
+	material := h.fsm.currentTemperatures.reading.Material
+
+	// Every channel, every tick, so the power unit's idle watchdog cannot cut
+	// the steam out from under the step it is waiting on.
+	h.fsm.psuController.setPower(psuSteam, 100)
+	h.fsm.psuController.setPower(psuOven, 0)
+	h.fsm.psuController.setPower(psuFan, 0)
+
+	if kiln-material > h.entryGap+delta {
+		log.Info("FSM: steam warm-up - kiln (%.1f°C) has risen %.1f°C on the material (%.1f°C) since the step began, the generator is producing",
+			kiln, kiln-material-h.entryGap, material)
+		return fsmStateNextProgramStep
+	}
+
+	elapsed := time.Now().Unix() - h.fsm.stepStarted
+	if elapsed >= h.fsm.defaults.Equalize.SteamPrewarmTimeoutSeconds {
+		log.Error("FSM: steam warm-up - no %.1f°C rise on the material in %ds (limit %ds), the reservoir is empty or the element is dead - failing program",
+			delta, elapsed, h.fsm.defaults.Equalize.SteamPrewarmTimeoutSeconds)
+		return fsmStateFailed
+	}
+
+	log.Trace("FSM: steam warm-up - waiting for the generator (kiln %.1f°C, material %.1f°C, risen %.1f°C of %.1f°C, %ds / %ds)",
+		kiln, material, kiln-material-h.entryGap, delta, elapsed, h.fsm.defaults.Equalize.SteamPrewarmTimeoutSeconds)
+	return fsmStateSteamPrewarm
+}
+
+func (h *steamPrewarmStateHandler) enterState() {
+	h.fsm.stepStarted = time.Now().Unix()
+	h.entryGap = h.fsm.currentTemperatures.reading.Kiln - h.fsm.currentTemperatures.reading.Material
+	log.Info("FSM: Entered steam warm-up state - kiln starts %.1f°C on the material, waiting up to %ds for a %.1f°C rise",
+		h.entryGap, h.fsm.defaults.Equalize.SteamPrewarmTimeoutSeconds, *h.fsm.program.Equalize.Delta)
 }
 
 func (h *nextProgramStepHandler) executeState() fsmState {
@@ -339,9 +442,11 @@ func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStat
 		currentPSUStatus:    psuStatus,
 		currentTemperatures: temperatures,
 		stepToState: map[types.StepType]fsmState{
-			types.StepTypeHeating:   fsmStateHeatUp,
-			types.StepTypeAcclimate: fsmStateAcclimate,
-			types.StepTypeCooling:   fsmStateCoolDown,
+			types.StepTypeHeating:      fsmStateHeatUp,
+			types.StepTypeAcclimate:    fsmStateAcclimate,
+			types.StepTypeCooling:      fsmStateCoolDown,
+			types.StepTypeEqualize:     fsmStateEqualize,
+			types.StepTypeSteamPrewarm: fsmStateSteamPrewarm,
 		},
 		defaults: defaults,
 	}
@@ -350,7 +455,8 @@ func newProgramFSMController(psuController *psuController, psuStatus *fsmPSUStat
 		fsmStateNextProgramStep: &nextProgramStepHandler{fsm: controller},
 		fsmStateIdle:            &idleStateHandler{fsm: controller},
 		fsmStateWaiting:         &waitingStateHandler{fsm: controller},
-		fsmStatePreHeat:         &preHeatStateHandler{fsm: controller},
+		fsmStateEqualize:        &equalizeStateHandler{fsm: controller},
+		fsmStateSteamPrewarm:    &steamPrewarmStateHandler{fsm: controller},
 		fsmStateHeatUp:          &heatUpStateHandler{fsm: controller},
 		fsmStateAcclimate:       &acclimateStateHandler{fsm: controller},
 		fsmStateCoolDown:        &coolDownStateHandler{fsm: controller},
@@ -440,15 +546,7 @@ func (p *programFSMController) UpdateStatus(status *types.ExecutionStatus) {
 	case p.step >= 0 && p.step < p.numberOfSteps:
 		status.CurrentStep = p.program.ProgramSteps[p.step].Name
 	case p.step < 0:
-		// Differentiate between waiting and preheat states
-		switch p.state {
-		case fsmStateWaiting:
-			status.CurrentStep = "Waiting"
-		case fsmStatePreHeat:
-			status.CurrentStep = "Pre-Heat"
-		default:
-			status.CurrentStep = "Initializing"
-		}
+		status.CurrentStep = "Waiting"
 	default:
 		status.CurrentStep = "Completed"
 	}

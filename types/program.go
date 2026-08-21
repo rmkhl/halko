@@ -12,6 +12,11 @@ const (
 	StepTypeCooling   StepType = "cooling"
 	StepTypeAcclimate StepType = "acclimate"
 
+	// Startup step types. The control unit synthesizes these in front of a
+	// program's own steps; a program may not name them.
+	StepTypeEqualize     StepType = "equalize"
+	StepTypeSteamPrewarm StepType = "steam_prewarm"
+
 	PowerSettingTypeSimple PowerSettingType = "simple"
 	PowerSettingTypeDelta  PowerSettingType = "delta"
 )
@@ -31,6 +36,15 @@ type (
 		Power    *uint8           `json:"power,omitempty"`
 	}
 
+	// EqualizeSettings configures the startup steps the control unit runs
+	// before a program's own first step. Delta is the band within which the
+	// kiln and the material count as equal; SteamPrewarm asks for the steam
+	// generator to be brought up to boiling and proved before the run starts.
+	EqualizeSettings struct {
+		Delta        *float32 `json:"delta,omitempty"`
+		SteamPrewarm *bool    `json:"steam_prewarm,omitempty"`
+	}
+
 	ProgramStep struct {
 		Name              string            `json:"name"`
 		StepType          StepType          `json:"type"`
@@ -42,9 +56,10 @@ type (
 	}
 
 	Program struct {
-		ProgramName     string        `json:"name"`
-		ProgramSteps    []ProgramStep `json:"steps"`
-		DefaultsApplied bool          `json:"-"`
+		ProgramName     string            `json:"name"`
+		Equalize        *EqualizeSettings `json:"equalize,omitempty"`
+		ProgramSteps    []ProgramStep     `json:"steps"`
+		DefaultsApplied bool              `json:"-"`
 		// Captured from the defaults so Validate does not need them passed in.
 		maxTargetTemperature uint8
 		steamCeiling         uint8
@@ -148,6 +163,8 @@ func (p *ProgramStep) Validate(steamCeiling uint8) error {
 		return p.validateAcclimateStep(steamCeiling)
 	case StepTypeCooling:
 		return p.validateCoolingStep()
+	case StepTypeEqualize, StepTypeSteamPrewarm:
+		return errors.New("equalize and steam_prewarm steps are created by the control unit and cannot be part of a program")
 	default:
 		return errors.New("unknown step type")
 	}
@@ -295,14 +312,47 @@ func (p *Program) ApplyDefaults(defaults *Defaults) {
 		}
 	}
 
+	if p.Equalize == nil {
+		p.Equalize = &EqualizeSettings{}
+	}
+	if p.Equalize.Delta == nil {
+		p.Equalize.Delta = defaults.Equalize.Delta
+	}
+	if p.Equalize.SteamPrewarm == nil {
+		p.Equalize.SteamPrewarm = defaults.Equalize.SteamPrewarm
+	}
+
 	p.maxTargetTemperature = *defaults.MaxTargetTemperature
 	p.steamCeiling = *defaults.SteamCeiling
 	p.DefaultsApplied = true
 }
 
+// PrependStartupSteps puts the control unit's own startup steps in front of the
+// program's. They are synthesized rather than authored so that everything
+// downstream - the status endpoint, the execution log, the history record and
+// the webapp - sees ordinary steps instead of special-casing a hidden state.
+//
+// Call this only after Validate has passed. The authored program is what the
+// rules apply to; a synthesized equalize step in front of it would defeat
+// "first step must be a heating step".
+//
+// The steps carry no power settings: the FSM states that run them drive the
+// channels from the kiln/material delta, not from a PowerController.
+func (p *Program) PrependStartupSteps() {
+	startup := []ProgramStep{{Name: "Equalize", StepType: StepTypeEqualize}}
+	if *p.Equalize.SteamPrewarm {
+		startup = append(startup, ProgramStep{Name: "Steam warm-up", StepType: StepTypeSteamPrewarm})
+	}
+	p.ProgramSteps = append(startup, p.ProgramSteps...)
+}
+
 func (p *Program) Validate() error {
 	if !p.DefaultsApplied {
 		return errors.New("defaults must be applied before validation")
+	}
+
+	if *p.Equalize.Delta <= 0 {
+		return errors.New("equalize delta must be greater than zero")
 	}
 
 	for _, step := range p.ProgramSteps {

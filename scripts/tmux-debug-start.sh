@@ -10,9 +10,13 @@ HALKO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # Log levels: 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE
 LOGLEVEL=${LOGLEVEL:-3}
 
-# Simulator configuration (if empty, uses simulator.conf default)
-# Options: thermodynamic, differential, or any other simulator-*.conf file
-SIMULATOR=${SIMULATOR:-}
+# Simulator configuration, named for the job it does rather than the physics
+# engine behind it. Selects simulator-$SIMULATOR.conf.
+#   fast           - exaggerated kiln, a whole program in about 90 minutes (default)
+#   tuning         - coefficients fitted to a real run, for tuning programs
+#   equalize       - fast, but starting the kiln hot so equalization has work
+#   thermodynamic  - the detailed model
+SIMULATOR=${SIMULATOR:-fast}
 
 # Inject temperature sensor failures (any non-empty value enables it)
 FAIL_SENSORS=${FAIL_SENSORS:-}
@@ -30,19 +34,15 @@ fi
 
 # Build simulator command
 SIM_CMD="./bin/simulator -loglevel $LOGLEVEL"
-if [ -n "$SIMULATOR" ]; then
-    SIM_CONFIG="simulator-${SIMULATOR}.conf"
-    if [ ! -f "$SIM_CONFIG" ]; then
-        echo "ERROR: Simulator config file '$SIM_CONFIG' not found."
-        echo "Available configs:"
-        ls -1 simulator*.conf 2>/dev/null || echo "  (none found)"
-        exit 1
-    fi
-    SIM_CMD="$SIM_CMD -sim-config $SIM_CONFIG"
-    echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL, simulator=$SIMULATOR..."
-else
-    echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL..."
+SIM_CONFIG="simulator-${SIMULATOR}.conf"
+if [ ! -f "$SIM_CONFIG" ]; then
+    echo "ERROR: Simulator config file '$SIM_CONFIG' not found."
+    echo "Available configs:"
+    ls -1 simulator-*.conf 2>/dev/null || echo "  (none found)"
+    exit 1
 fi
+SIM_CMD="$SIM_CMD -sim-config $SIM_CONFIG"
+echo "Creating tmux session '$SESSION' with loglevel=$LOGLEVEL, simulator=$SIMULATOR..."
 
 if [ -n "$FAIL_SENSORS" ]; then
     SIM_CMD="$SIM_CMD -fail-sensors"
@@ -99,15 +99,14 @@ tmux new-window -t "$SESSION:" -n shell -c "$HALKO_DIR"
 echo "✓ Session '$SESSION' created with windows: simulator, powerunit, sensorunit, controlunit, dbusunit, webapp, shell"
 echo "  Log level: $LOGLEVEL (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG, 4=TRACE)"
 echo "  Log files: $LOG_DIR/<window>.log (overwritten on every start)"
-if [ -n "$SIMULATOR" ]; then
-    echo "  Simulator: $SIM_CONFIG"
-fi
+echo "  Simulator: $SIM_CONFIG"
 echo ""
 
 echo "To start with different settings:"
 echo "  LOGLEVEL=4 make tmux-debug-run                          # TRACE level"
 echo "  LOGLEVEL=2 make tmux-debug-run                          # INFO level"
-echo "  SIMULATOR=thermodynamic make tmux-debug-run             # Use thermodynamic model"
-echo "  LOGLEVEL=4 SIMULATOR=differential make tmux-debug-run   # Both options"
-echo "  make tmux-debug-fail-run                               # Inject sensor failures"
+echo "  SIMULATOR=tuning make tmux-debug-run                    # Fitted coefficients"
+echo "  SIMULATOR=equalize make tmux-debug-run                  # Kiln starts hot"
+echo "  LOGLEVEL=4 SIMULATOR=tuning make tmux-debug-run         # Both options"
+echo "  make tmux-debug-fail-run                                # Inject sensor failures"
 echo ""

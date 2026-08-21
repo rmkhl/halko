@@ -42,7 +42,10 @@ func describeConfig(config *types.HalkoConfig) string {
 	}
 	fmt.Fprintf(&b, "  fan_power                 %d%%\n", *d.FanPower)
 	fmt.Fprintf(&b, "  steam_power               %d%%\n", *d.SteamPower)
-	fmt.Fprintf(&b, "  preheat_fan_power         %d%%\n", *d.PreheatFanPower)
+	fmt.Fprintf(&b, "  equalize\n")
+	fmt.Fprintf(&b, "    delta                   %.1f°C\n", *d.Equalize.Delta)
+	fmt.Fprintf(&b, "    steam_prewarm           %t\n", *d.Equalize.SteamPrewarm)
+	fmt.Fprintf(&b, "    steam_prewarm_timeout   %s\n", d.Equalize.SteamPrewarmTimeout)
 	fmt.Fprintf(&b, "\nLimits and timings\n")
 	fmt.Fprintf(&b, "  max_target_temperature    %d°C\n", *d.MaxTargetTemperature)
 	fmt.Fprintf(&b, "  steam_ceiling             %d°C\n", *d.SteamCeiling)

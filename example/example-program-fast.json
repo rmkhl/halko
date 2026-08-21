@@ -1,0 +1,82 @@
+{
+  "name": "Fast simulation run",
+  "equalize": {
+    "delta": 2.0,
+    "steam_prewarm": true
+  },
+  "steps": [
+    {
+      "name": "Esilammitys",
+      "type": "heating",
+      "temperature_target": 100,
+      "heater": {
+        "type": "delta",
+        "min_delta": 5,
+        "max_delta": 10
+      },
+      "fan": {
+        "type": "simple",
+        "power": 100
+      },
+      "steam": {
+        "type": "delta",
+        "min_delta": 5,
+        "max_delta": 10
+      }
+    },
+    {
+      "name": "Lammitys",
+      "type": "heating",
+      "temperature_target": 120,
+      "heater": {
+        "type": "delta",
+        "min_delta": 5,
+        "max_delta": 10
+      },
+      "fan": {
+        "type": "simple",
+        "power": 100
+      },
+      "steam": {
+        "type": "simple",
+        "power": 100
+      }
+    },
+    {
+      "name": "Pito",
+      "type": "acclimate",
+      "temperature_target": 120,
+      "runtime": "30m0s",
+      "heater": {
+        "type": "delta",
+        "min_delta": -1,
+        "max_delta": 5
+      },
+      "fan": {
+        "type": "simple",
+        "power": 100
+      },
+      "steam": {
+        "type": "simple",
+        "power": 50
+      }
+    },
+    {
+      "name": "Jaahdyttely",
+      "type": "cooling",
+      "temperature_target": 110,
+      "heater": {
+        "type": "simple",
+        "power": 0
+      },
+      "fan": {
+        "type": "simple",
+        "power": 100
+      },
+      "steam": {
+        "type": "simple",
+        "power": 0
+      }
+    }
+  ]
+}
