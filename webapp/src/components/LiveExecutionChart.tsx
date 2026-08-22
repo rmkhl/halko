@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { ExecutionChart } from "./ExecutionChart";
 import { getApiEndpoints } from "../config/api";
+import { runStartedAt } from "../util/executionLog";
 import { useGetRunningProgramQuery } from "../store/services/controlunitApi";
 import { useGetTemperaturesQuery } from "../store/services/sensorsApi";
 import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../types/api";
@@ -32,6 +33,10 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
     pollingInterval: 5000,
     skipPollingIfUnfocused: true,
   });
+
+  const startedAt = runStartedAt(
+    (runningProgramData as RunningProgramResponse | undefined)?.data?.started_at
+  );
 
   // Calculate temperature range based on program targets and historical/current temps
   const temperatureRange = useMemo(() => {
@@ -288,6 +293,7 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
       isLoading={isLoading || (!csvData && isConnected)}
       isLive={true}
       temperatureRange={temperatureRange}
+      startedAt={startedAt}
     />
   );
 }

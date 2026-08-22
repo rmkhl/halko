@@ -14,7 +14,7 @@ import {
 } from "chart.js";
 import { ExecutedProgram } from "../store/services/controlunitApi";
 import { PowerSettings, Step, StepType } from "../types/api";
-import { LogRow, StepSegment, parseExecutionLog, segmentBySteps } from "./executionLog";
+import { LogRow, StepSegment, formatClock, parseExecutionLog, runStartedAt, segmentBySteps } from "./executionLog";
 
 // Registered separately from ExecutionChart.tsx's identical call (Chart.js
 // registration is idempotent) rather than importing "chart.js/auto": that
@@ -91,15 +91,18 @@ const describePower = (settings?: PowerSettings): string => {
 };
 
 // Renders a temperature-only line chart of the segment into an offscreen
-// canvas and returns it as a PNG data URL.
-const renderSegmentChart = (rows: LogRow[]): string => {
+// canvas and returns it as a PNG data URL. Without a start time for the run
+// the X-axis falls back to minutes elapsed since it started.
+const renderSegmentChart = (rows: LogRow[], startedAt?: number): string => {
   const canvas = document.createElement("canvas");
   canvas.width = CHART_WIDTH_PX;
   canvas.height = CHART_HEIGHT_PX;
   const chart = new Chart(canvas, {
     type: "line",
     data: {
-      labels: rows.map((row) => (row.time / 60).toFixed(1)),
+      labels: rows.map((row) =>
+        startedAt ? formatClock(startedAt + row.time) : (row.time / 60).toFixed(1)
+      ),
       datasets: [
         {
           label: "Material Temperature (°C)",
@@ -128,7 +131,7 @@ const renderSegmentChart = (rows: LogRow[]): string => {
       },
       scales: {
         x: {
-          title: { display: true, text: "Time (minutes)" },
+          title: { display: true, text: startedAt ? "Time" : "Time (minutes)" },
           ticks: { maxTicksLimit: 12 },
         },
         y: {
@@ -173,6 +176,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
   doc.text(input.runName.split("@")[0], margin, y);
   y += 10;
 
+  const startedAt = runStartedAt(input.executed?.started_at, input.runName);
   const runStart = rows[0].time;
   const runEnd = rows[rows.length - 1].time;
   const preparationSeconds = stepSegments[0].rows[0].time - runStart;
@@ -259,7 +263,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       doc.addPage();
       y = margin;
     }
-    doc.addImage(renderSegmentChart(segment.rows), "PNG", margin, y, contentWidth, chartHeight);
+    doc.addImage(renderSegmentChart(segment.rows, startedAt), "PNG", margin, y, contentWidth, chartHeight);
     y += chartHeight + 28;
   });
 
