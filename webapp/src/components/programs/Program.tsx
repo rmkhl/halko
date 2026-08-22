@@ -89,6 +89,16 @@ export const Program: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  // The programs query returns the raw API envelope, so unwrap it before
+  // anyone matches on the record's name.
+  const program = useMemo(() => {
+    if (!data) return undefined;
+    if (typeof data === 'object' && data !== null && 'data' in data) {
+      return (data as { data: ApiProgram }).data;
+    }
+    return data as ApiProgram;
+  }, [data]);
+
   // useFormData must be above any useMemo that uses nameUsed
   const {
     editing,
@@ -96,7 +106,7 @@ export const Program: React.FC = () => {
     handleCancel,
     handleSave,
   } = useFormData({
-    allData: data ? [data as ApiProgram] : [],
+    allData: program ? [program] : [],
     defaultData: emptyProgram(),
     editData: editProgram,
     rootPath: "/programs",
@@ -113,17 +123,6 @@ export const Program: React.FC = () => {
       navigate("/programs");
     }
   }, [isSuccess, dispatch, navigate]);
-
-  const program = useMemo(() => {
-    if (!data) return undefined;
-    if (typeof data === 'object' && data !== null && 'data' in data) {
-      return (data as { data: ApiProgram }).data;
-    }
-    return data as ApiProgram;
-  }, [data]);
-
-
-  // ...existing code...
 
   // Ensure editRecord is set from loaded program if missing or mismatched
   useEffect(() => {

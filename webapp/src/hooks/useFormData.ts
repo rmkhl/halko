@@ -55,8 +55,15 @@ export const useFormData = <T extends Named>(props: Props<T>) => {
     }
 
 
-    // Only reset if not already editing (mode !== 'edit') and editData is not set
-    if (editData || mode === 'edit') {
+    if (mode === "edit") {
+      return;
+    }
+
+    // The list view drops the record into the store before navigating here, so
+    // a populated editData is the normal way this route is entered, not a
+    // reason to stay in view mode - the editor has no view mode to stay in.
+    if (editData) {
+      setMode("edit");
       return;
     }
 

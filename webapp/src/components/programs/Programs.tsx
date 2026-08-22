@@ -1,9 +1,14 @@
 import React, { useState, useMemo } from "react";
 import { useGetProgramsQuery, useGetProgramQuery, useDeleteProgramMutation } from "../../store/services";
-import { useStartProgramMutation } from "../../store/services/controlunitApi";
+import {
+  useStartProgramMutation,
+  useGetDefaultsQuery,
+  EqualizeDefaults,
+} from "../../store/services/controlunitApi";
 import { useDispatch } from "react-redux";
 import { setEditProgram } from "../../store/features/programsSlice";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Typography,
@@ -43,6 +48,50 @@ const formatTimestamp = (timestamp: string): string => {
   return new Date(timestamp).toLocaleString();
 };
 
+// The startup settings live on the program rather than in its step list, so
+// they need showing in their own right - a run applies them whether or not the
+// program names them, falling back to the engine defaults when it does not.
+const StartupSummary: React.FC<{
+  equalize?: ApiProgram["equalize"];
+  defaults?: EqualizeDefaults;
+}> = ({ equalize, defaults }) => {
+  const { t } = useTranslation();
+
+  const delta = equalize?.delta ?? defaults?.delta;
+  const prewarm = equalize?.steam_prewarm ?? defaults?.steam_prewarm;
+
+  if (delta === undefined && prewarm === undefined) return null;
+
+  const suffix = (fromProgram: boolean) =>
+    fromProgram ? "" : ` ${t("programs.equalize.usingDefault")}`;
+
+  return (
+    <>
+      <Typography variant="h6" gutterBottom>
+        {t("programs.equalize.title")}
+      </Typography>
+      <Paper variant="outlined" sx={{ padding: 2, marginBottom: 3 }}>
+        {delta !== undefined && (
+          <Typography variant="body2" color="text.secondary">
+            {t("programs.equalize.valueDelta", { value: delta })}
+            {suffix(equalize?.delta !== undefined)}
+          </Typography>
+        )}
+        {prewarm !== undefined && (
+          <Typography variant="body2" color="text.secondary">
+            {t("programs.equalize.valuePrewarm", {
+              value: prewarm
+                ? t("programs.equalize.on")
+                : t("programs.equalize.off"),
+            })}
+            {suffix(equalize?.steam_prewarm !== undefined)}
+          </Typography>
+        )}
+      </Paper>
+    </>
+  );
+};
+
 const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
   if (!power) return "Default";
 
@@ -67,6 +116,7 @@ const formatPowerInfo = (power?: ApiProgram["steps"][0]["heater"]): string => {
 
 export const Programs: React.FC = () => {
   const [startProgram, { isLoading: isStarting }] = useStartProgramMutation();
+  const { data: engineDefaults } = useGetDefaultsQuery();
 
   const handleRun = async () => {
     if (!selectedProgramData) return;
@@ -370,6 +420,10 @@ export const Programs: React.FC = () => {
                 </Stack>
               </Box>
               <Divider sx={{ marginBottom: 2 }} />
+              <StartupSummary
+                equalize={selectedProgramData.equalize}
+                defaults={engineDefaults?.equalize}
+              />
               <Typography variant="h6" gutterBottom>
                 Steps ({selectedProgramData.steps?.length || 0})
               </Typography>
