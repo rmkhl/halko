@@ -716,3 +716,54 @@ func TestValidationSeesTheAuthoredProgram(t *testing.T) {
 		t.Fatal("a program starting with a cooling step was accepted")
 	}
 }
+
+// A description is operator-written text about the program, so it has to
+// survive the JSON round trip both the file storage and Duplicate rely on.
+// The assertions go through a map rather than the field so that they test what
+// is actually on the wire, which is what the webapp and halkoctl read.
+func TestProgramDescriptionSurvivesTheJSONRoundTrip(t *testing.T) {
+	const description = "Birch 50mm\nGentle schedule, run it after the pine"
+	stored := `{"name":"birch","description":"Birch 50mm\nGentle schedule, run it after the pine","steps":[]}`
+
+	var program Program
+	if err := json.Unmarshal([]byte(stored), &program); err != nil {
+		t.Fatalf("Failed to unmarshal program: %v", err)
+	}
+
+	duplicate, err := program.Duplicate()
+	if err != nil {
+		t.Fatalf("Failed to duplicate program: %v", err)
+	}
+
+	encoded, err := json.Marshal(duplicate)
+	if err != nil {
+		t.Fatalf("Failed to marshal program: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("Failed to decode the marshaled program: %v", err)
+	}
+
+	if decoded["description"] != description {
+		t.Errorf("description = %v, want %q", decoded["description"], description)
+	}
+}
+
+// Programs stored before descriptions existed carry no description, and
+// rewriting one must not add an empty key to its file.
+func TestProgramWithoutDescriptionOmitsTheKey(t *testing.T) {
+	encoded, err := json.Marshal(validProgram())
+	if err != nil {
+		t.Fatalf("Failed to marshal program: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("Failed to decode the marshaled program: %v", err)
+	}
+
+	if _, present := decoded["description"]; present {
+		t.Errorf("marshaled program carries a description key: %s", encoded)
+	}
+}

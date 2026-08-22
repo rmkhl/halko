@@ -36,6 +36,12 @@ export const en = {
     confirmStopTitle: "Confirm Stop",
     confirmStopBody:
       "Are you sure you want to stop the running program? The run will be marked as canceled and all power switched off. This cannot be undone.",
+    description: {
+      title: "Description",
+      label: "Description",
+      help:
+        "Free notes about this program - what charge it suits, why the steps are shaped the way they are. Shown wherever the program is, and kept with the run in its history.",
+    },
     equalize: {
       title: "Startup",
       delta: "Equalize delta (°C)",
