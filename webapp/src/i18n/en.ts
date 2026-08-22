@@ -41,10 +41,11 @@ export const en = {
       delta: "Equalize delta (°C)",
       deltaHelp:
         "How close the kiln and the material must be before the first step begins.",
-      deltaHelpDefault: "Leave empty to use the configured default of {{delta}} °C.",
       steamPrewarm: "Warm the steam generator before the run",
       steamPrewarmHelp:
         "Runs the steam generator until the kiln shows it has reached boiling. Fails the run if it never does.",
+      defaultsUnavailable:
+        "Could not load the engine defaults, so these fields start empty. Anything left unset falls back to the configured default when the run starts.",
     },
     steps: {
       ...common(),

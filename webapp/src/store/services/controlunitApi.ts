@@ -67,6 +67,10 @@ export const controlunitApi = createApi({
         method: "POST",
         body: JSON.stringify({
           name: p.name,
+          // The startup settings are part of the program, not of a step, so
+          // the per-step pruning below would otherwise drop them and leave the
+          // control unit falling back to the configured defaults.
+          ...(p.equalize !== undefined && { equalize: p.equalize }),
           steps: p.steps.map((s) => {
             // Only include fields present in the step, do not use defaults
             const step: Partial<Step> = {
