@@ -34,6 +34,10 @@ import CancelIcon from "@mui/icons-material/Cancel";
 const normalize = (program: ApiProgram): ApiProgram => {
   const cpy = { ...program };
   cpy.name = cpy.name.trim();
+  // Drop a description the operator has emptied rather than storing a blank
+  // one, so the saved program matches what a program that never had one looks
+  // like.
+  cpy.description = cpy.description?.trim() || undefined;
 
   return cpy;
 };
@@ -304,6 +308,24 @@ export const Program: React.FC = () => {
                   editing={editing}
                   name={editProgram?.name}
                   handleChange={updateName}
+                />
+              </Paper>
+            )}
+
+            {editing && (
+              <Paper variant="outlined" sx={{ padding: 2 }}>
+                <Typography variant="subtitle1" sx={{ marginBottom: 2, fontWeight: "bold" }}>
+                  {t("programs.description.title")}
+                </Typography>
+                <TextField
+                  label={t("programs.description.label")}
+                  helperText={t("programs.description.help")}
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  size="small"
+                  value={editProgram?.description ?? ""}
+                  onChange={(e) => updateEdited("description")(e.currentTarget.value)}
                 />
               </Paper>
             )}

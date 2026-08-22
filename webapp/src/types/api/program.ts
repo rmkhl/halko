@@ -26,6 +26,7 @@ export interface EqualizeSettings {
 
 export interface Program {
   name: string;
+  description?: string;
   equalize?: EqualizeSettings;
   steps: Step[];
 }

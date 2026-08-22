@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rmkhl/halko/types"
 )
@@ -139,17 +140,37 @@ func validateProgram(programPath string, verbose bool) error {
 		fmt.Println("✓ Program validation completed successfully")
 
 		fmt.Println()
-		fmt.Println("Program structure:")
-		fmt.Printf("  Name: %s\n", program.ProgramName)
-		fmt.Printf("  Steps: %d\n", len(program.ProgramSteps))
-		for i, step := range program.ProgramSteps {
-			fmt.Printf("    %d. %s (%s) - Target: %d°C\n",
-				i+1, step.Name, step.StepType, step.TargetTemperature)
-			if step.Runtime != nil {
-				fmt.Printf("       Runtime: %s\n", step.Runtime.String())
-			}
-		}
+		fmt.Print(describeProgram(&program))
 	}
 
 	return nil
+}
+
+// describeProgram renders what a program actually contains, for `validate
+// --verbose`. The description is operator-written and may run to several
+// lines, so its continuation lines are indented under the first.
+func describeProgram(program *types.Program) string {
+	var out strings.Builder
+
+	out.WriteString("Program structure:\n")
+	fmt.Fprintf(&out, "  Name: %s\n", program.ProgramName)
+	if program.Description != "" {
+		for i, line := range strings.Split(program.Description, "\n") {
+			if i == 0 {
+				fmt.Fprintf(&out, "  Description: %s\n", line)
+				continue
+			}
+			fmt.Fprintf(&out, "               %s\n", line)
+		}
+	}
+	fmt.Fprintf(&out, "  Steps: %d\n", len(program.ProgramSteps))
+	for i, step := range program.ProgramSteps {
+		fmt.Fprintf(&out, "    %d. %s (%s) - Target: %d°C\n",
+			i+1, step.Name, step.StepType, step.TargetTemperature)
+		if step.Runtime != nil {
+			fmt.Fprintf(&out, "       Runtime: %s\n", step.Runtime.String())
+		}
+	}
+
+	return out.String()
 }

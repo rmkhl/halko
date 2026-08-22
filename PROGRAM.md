@@ -11,6 +11,7 @@ A kiln drying program is defined as a JSON file with the following structure:
 ```jsonc
 {
   "name": "Program Name",
+  "description": "Optional free text about the program",
   "steps": [
     {
       "name": "Step Name",
@@ -24,6 +25,12 @@ A kiln drying program is defined as a JSON file with the following structure:
   ]
 }
 ```
+
+The optional `description` is free text the operator writes about the program —
+what charge it suits, why the steps are shaped the way they are. Nothing in the
+system interprets it: it is carried into a run and its history alongside the
+program, and shown in the program list, the `validate --verbose` output and the
+PDF run report. Programs without one are unaffected.
 
 ## Step Types
 

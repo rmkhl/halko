@@ -420,6 +420,15 @@ export const Programs: React.FC = () => {
                 </Stack>
               </Box>
               <Divider sx={{ marginBottom: 2 }} />
+              {selectedProgramData.description && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ whiteSpace: "pre-wrap", marginBottom: 3 }}
+                >
+                  {selectedProgramData.description}
+                </Typography>
+              )}
               <StartupSummary
                 equalize={selectedProgramData.equalize}
                 defaults={engineDefaults?.equalize}

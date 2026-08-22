@@ -188,6 +188,7 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
     styles: { fontSize: 10, cellPadding: 2 },
     body: [
       ["Run", input.runName],
+      ...(program?.description ? [["Description", program.description]] : []),
       ["State", input.executed?.state ?? "unknown"],
       ["Started", formatTimestamp(input.executed?.started_at)],
       ["Ended", formatTimestamp(input.executed?.completed_at)],

@@ -56,7 +56,12 @@ type (
 	}
 
 	Program struct {
-		ProgramName     string            `json:"name"`
+		ProgramName string `json:"name"`
+		// Description is free text the operator writes about the program -
+		// what charge it suits, why the steps are shaped the way they are. It
+		// is carried along with the program into a run and its history so the
+		// note is still there when the run is looked at later.
+		Description     string            `json:"description,omitempty"`
 		Equalize        *EqualizeSettings `json:"equalize,omitempty"`
 		ProgramSteps    []ProgramStep     `json:"steps"`
 		DefaultsApplied bool              `json:"-"`
