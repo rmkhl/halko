@@ -108,6 +108,7 @@ inside a container (distrobox/toolbox) where the host bus is exposed at:
     "base_path": "/var/opt/halko",
     "tick_length": "6s",
     "network_interface": "enp0s3",  // ← Change to your interface
+    "kiln_sensor_strategy": "higher",
     "defaults": { /* ... */ }
   },
   "power_unit": {
@@ -132,6 +133,7 @@ inside a container (distrobox/toolbox) where the host bus is exposed at:
     "base_path": "/var/opt/halko",
     "tick_length": "6s",
     "network_interface": "wlan0",  // WiFi for display IP
+    "kiln_sensor_strategy": "higher",
     "defaults": { /* ... */ }
   },
   "power_unit": {

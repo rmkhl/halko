@@ -148,7 +148,8 @@ func (runner *programRunner) Run() {
 		case temperatures := <-runner.temperatureSensorResponses:
 			now := time.Now().Unix()
 			runner.temperatureStatus.updated = now
-			runner.temperatureStatus.observe(temperatures, now)
+			runner.temperatureStatus.observe(temperatures, now,
+				runner.halkoConfig.ControlUnitConfig.KilnSensorStrategy)
 		}
 		runner.fsmController.UpdateStatus(runner.programStatus)
 

@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { useGetTemperaturesQuery } from "../../store/services/sensorsApi";
 import { useGetPowerStatusQuery } from "../../store/services/powerunitApi";
 import { blockActivationKeys, celsius } from "../../util";
-import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../../types/api";
+import { RunningProgramResponse, SensorTemperatures, APIResponse, Step } from "../../types/api";
 import { AddNoteButton } from "../notes/AddNoteButton";
 
 // Format duration in seconds to human-readable string
@@ -92,7 +92,7 @@ export const RunningProgram: React.FC = () => {
 
   const temperatures = useMemo(() => {
     return sensorData
-      ? (sensorData as APIResponse<Omit<TemperatureStatus, "delta">>)
+      ? (sensorData as APIResponse<SensorTemperatures>)
       : undefined;
   }, [sensorData]);
 
@@ -101,8 +101,12 @@ export const RunningProgram: React.FC = () => {
       {temperatures && (
         <Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
-            <Typography>{t("sensors.kiln")}:</Typography>
-            <Typography>{celsius(temperatures.data.kiln)}</Typography>
+            <Typography>{t("sensors.kilnPrimary")}:</Typography>
+            <Typography>{celsius(temperatures.data.kiln_primary)}</Typography>
+          </Stack>
+          <Stack direction="row" justifyContent="space-between" gap={2}>
+            <Typography>{t("sensors.kilnSecondary")}:</Typography>
+            <Typography>{celsius(temperatures.data.kiln_secondary)}</Typography>
           </Stack>
           <Stack direction="row" justifyContent="space-between" gap={2}>
             <Typography>{t("sensors.material")}:</Typography>

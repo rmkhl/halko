@@ -83,6 +83,8 @@ export const en = {
   sensors: {
     material: "Material",
     kiln: "Kiln",
+    kilnPrimary: "Kiln 1",
+    kilnSecondary: "Kiln 2",
   },
   system: {
     title: "System Status",

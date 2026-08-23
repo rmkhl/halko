@@ -28,6 +28,7 @@ const shellyTestConfig = `{
     "base_path": "%s",
     "tick_length": "%s",
     "network_interface": "enp4s0",
+    "kiln_sensor_strategy": "higher",
     "defaults": {
       "deltas": {
         "heating": {"min_delta": 5.0, "max_delta": 10.0},

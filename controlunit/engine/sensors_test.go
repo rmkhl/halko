@@ -37,7 +37,7 @@ func temperatureServer(t *testing.T, gate <-chan struct{}) *httptest.Server {
 			<-gate
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+		_, _ = w.Write([]byte(`{"data":{"kiln_primary":28.5,"kiln_secondary":29.0,"material":22.25}}`))
 	}))
 	t.Cleanup(server.Close)
 	return server
@@ -72,10 +72,10 @@ func TestReadSensorsMapsEachDeviceToItsOwnReading(t *testing.T) {
 	}
 }
 
-func TestReadTemperaturesMapsKilnAndMaterial(t *testing.T) {
+func TestReadTemperaturesMapsBothKilnSensorsAndMaterial(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+		_, _ = w.Write([]byte(`{"data":{"kiln_primary":28.5,"kiln_secondary":29.0,"material":22.25}}`))
 	}))
 	defer server.Close()
 
@@ -88,8 +88,13 @@ func TestReadTemperaturesMapsKilnAndMaterial(t *testing.T) {
 		t.Fatalf("readTemperatures() returned error: %v", err)
 	}
 
-	if readings.Kiln != 28.5 {
-		t.Errorf("Kiln = %v, want 28.5", readings.Kiln)
+	// The reader reports what the sensors said and resolves nothing; Kiln is
+	// filled in later, by observe.
+	if readings.KilnPrimary != 28.5 {
+		t.Errorf("KilnPrimary = %v, want 28.5", readings.KilnPrimary)
+	}
+	if readings.KilnSecondary != 29.0 {
+		t.Errorf("KilnSecondary = %v, want 29.0", readings.KilnSecondary)
 	}
 	if readings.Material != 22.25 {
 		t.Errorf("Material = %v, want 22.25", readings.Material)
@@ -197,7 +202,7 @@ func TestReadTemperaturesFetchesDieReadingsFromTheirOwnEndpoint(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+		_, _ = w.Write([]byte(`{"data":{"kiln_primary":28.5,"kiln_secondary":29.0,"material":22.25}}`))
 	}))
 	defer server.Close()
 
@@ -232,7 +237,7 @@ func TestReadTemperaturesSurvivesAFailingDieEndpoint(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"kiln":28.5,"material":22.25}}`))
+		_, _ = w.Write([]byte(`{"data":{"kiln_primary":28.5,"kiln_secondary":29.0,"material":22.25}}`))
 	}))
 	defer server.Close()
 
@@ -246,8 +251,9 @@ func TestReadTemperaturesSurvivesAFailingDieEndpoint(t *testing.T) {
 		t.Fatalf("readTemperatures() returned error: %v", err)
 	}
 
-	if readings.Kiln != 28.5 || readings.Material != 22.25 {
-		t.Errorf("kiln/material = %v/%v, want 28.5/22.25", readings.Kiln, readings.Material)
+	if readings.KilnPrimary != 28.5 || readings.KilnSecondary != 29.0 || readings.Material != 22.25 {
+		t.Errorf("kiln primary/secondary/material = %v/%v/%v, want 28.5/29.0/22.25",
+			readings.KilnPrimary, readings.KilnSecondary, readings.Material)
 	}
 	if readings.MaterialDie != types.InvalidTemperatureReading {
 		t.Errorf("MaterialDie = %v, want the invalid sentinel", readings.MaterialDie)

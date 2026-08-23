@@ -67,7 +67,8 @@ Fetches current temperature readings from all sensors.
 ```json
 {
   "data": {
-    "kiln": 45.2,
+    "kiln_primary": 45.2,
+    "kiln_secondary": 45.8,
     "material": 32.1
   }
 }
@@ -75,8 +76,15 @@ Fetches current temperature readings from all sensors.
 
 The response includes:
 
-- `kiln`: The highest of the two kiln temperature sensors, or a single kiln temperature if one sensor is unavailable
+- `kiln_primary`, `kiln_secondary`: the two kiln sensors, as they read
 - `material`: The current material (wood) temperature
+
+Both kiln readings are reported unresolved. The SensorUnit does not choose
+between them: the ControlUnit resolves them according to
+`controlunit.kiln_sensor_strategy` (`lower`, `higher` or `average`), falling
+back to whichever sensor is still valid when the other fails. A probe the
+device did not report reads as the invalid sentinel (-273.15), never as zero
+degrees.
 
 #### GET `/temperatures/die`
 
@@ -513,7 +521,9 @@ When a program is running:
     "current_step_started_at": 1734007890,
     "temperatures": {
       "material": 42.5,
-      "kiln": 45.2
+      "kiln": 45.2,
+      "kiln_primary": 45.2,
+      "kiln_secondary": 44.9
     },
     "power_status": {
       "heater": 75,
@@ -523,6 +533,10 @@ When a program is running:
   }
 }
 ```
+
+`kiln_primary` and `kiln_secondary` are the two sensors as they read; `kiln` is
+what the ControlUnit resolved from them and acted on, per
+`controlunit.kiln_sensor_strategy`.
 
 **Response Fields:**
 
@@ -761,6 +775,8 @@ Records a note against the running program.
     "temperatures": {
       "material": 42.5,
       "kiln": 55.0,
+      "kiln_primary": 55.0,
+      "kiln_secondary": 54.6,
       "material_die": 24.1,
       "kiln_primary_die": 24.3,
       "kiln_secondary_die": 24.2

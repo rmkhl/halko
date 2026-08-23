@@ -49,9 +49,13 @@ func TestExecutionLogWritesItsHeaderOnCreation(t *testing.T) {
 		t.Fatalf("expected only a header row, got %d rows", len(rows))
 	}
 
+	// The exact on-disk order, pinned deliberately. New columns are appended,
+	// never inserted, so that histories written before them keep parsing: the
+	// webapp reads this CSV by position.
 	want := []string{
 		"time", "step", "steptime", "material", "kiln", "heater", "fan", "steam",
 		"material_die", "kiln_primary_die", "kiln_secondary_die",
+		"kiln_primary", "kiln_secondary",
 	}
 	if len(rows[0]) != len(want) {
 		t.Fatalf("expected %d columns, got %v", len(want), rows[0])

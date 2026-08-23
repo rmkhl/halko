@@ -166,14 +166,35 @@ const renderSegmentChart = (rows: LogRow[], startedAt?: number): string => {
           pointRadius: 2,
           tension: 0.3,
         },
-        {
-          label: "Kiln Temperature (°C)",
-          data: rows.map((row) => row.kiln),
-          borderColor: "rgb(255, 159, 64)",
-          backgroundColor: "rgba(255, 159, 64, 0.5)",
-          pointRadius: 2,
-          tension: 0.3,
-        },
+        ...(rows.some((row) => row.kilnPrimary !== undefined)
+          ? [
+              {
+                label: "Kiln 1 Temperature (°C)",
+                data: rows.map((row) => row.kilnPrimary ?? null),
+                borderColor: "rgb(255, 159, 64)",
+                backgroundColor: "rgba(255, 159, 64, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+              {
+                label: "Kiln 2 Temperature (°C)",
+                data: rows.map((row) => row.kilnSecondary ?? null),
+                borderColor: "rgb(153, 102, 255)",
+                backgroundColor: "rgba(153, 102, 255, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+            ]
+          : [
+              {
+                label: "Kiln Temperature (°C)",
+                data: rows.map((row) => row.kiln),
+                borderColor: "rgb(255, 159, 64)",
+                backgroundColor: "rgba(255, 159, 64, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+            ]),
       ],
     },
     options: {
@@ -299,7 +320,12 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
 
     const first = segment.rows[0];
     const last = segment.rows[segment.rows.length - 1];
+    // Same rule as the charts: a run that recorded both sensors is reported
+    // per sensor, one that did not keeps its single kiln figures.
+    const hasSensorPair = segment.rows.some((row) => row.kilnPrimary !== undefined);
     const kilns = segment.rows.map((row) => row.kiln);
+    const primaries = segment.rows.map((row) => row.kilnPrimary ?? row.kiln);
+    const secondaries = segment.rows.map((row) => row.kilnSecondary ?? row.kiln);
     const materials = segment.rows.map((row) => row.material);
     const fmt = (value: number) => value.toFixed(1);
 
@@ -311,7 +337,9 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       head: [[
         "Duration",
         "Kiln start -> end (°C)",
-        "Kiln min - max (°C)",
+        ...(hasSensorPair
+          ? ["Kiln 1 min - max (°C)", "Kiln 2 min - max (°C)"]
+          : ["Kiln min - max (°C)"]),
         "Material start -> end (°C)",
         "Material min - max (°C)",
         "Avg heater/fan/hum (%)",
@@ -319,7 +347,12 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       body: [[
         formatDuration(last.time - first.time),
         `${fmt(first.kiln)} -> ${fmt(last.kiln)}`,
-        `${fmt(Math.min(...kilns))} - ${fmt(Math.max(...kilns))}`,
+        ...(hasSensorPair
+          ? [
+              `${fmt(Math.min(...primaries))} - ${fmt(Math.max(...primaries))}`,
+              `${fmt(Math.min(...secondaries))} - ${fmt(Math.max(...secondaries))}`,
+            ]
+          : [`${fmt(Math.min(...kilns))} - ${fmt(Math.max(...kilns))}`]),
         `${fmt(first.material)} -> ${fmt(last.material)}`,
         `${fmt(Math.min(...materials))} - ${fmt(Math.max(...materials))}`,
         [

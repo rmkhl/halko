@@ -47,35 +47,10 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Debug("Retrieved %d temperature readings from sensor unit (attempt %d/%d)", len(temperatures), attempt, maxAttempts)
 
-		response := make(types.TemperatureResponse)
-		// A reading the device did not report must not read as 0 degrees.
-		kilnPrimary := float32(types.InvalidTemperatureReading)
-		kilnSecondary := float32(types.InvalidTemperatureReading)
-
-		// Cold junction values ride along on the same read but stay out of
-		// this response: they are diagnostics about the measurement, not
-		// temperatures the system controls on. They are kept per chip rather
-		// than folded into one value because whether they moved together is
-		// what says a shift is the board and not the kiln.
-		dies := make(types.TemperatureResponse, dieSensorCount)
-
-		for _, temp := range temperatures {
-			switch temp.Name {
-			case "KilnPrimary":
-				kilnPrimary = temp.Value
-			case "KilnSecondary":
-				kilnSecondary = temp.Value
-			case "Wood":
-				response["material"] = temp.Value
-			case "KilnPrimaryDie":
-				dies["kiln_primary_die"] = temp.Value
-			case "KilnSecondaryDie":
-				dies["kiln_secondary_die"] = temp.Value
-			case "WoodDie":
-				dies["material_die"] = temp.Value
-			}
-		}
+		response, dies := temperatureResponseFrom(temperatures)
 		api.storeDieReadings(dies)
+		kilnPrimary := response["kiln_primary"]
+		kilnSecondary := response["kiln_secondary"]
 
 		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C, dies %.2f/%.2f/%.2f°C",
 			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"],
@@ -103,18 +78,68 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		default:
 			api.updateKilnStatus(kilnSensorBothInvalid)
 		}
-		response["kiln"] = api.selectKilnTemperature(kilnPrimary, kilnSecondary)
 		api.updateMaterialStatus(response["material"] != types.InvalidTemperatureReading)
 
-		log.Debug("Temperature selection complete: kiln=%.1f°C, material=%.1f°C",
-			response["kiln"], response["material"])
-
-		log.Debug("Returning temperature data: kiln=%.1f°C, material=%.1f°C", response["kiln"], response["material"])
+		log.Debug("Returning temperature data: kiln primary=%.1f°C, secondary=%.1f°C, material=%.1f°C",
+			response["kiln_primary"], response["kiln_secondary"], response["material"])
 		writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
 			Data: response,
 		})
 		return
 	}
+}
+
+// The probe names as the device reports them. They are the wire contract with
+// the firmware, so they live in one place rather than being spelled out at
+// each use.
+const (
+	probeKilnPrimary      = "KilnPrimary"
+	probeKilnSecondary    = "KilnSecondary"
+	probeWood             = "Wood"
+	probeKilnPrimaryDie   = "KilnPrimaryDie"
+	probeKilnSecondaryDie = "KilnSecondaryDie"
+	probeWoodDie          = "WoodDie"
+)
+
+// temperatureResponseFrom turns one device read into the two maps this service
+// serves: the temperatures, and the cold junctions the die endpoint answers
+// from. A probe the device did not report reads as the invalid sentinel, never
+// as zero degrees.
+//
+// Both kiln readings are reported unresolved. Which one the controller acts on
+// is configured in the control unit; this service's job is to say what the
+// probes read.
+//
+// The cold junctions stay out of the temperature response: they are diagnostics
+// about the measurement, not temperatures the system controls on. They are kept
+// per chip rather than folded into one value because whether they moved
+// together is what says a shift is the board and not the kiln.
+func temperatureResponseFrom(readings []serial.Temperature) (types.TemperatureResponse, types.TemperatureResponse) {
+	response := types.TemperatureResponse{
+		"kiln_primary":   types.InvalidTemperatureReading,
+		"kiln_secondary": types.InvalidTemperatureReading,
+		"material":       types.InvalidTemperatureReading,
+	}
+	dies := make(types.TemperatureResponse, dieSensorCount)
+
+	for _, reading := range readings {
+		switch reading.Name {
+		case probeKilnPrimary:
+			response["kiln_primary"] = reading.Value
+		case probeKilnSecondary:
+			response["kiln_secondary"] = reading.Value
+		case probeWood:
+			response["material"] = reading.Value
+		case probeKilnPrimaryDie:
+			dies["kiln_primary_die"] = reading.Value
+		case probeKilnSecondaryDie:
+			dies["kiln_secondary_die"] = reading.Value
+		case probeWoodDie:
+			dies["material_die"] = reading.Value
+		}
+	}
+
+	return response, dies
 }
 
 // dieSensorCount is how many cold junctions the unit reports, one per chip.
