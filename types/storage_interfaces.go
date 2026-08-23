@@ -9,6 +9,7 @@ type ExecutionStorage interface {
 	LoadState(programName string) (ProgramState, int64, error)
 	GetLogPath(programName string) (string, error)
 	GetRunningLogPath(programName string) (string, error)
+	LoadRunNotes(programName string) ([]RunNote, error)
 
 	// System resource operations
 	GetAvailableSpaceMB() int64

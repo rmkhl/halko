@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/rmkhl/halko/controlunit/heartbeat"
 	"github.com/rmkhl/halko/controlunit/storagefs"
@@ -122,4 +123,50 @@ func (engine *ControlEngine) StopEngine() error {
 
 func (engine *ControlEngine) Wait() {
 	engine.wg.Wait()
+}
+
+// AddRunNote records an operator's observation against the run in progress.
+// The caller supplies only the text: the time, the step and the temperatures
+// are stamped here from the run's own status, so a note cannot claim a moment
+// or a reading that was not true when it was taken.
+//
+// The run's name never leaves this method. It is a storage key, and publishing
+// it would freeze the "<program>@<RFC3339>" format into the API.
+//
+// The read lock is held across the file write on purpose: every other reader
+// takes a read lock too and is unaffected, and the notes writer never reaches
+// back for engine.mu, so there is no inversion to deadlock on.
+func (engine *ControlEngine) AddRunNote(text string) (*types.RunNote, error) {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
+
+	if engine.runner == nil {
+		return nil, ErrNoProgramRunning
+	}
+
+	status := engine.runner.programStatus
+	note := types.RunNote{
+		Time: time.Now().Unix(),
+		Text: text,
+	}
+	if status != nil {
+		note.Step = status.CurrentStep
+		note.Temperatures = status.Temperatures
+	}
+
+	if err := engine.runner.notesWriter.Add(note); err != nil {
+		return nil, err
+	}
+	return &note, nil
+}
+
+// RunNotes returns the notes taken during the run in progress.
+func (engine *ControlEngine) RunNotes() ([]types.RunNote, error) {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
+
+	if engine.runner == nil {
+		return nil, ErrNoProgramRunning
+	}
+	return engine.runner.notesWriter.Notes(), nil
 }

@@ -36,6 +36,7 @@ type (
 		programStatus    *types.ExecutionStatus
 		statusWriter     *storagefs.StateWriter
 		logWriter        *storagefs.ExecutionLogWriter
+		notesWriter      *storagefs.NotesWriter
 		previousStep     string
 		heartbeatManager *heartbeat.Manager
 		programName      string
@@ -106,6 +107,7 @@ func newProgramRunner(halkoConfig *types.HalkoConfig, programStorage *storagefs.
 	startTime := time.Now().Unix()
 	runner.logWriter = storagefs.NewExecutionLogWriter(programStorage, programName,
 		runner.defaults.ExecutionLogIntervalSeconds, startTime)
+	runner.notesWriter = storagefs.NewNotesWriter(programStorage, programName)
 	return &runner, nil
 }
 
@@ -172,6 +174,12 @@ func (runner *programRunner) Run() {
 
 	// Reset display to idle
 	runner.heartbeatManager.SetDisplayMessage(heartbeat.DisplayIdle)
+
+	// Close the notes before the files move. Between the move and the engine
+	// clearing its runner, a note request still sees a live run; a writer that
+	// still accepted would recreate running/<run>.notes after the move and
+	// strand it there.
+	runner.notesWriter.Close()
 
 	// Move files from running to history
 	runner.statusWriter.MarkCompleted()

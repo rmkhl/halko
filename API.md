@@ -734,15 +734,67 @@ Gets the default program settings configured in the ControlUnit.
 
 **Usage:** These defaults are automatically applied to programs that don't specify complete power control settings for all steps.
 
+### Run Notes
+
+Notes are operator observations recorded **while a run is in progress**. The
+ControlUnit stamps each one with the time, the step that was running and the
+temperatures at that moment; the client sends only text. Notes cannot be
+edited, deleted, or added to a run that has already finished.
+
+### POST `/engine/running/notes`
+
+Records a note against the running program.
+
+**Request Format:**
+
+```json
+{ "text": "opened the door to move a stack" }
+```
+
+**Response Format (201):**
+
+```json
+{
+  "data": {
+    "time": 1755939600,
+    "step": "Lammitys",
+    "temperatures": {
+      "material": 42.5,
+      "kiln": 55.0,
+      "material_die": 24.1,
+      "kiln_primary_die": 24.3,
+      "kiln_secondary_die": 24.2
+    },
+    "text": "opened the door to move a stack"
+  }
+}
+```
+
+**Errors:**
+
+- `400` - the body is not JSON, or the text is empty
+- `404` - no program is running, or the run ended before the note was written
+
+### GET `/engine/running/notes`
+
+The running program's notes, oldest first. Returns `204 No Content` when no
+program is running.
+
+### GET `/engine/history/{name}/notes`
+
+A finished run's notes, oldest first. Returns `200` with an empty array for a
+run that was never annotated, and `400` for an invalid run name.
+
 ### File-Based Storage
 
 The ControlUnit maintains a file-based storage system with the following structure:
 
 - `{base_path}/programs/` - Stored program templates (managed via `/programs` endpoints)
-- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log)
+- `{base_path}/running/` - Active program execution files (JSON + TXT status + CSV log + `.notes`)
 - `{base_path}/history/` - Completed program executions (JSON)
 - `{base_path}/history/logs/` - Completed execution logs (CSV)
 - `{base_path}/history/status/` - Completed program status files (TXT)
+- `{base_path}/history/notes/` - Notes taken during the run (JSON)
 
 **Automatic File Management:**
 
