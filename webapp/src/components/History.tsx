@@ -16,7 +16,9 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation, useLazyGetRunQuery } from "../store/services/controlunitApi";
+import { useGetExecutionHistoryQuery, useGetExecutionLogQuery, useDeleteExecutionMutation, useLazyGetRunQuery, useGetRunNotesQuery, useLazyGetRunNotesQuery } from "../store/services/controlunitApi";
+import { useTranslation } from "react-i18next";
+import { NotesList } from "./notes/NotesList";
 import { runStartedAt } from "../util/executionLog";
 import { generateRunReportPdf, NoStepDataError } from "../util/runReportPdf";
 import { ExecutionChart } from "./ExecutionChart";
@@ -40,8 +42,14 @@ const getStateColor = (state: string): "success" | "error" | "warning" | "defaul
 };
 
 export const History: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const { data: history, isLoading, error } = useGetExecutionHistoryQuery();
+  // Fetched per selection rather than per row: a count badge on the list would
+  // mean fetching every run's notes just to draw the list.
+  const { data: runNotes } = useGetRunNotesQuery(selectedProgram || "", {
+    skip: !selectedProgram,
+  });
   const { data: logData, isLoading: isLoadingLog } = useGetExecutionLogQuery(selectedProgram || "", {
     skip: !selectedProgram,
   });
@@ -52,6 +60,7 @@ export const History: React.FC = () => {
   );
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [fetchRun] = useLazyGetRunQuery();
+  const [fetchNotes] = useLazyGetRunNotesQuery();
 
   const handleDownloadCsv = () => {
     if (!selectedProgram || !logData) return;
@@ -71,10 +80,14 @@ export const History: React.FC = () => {
       // If this fails, executed stays undefined and the report is
       // generated without the program appendix.
       const { data: executed } = await fetchRun(selectedProgram);
+      // Same tolerance as the executed program: a report without the notes
+      // beats no report at all.
+      const { data: notes } = await fetchNotes(selectedProgram);
       const doc = generateRunReportPdf({
         runName: selectedProgram,
         csv: logData,
         executed,
+        notes,
       });
       doc.save(`${selectedProgram}.pdf`);
     } catch (error) {
@@ -203,6 +216,7 @@ export const History: React.FC = () => {
       {/* Right panel - Chart */}
       <Box sx={{ flexGrow: 1, overflow: "auto" }}>
         {selectedProgram ? (
+          <>
           <ExecutionChart
             csvData={logData}
             title={`${selectedProgram.split("@")[0]} - Execution Chart`}
@@ -225,6 +239,13 @@ export const History: React.FC = () => {
               ) : undefined
             }
           />
+          <Paper sx={{ padding: 2, marginTop: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              {t("notes.title")}
+            </Typography>
+            <NotesList notes={runNotes} />
+          </Paper>
+          </>
         ) : (
           <Paper
             sx={{

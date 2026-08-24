@@ -1,10 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { fetchSingleQuery } from "./queryBuilders";
-import { Program, Step } from "../../types/api";
+import { Program, RunNote, Step } from "../../types/api";
 import { API_ENDPOINTS } from "../../config/api";
 const runningProgramTag = "runningProgram";
 const defaultsTag = "defaults";
+const notesTag = "notes";
 
 export interface DeltaBand {
   min_delta: number;
@@ -45,7 +46,7 @@ export const controlunitApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: API_ENDPOINTS.controlunit,
   }),
-  tagTypes: [runningProgramTag, defaultsTag, "history"],
+  tagTypes: [runningProgramTag, defaultsTag, "history", notesTag],
   endpoints: (builder) => ({
     getRunningProgram: {
       ...fetchSingleQuery(
@@ -117,6 +118,27 @@ export const controlunitApi = createApi({
       }),
       invalidatesTags: ["history"],
     }),
+    getRunningNotes: builder.query<RunNote[], void>({
+      query: () => "/engine/running/notes",
+      providesTags: [notesTag],
+      // 204 when nothing is running: an idle kiln has no notes, which is not
+      // an error and must not surface as one.
+      transformResponse: (response?: { data: RunNote[] }) => response?.data ?? [],
+    }),
+    addRunningNote: builder.mutation<RunNote, string>({
+      query: (text) => ({
+        url: "/engine/running/notes",
+        method: "POST",
+        body: JSON.stringify({ text }),
+        headers: { "Content-type": "application/json" },
+      }),
+      invalidatesTags: [notesTag],
+      transformResponse: (response: { data: RunNote }) => response.data,
+    }),
+    getRunNotes: builder.query<RunNote[], string>({
+      query: (name) => `/engine/history/${encodeURIComponent(name)}/notes`,
+      transformResponse: (response: { data: RunNote[] }) => response.data,
+    }),
   }),
 });
 
@@ -129,4 +151,8 @@ export const {
   useGetExecutionLogQuery,
   useLazyGetRunQuery,
   useDeleteExecutionMutation,
+  useGetRunningNotesQuery,
+  useAddRunningNoteMutation,
+  useGetRunNotesQuery,
+  useLazyGetRunNotesQuery,
 } = controlunitApi;

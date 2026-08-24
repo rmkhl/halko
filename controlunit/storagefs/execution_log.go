@@ -14,9 +14,11 @@ import (
 
 // ExecutionLogColumns is the execution log's CSV header, shared with the
 // websocket stream that serves the same rows live so the two cannot drift
-// apart. The die columns are appended rather than placed beside the readings
-// they belong to, so logs written before them stay readable against the same
-// code.
+// apart. The die columns, and the two raw kiln readings after them, are
+// appended rather than placed beside the readings they belong to, so logs
+// written before them stay readable against the same code. Note that the
+// stream builds its rows by hand: a column added here has to be added there
+// too, or it streams fewer values than its own header names.
 var ExecutionLogColumns = []string{
 	"time",
 	"step",
@@ -29,6 +31,8 @@ var ExecutionLogColumns = []string{
 	"material_die",
 	"kiln_primary_die",
 	"kiln_secondary_die",
+	"kiln_primary",
+	"kiln_secondary",
 }
 
 type (
@@ -105,6 +109,8 @@ func (writer *ExecutionLogWriter) AddLine(status *types.ExecutionStatus) {
 		fmt.Sprintf("%.1f", status.Temperatures.MaterialDie),
 		fmt.Sprintf("%.1f", status.Temperatures.KilnPrimaryDie),
 		fmt.Sprintf("%.1f", status.Temperatures.KilnSecondaryDie),
+		fmt.Sprintf("%.1f", status.Temperatures.KilnPrimary),
+		fmt.Sprintf("%.1f", status.Temperatures.KilnSecondary),
 	})
 	writer.csvWriter.Flush()
 	writer.lastUpdate = now

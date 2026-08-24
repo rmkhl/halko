@@ -13,6 +13,18 @@ import (
 	"github.com/rmkhl/halko/types/log"
 )
 
+// KilnSensorStrategy names how the control unit turns the kiln's two sensor
+// readings into the one temperature it controls on. It is a property of the
+// installation, so it is configured rather than defaulted: a control unit that
+// invented one would silently control on a number nobody chose.
+type KilnSensorStrategy string
+
+const (
+	KilnSensorLower   KilnSensorStrategy = "lower"
+	KilnSensorHigher  KilnSensorStrategy = "higher"
+	KilnSensorAverage KilnSensorStrategy = "average"
+)
+
 type (
 	EndpointWithStatus interface {
 		GetStatusURL() string
@@ -83,10 +95,11 @@ type (
 	}
 
 	ControlUnitConfig struct {
-		BasePath         string    `json:"base_path"`
-		TickLength       string    `json:"tick_length"`
-		NetworkInterface string    `json:"network_interface"`
-		Defaults         *Defaults `json:"defaults"`
+		BasePath           string             `json:"base_path"`
+		TickLength         string             `json:"tick_length"`
+		NetworkInterface   string             `json:"network_interface"`
+		KilnSensorStrategy KilnSensorStrategy `json:"kiln_sensor_strategy"`
+		Defaults           *Defaults          `json:"defaults"`
 
 		// Resolved from TickLength once, while loading.
 		TickDuration time.Duration `json:"-"`
@@ -394,6 +407,18 @@ func (c *HalkoConfig) ValidateRequired() error {
 	}
 	if _, err := time.ParseDuration(c.ControlUnitConfig.TickLength); err != nil {
 		return fmt.Errorf("controlunit tick_length must be a valid duration (e.g., '6s', '100ms'): %w", err)
+	}
+
+	// Which of the two kiln sensors the controller acts on is a property of
+	// the installation. There is deliberately no fallback: a control unit that
+	// invented one would silently control on a number nobody chose.
+	switch c.ControlUnitConfig.KilnSensorStrategy {
+	case KilnSensorLower, KilnSensorHigher, KilnSensorAverage:
+	case "":
+		return errors.New("controlunit kiln_sensor_strategy is required (lower, higher or average)")
+	default:
+		return fmt.Errorf("controlunit kiln_sensor_strategy must be lower, higher or average, got %q",
+			c.ControlUnitConfig.KilnSensorStrategy)
 	}
 
 	// Everything the control unit falls back to has to be present and usable.

@@ -13,7 +13,7 @@ import {
   Legend,
 } from "chart.js";
 import { ExecutedProgram } from "../store/services/controlunitApi";
-import { PowerSettings, Step, StepType } from "../types/api";
+import { PowerSettings, RunNote, Step, StepType } from "../types/api";
 import { LogRow, StepSegment, formatClock, parseExecutionLog, runStartedAt, segmentBySteps } from "./executionLog";
 
 // Registered separately from ExecutionChart.tsx's identical call (Chart.js
@@ -35,6 +35,7 @@ export interface RunReportInput {
   runName: string; // history entry name, e.g. "My program@2026-07-19T18:10:40+03:00"
   csv: string;
   executed?: ExecutedProgram; // undefined when the executed program could not be loaded
+  notes?: RunNote[];
 }
 
 // Controlunit phases that are not program steps (used only when the
@@ -62,6 +63,59 @@ const numberedProgramSteps = (steps: Step[]): [Step, string][] => {
     return [step, String(number)];
   });
 };
+
+// A note is placed by time, not by the step name it carries: nothing stops a
+// program from using the same step name twice, and matching on the name would
+// misfile every note in such a run. The log's times are elapsed seconds from
+// the run's start, so a note's absolute stamp maps into the same scale.
+//
+// When the run's start time is unknown the report falls back to an elapsed
+// axis and so does this, matching on the step name instead. Each note prints
+// the step it was stamped with, so a mismatch is visible rather than silent.
+const notesInSegment = (
+  notes: RunNote[],
+  segment: StepSegment,
+  startedAt?: number
+): RunNote[] => {
+  if (startedAt === undefined) {
+    return notes.filter((note) => note.step === segment.step);
+  }
+  const first = segment.rows[0].time;
+  const last = segment.rows[segment.rows.length - 1].time;
+  return notes.filter((note) => {
+    const elapsed = note.time - startedAt;
+    return elapsed >= first && elapsed <= last;
+  });
+};
+
+// Notes taken before the first step began (the preparation gap the header
+// already reports) or after the last logged row. They are printed under the
+// header rather than dropped.
+const notesOutsideEverySegment = (
+  notes: RunNote[],
+  segments: StepSegment[],
+  startedAt?: number
+): RunNote[] => {
+  const placed = new Set<RunNote>();
+  segments.forEach((segment) => {
+    notesInSegment(notes, segment, startedAt).forEach((note) => placed.add(note));
+  });
+  return notes.filter((note) => !placed.has(note));
+};
+
+// Every note prints its own step, even inside that step's section. It is what
+// makes a misplaced note visible when the time fallback above had to match on
+// the name. A note's time is an absolute stamp, so the clock is printable even
+// when the run's start is unknown and the charts are on an elapsed axis.
+const noteRows = (notes: RunNote[]): string[][] =>
+  notes.map((note) => [
+    formatClock(note.time),
+    note.step,
+    `${note.temperatures.kiln.toFixed(1)} / ${note.temperatures.material.toFixed(1)}`,
+    note.text,
+  ]);
+
+const NOTE_COLUMNS = [["Time", "Step", "Kiln / material (°C)", "Note"]];
 
 const formatDuration = (seconds: number): string => {
   const s = Math.max(0, Math.round(seconds));
@@ -112,14 +166,35 @@ const renderSegmentChart = (rows: LogRow[], startedAt?: number): string => {
           pointRadius: 2,
           tension: 0.3,
         },
-        {
-          label: "Kiln Temperature (°C)",
-          data: rows.map((row) => row.kiln),
-          borderColor: "rgb(255, 159, 64)",
-          backgroundColor: "rgba(255, 159, 64, 0.5)",
-          pointRadius: 2,
-          tension: 0.3,
-        },
+        ...(rows.some((row) => row.kilnPrimary !== undefined)
+          ? [
+              {
+                label: "Kiln 1 Temperature (°C)",
+                data: rows.map((row) => row.kilnPrimary ?? null),
+                borderColor: "rgb(255, 159, 64)",
+                backgroundColor: "rgba(255, 159, 64, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+              {
+                label: "Kiln 2 Temperature (°C)",
+                data: rows.map((row) => row.kilnSecondary ?? null),
+                borderColor: "rgb(153, 102, 255)",
+                backgroundColor: "rgba(153, 102, 255, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+            ]
+          : [
+              {
+                label: "Kiln Temperature (°C)",
+                data: rows.map((row) => row.kiln),
+                borderColor: "rgb(255, 159, 64)",
+                backgroundColor: "rgba(255, 159, 64, 0.5)",
+                pointRadius: 2,
+                tension: 0.3,
+              },
+            ]),
       ],
     },
     options: {
@@ -198,6 +273,23 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
   });
   y = lastAutoTableY(doc) + 20;
 
+  const notes = input.notes ?? [];
+  const strayNotes = notesOutsideEverySegment(notes, stepSegments, startedAt);
+  if (strayNotes.length > 0) {
+    doc.setFontSize(13);
+    doc.text("Notes", margin, y);
+    y += 8;
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 3 },
+      head: NOTE_COLUMNS,
+      body: noteRows(strayNotes),
+    });
+    y = lastAutoTableY(doc) + 20;
+  }
+
   // One section per program step. Startup steps are unnumbered, so the counter
   // advances only for authored ones.
   let stepNumber = 0;
@@ -228,7 +320,12 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
 
     const first = segment.rows[0];
     const last = segment.rows[segment.rows.length - 1];
+    // Same rule as the charts: a run that recorded both sensors is reported
+    // per sensor, one that did not keeps its single kiln figures.
+    const hasSensorPair = segment.rows.some((row) => row.kilnPrimary !== undefined);
     const kilns = segment.rows.map((row) => row.kiln);
+    const primaries = segment.rows.map((row) => row.kilnPrimary ?? row.kiln);
+    const secondaries = segment.rows.map((row) => row.kilnSecondary ?? row.kiln);
     const materials = segment.rows.map((row) => row.material);
     const fmt = (value: number) => value.toFixed(1);
 
@@ -240,7 +337,9 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       head: [[
         "Duration",
         "Kiln start -> end (°C)",
-        "Kiln min - max (°C)",
+        ...(hasSensorPair
+          ? ["Kiln 1 min - max (°C)", "Kiln 2 min - max (°C)"]
+          : ["Kiln min - max (°C)"]),
         "Material start -> end (°C)",
         "Material min - max (°C)",
         "Avg heater/fan/hum (%)",
@@ -248,7 +347,12 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       body: [[
         formatDuration(last.time - first.time),
         `${fmt(first.kiln)} -> ${fmt(last.kiln)}`,
-        `${fmt(Math.min(...kilns))} - ${fmt(Math.max(...kilns))}`,
+        ...(hasSensorPair
+          ? [
+              `${fmt(Math.min(...primaries))} - ${fmt(Math.max(...primaries))}`,
+              `${fmt(Math.min(...secondaries))} - ${fmt(Math.max(...secondaries))}`,
+            ]
+          : [`${fmt(Math.min(...kilns))} - ${fmt(Math.max(...kilns))}`]),
         `${fmt(first.material)} -> ${fmt(last.material)}`,
         `${fmt(Math.min(...materials))} - ${fmt(Math.max(...materials))}`,
         [
@@ -265,7 +369,24 @@ export const generateRunReportPdf = (input: RunReportInput): jsPDF => {
       y = margin;
     }
     doc.addImage(renderSegmentChart(segment.rows, startedAt), "PNG", margin, y, contentWidth, chartHeight);
-    y += chartHeight + 28;
+    y += chartHeight + 12;
+
+    // The notes taken during this step, under the curve they are about.
+    // autoTable paginates itself, so a long list needs no page-break maths.
+    const segmentNotes = notesInSegment(notes, segment, startedAt);
+    if (segmentNotes.length > 0) {
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        theme: "grid",
+        styles: { fontSize: 9, cellPadding: 3 },
+        head: NOTE_COLUMNS,
+        body: noteRows(segmentNotes),
+      });
+      y = lastAutoTableY(doc) + 16;
+    } else {
+      y += 16;
+    }
   });
 
   // Appendix: the executed program

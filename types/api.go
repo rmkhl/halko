@@ -104,8 +104,12 @@ type (
 	// apart, every reading on the board shifts by the difference, which
 	// otherwise looks exactly like the kiln changing temperature.
 	TemperatureStatus struct {
-		Material         float32 `json:"material"`
+		Material float32 `json:"material"`
+		// Kiln is what the control unit resolved from the two sensors below
+		// and acted on, by controlunit.kiln_sensor_strategy.
 		Kiln             float32 `json:"kiln"`
+		KilnPrimary      float32 `json:"kiln_primary"`
+		KilnSecondary    float32 `json:"kiln_secondary"`
 		MaterialDie      float32 `json:"material_die"`
 		KilnPrimaryDie   float32 `json:"kiln_primary_die"`
 		KilnSecondaryDie float32 `json:"kiln_secondary_die"`

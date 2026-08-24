@@ -1,5 +1,9 @@
-// Parsing and step-grouping of controlunit execution logs (CSV format:
-// time,step,steptime,material,kiln,heater,fan,steam).
+// Parsing and step-grouping of controlunit execution logs. Columns:
+// time,step,steptime,material,kiln,heater,fan,steam,
+// material_die,kiln_primary_die,kiln_secondary_die,kiln_primary,kiln_secondary
+//
+// The last two are appended, so histories written before the kiln pair landed
+// have eleven columns and parse without them.
 
 export interface LogRow {
   time: number;
@@ -10,12 +14,24 @@ export interface LogRow {
   heater: number;
   fan: number;
   steam: number;
+  kilnPrimary?: number;
+  kilnSecondary?: number;
 }
 
 export interface StepSegment {
   step: string;
   rows: LogRow[];
 }
+
+// A column an older history does not have, or one holding something
+// unparseable, reads as absent rather than as NaN in a chart.
+const optionalReading = (value?: string): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? undefined : parsed;
+};
 
 export const parseExecutionLog = (csv: string): LogRow[] => {
   const lines = csv.trim().split("\n").filter((line) => line.trim().length > 0);
@@ -50,6 +66,8 @@ export const parseExecutionLog = (csv: string): LogRow[] => {
       heater: parseFloat(values[5]),
       fan: parseFloat(values[6]),
       steam: parseFloat(values[7]),
+      kilnPrimary: optionalReading(values[11]),
+      kilnSecondary: optionalReading(values[12]),
     });
   }
 

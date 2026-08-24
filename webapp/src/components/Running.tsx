@@ -2,6 +2,7 @@ import React from "react";
 import { Box } from "@mui/material";
 import { RunningProgram } from "./programs/RunningProgram";
 import { LiveExecutionChart } from "./LiveExecutionChart";
+import { RunningNotes } from "./notes/RunningNotes";
 
 export const Running: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ export const Running: React.FC = () => {
     >
       <RunningProgram />
       <LiveExecutionChart title="Live Program Execution" />
+      <RunningNotes />
     </Box>
   );
 };

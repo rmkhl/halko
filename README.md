@@ -248,6 +248,11 @@ The option groups below describe what each setting does.
 - **`tick_length`**: Execution tick duration (Go duration format: "6s", "100ms", etc.)
 - **`network_interface`**: Network interface name for IP address reporting
   (e.g., "eth0", "wlan0")
+- **`kiln_sensor_strategy`**: how the kiln's two sensor readings become the one
+  temperature the controller acts on — `lower`, `higher` or `average`. Required;
+  there is no default, since which reading to trust is a property of the kiln
+  rather than something the control unit can invent. When one sensor fails the
+  other is used alone, whatever the strategy.
 - **`defaults`**: Everything the control unit would otherwise have to invent.
   All of it is required; a missing entry fails at startup rather than becoming a
   zero somewhere downstream. The webapp reads the same block from

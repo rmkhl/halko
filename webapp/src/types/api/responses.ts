@@ -30,6 +30,17 @@ export interface TemperatureStatus {
 }
 
 /**
+ * What the sensor unit reports. Distinct from TemperatureStatus, which is the
+ * control unit's view and carries the resolved kiln value: this service does
+ * not resolve anything.
+ */
+export interface SensorTemperatures {
+  material: number;
+  kiln_primary: number;
+  kiln_secondary: number;
+}
+
+/**
  * Power Supply Unit status - power levels in percentage
  * Matches Go's PSUStatus struct
  */

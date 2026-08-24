@@ -553,6 +553,8 @@ func (p *programFSMController) UpdateStatus(status *types.ExecutionStatus) {
 
 	status.Temperatures.Material = p.temperatures.reading.Material
 	status.Temperatures.Kiln = p.temperatures.reading.Kiln
+	status.Temperatures.KilnPrimary = p.temperatures.reading.KilnPrimary
+	status.Temperatures.KilnSecondary = p.temperatures.reading.KilnSecondary
 	status.Temperatures.MaterialDie = p.temperatures.reading.MaterialDie
 	status.Temperatures.KilnPrimaryDie = p.temperatures.reading.KilnPrimaryDie
 	status.Temperatures.KilnSecondaryDie = p.temperatures.reading.KilnSecondaryDie

@@ -45,9 +45,12 @@ func SetupRoutes(mux *http.ServeMux, execStorage types.ExecutionStorage, program
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running/logws", StreamLiveRunLog(engine))
 	// Engine execution endpoints
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running/log", corsMiddleware(getRunningLog(execStorage, engine)))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running/notes", corsMiddleware(getRunningNotes(engine)))
+	mux.HandleFunc("POST "+endpoints.ControlUnit.Engine+"/running/notes", corsMiddleware(addRunningNote(engine)))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history", corsMiddleware(listAllRuns(execStorage)))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}", corsMiddleware(getRun(execStorage)))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}/log", corsMiddleware(getRunLog(execStorage)))
+	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/history/{name}/notes", corsMiddleware(getRunNotes(execStorage)))
 	mux.HandleFunc("DELETE "+endpoints.ControlUnit.Engine+"/history/{name}", corsMiddleware(deleteRun(execStorage)))
 	mux.HandleFunc("GET "+endpoints.ControlUnit.Engine+"/running", corsMiddleware(getCurrentProgram(engine)))
 	mux.HandleFunc("POST "+endpoints.ControlUnit.Engine+"/running", corsMiddleware(startNewProgram(engine)))

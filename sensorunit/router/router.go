@@ -26,7 +26,6 @@ type API struct {
 
 	statusMu      sync.Mutex
 	kilnStatus    kilnSensorStatus
-	kilnSelect    kilnSelector
 	materialValid bool
 
 	// Cold junction readings arrive on the same device read as the
@@ -35,14 +34,6 @@ type API struct {
 	// board's thermal time constant makes immaterial.
 	dieMu   sync.Mutex
 	dieRead types.TemperatureResponse
-}
-
-// selectKilnTemperature applies hysteresis-based kiln sensor selection,
-// serialized by the status mutex since handlers may run concurrently.
-func (api *API) selectKilnTemperature(primary, secondary float32) float32 {
-	api.statusMu.Lock()
-	defer api.statusMu.Unlock()
-	return api.kilnSelect.Select(primary, secondary)
 }
 
 func NewAPI(sensorUnit *serial.SensorUnit) *API {

@@ -112,6 +112,8 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 					fmt.Sprintf("%.1f", status.Temperatures.MaterialDie),
 					fmt.Sprintf("%.1f", status.Temperatures.KilnPrimaryDie),
 					fmt.Sprintf("%.1f", status.Temperatures.KilnSecondaryDie),
+					fmt.Sprintf("%.1f", status.Temperatures.KilnPrimary),
+					fmt.Sprintf("%.1f", status.Temperatures.KilnSecondary),
 				}); err != nil {
 					log.Warning("CSV line write error: %v", err)
 					continue

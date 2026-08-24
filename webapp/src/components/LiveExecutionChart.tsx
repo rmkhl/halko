@@ -4,7 +4,7 @@ import { getApiEndpoints } from "../config/api";
 import { runStartedAt } from "../util/executionLog";
 import { useGetRunningProgramQuery } from "../store/services/controlunitApi";
 import { useGetTemperaturesQuery } from "../store/services/sensorsApi";
-import { RunningProgramResponse, TemperatureStatus, APIResponse, Step } from "../types/api";
+import { RunningProgramResponse, SensorTemperatures, APIResponse, Step } from "../types/api";
 
 interface LiveExecutionChartProps {
   title?: string;
@@ -65,7 +65,7 @@ export const LiveExecutionChart: React.FC<LiveExecutionChartProps> = ({
 
     // Fallback to current sensor data if no historical data
     if (minTemp === null) {
-      const temperatures = sensorData ? (sensorData as APIResponse<Omit<TemperatureStatus, "delta">>) : undefined;
+      const temperatures = sensorData ? (sensorData as APIResponse<SensorTemperatures>) : undefined;
       const currentMaterialTemp = temperatures?.data?.material;
 
       // Store initial material temperature when first available

@@ -51,6 +51,7 @@ var testConfigData = `{
     "base_path": "/tmp/test/halko",
     "tick_length": "6s",
     "network_interface": "enp4s0",
+    "kiln_sensor_strategy": "higher",
     "defaults": {
       "deltas": {
         "heating": {"min_delta": 5.0, "max_delta": 10.0},
@@ -420,5 +421,78 @@ func TestLoadConfigRejectsUnusableEqualizeDefaults(t *testing.T) {
 				t.Fatal("expected LoadConfig to fail, got nil")
 			}
 		})
+	}
+}
+
+// writeConfigWithStrategy writes the standard test config with its
+// controlunit.kiln_sensor_strategy line replaced by the given text. Pass an
+// empty string to remove the key entirely.
+func writeConfigWithStrategy(t *testing.T, line string) string {
+	t.Helper()
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_halko.cfg")
+
+	data := strings.Replace(testConfigData, "/dev/ttyUSB0", filepath.Join(tempDir, "esp32"), 1)
+	const existing = `"kiln_sensor_strategy": "higher",`
+	if !strings.Contains(data, existing) {
+		t.Fatalf("test config has no kiln_sensor_strategy line to replace")
+	}
+	data = strings.Replace(data, existing, line, 1)
+
+	if err := os.WriteFile(configPath, []byte(data), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return configPath
+}
+
+// Which of the two kiln sensors the controller acts on is a property of the
+// installation, and the control unit must not invent one. A config that does
+// not say fails here, where the message can name the config, rather than when
+// someone starts a program.
+func TestLoadConfigRequiresAKilnSensorStrategy(t *testing.T) {
+	_, err := LoadConfig(writeConfigWithStrategy(t, ""))
+
+	if err == nil {
+		t.Fatal("LoadConfig accepted a config with no kiln_sensor_strategy")
+	}
+	if !strings.Contains(err.Error(), "kiln_sensor_strategy") {
+		t.Errorf("error does not name the key: %v", err)
+	}
+}
+
+func TestLoadConfigRejectsAnUnknownKilnSensorStrategy(t *testing.T) {
+	_, err := LoadConfig(writeConfigWithStrategy(t, `"kiln_sensor_strategy": "hottest",`))
+
+	if err == nil {
+		t.Fatal("LoadConfig accepted an unrecognised kiln_sensor_strategy")
+	}
+	if !strings.Contains(err.Error(), "kiln_sensor_strategy") {
+		t.Errorf("error does not name the key: %v", err)
+	}
+}
+
+func TestLoadConfigAcceptsEveryKilnSensorStrategy(t *testing.T) {
+	for _, strategy := range []KilnSensorStrategy{KilnSensorLower, KilnSensorHigher, KilnSensorAverage} {
+		line := `"kiln_sensor_strategy": "` + string(strategy) + `",`
+		config, err := LoadConfig(writeConfigWithStrategy(t, line))
+		if err != nil {
+			t.Fatalf("LoadConfig(%s): %v", strategy, err)
+		}
+		if config.ControlUnitConfig.KilnSensorStrategy != strategy {
+			t.Errorf("loaded strategy = %q, want %q", config.ControlUnitConfig.KilnSensorStrategy, strategy)
+		}
+	}
+}
+
+// The shipped template must be a config that actually loads.
+func TestTemplateConfigNamesAKilnSensorStrategy(t *testing.T) {
+	config, err := LoadConfig("../templates/halko.cfg")
+	if err != nil {
+		t.Fatalf("load template config: %v", err)
+	}
+
+	if config.ControlUnitConfig.KilnSensorStrategy != KilnSensorHigher {
+		t.Errorf("template strategy = %q, want %q",
+			config.ControlUnitConfig.KilnSensorStrategy, KilnSensorHigher)
 	}
 }

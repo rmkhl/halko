@@ -30,9 +30,16 @@ type (
 		Data map[string]float32 `json:"data"`
 	}
 
+	// temperatureReadings is what one poll produced. Kiln is the exception to
+	// "what the sensors said": the reader never sets it. It carries the
+	// resolved value in fsmTemperatures.reading, written by observe from the
+	// pair below. A sample handed to observe always leaves it at the zero
+	// value, which nothing reads.
 	temperatureReadings struct {
-		Material float32
-		Kiln     float32
+		Material      float32
+		Kiln          float32
+		KilnPrimary   float32
+		KilnSecondary float32
 		// Cold junction temperatures, carried through for the execution log
 		// only. Nothing controls on them.
 		MaterialDie      float32
@@ -102,7 +109,8 @@ func (controller *temperatureSensorReader) readTemperatures() (*temperatureReadi
 
 	readings := temperatureReadings{
 		Material:         readingOrInvalid(dataResponse.Data, "material"),
-		Kiln:             readingOrInvalid(dataResponse.Data, "kiln"),
+		KilnPrimary:      readingOrInvalid(dataResponse.Data, "kiln_primary"),
+		KilnSecondary:    readingOrInvalid(dataResponse.Data, "kiln_secondary"),
 		MaterialDie:      types.InvalidTemperatureReading,
 		KilnPrimaryDie:   types.InvalidTemperatureReading,
 		KilnSecondaryDie: types.InvalidTemperatureReading,

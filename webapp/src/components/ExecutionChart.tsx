@@ -140,6 +140,47 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
     startedAt ? formatClock(startedAt + seconds) : `Time: ${(seconds / 60).toFixed(1)} min`;
   const timeLabels = dataPoints.map((point) => formatTick(point.time));
 
+  // A run that recorded both sensors is charted as two lines; one written
+  // before the pair landed has only its resolved kiln column and is charted
+  // from that. The two forms are never drawn together.
+  //
+  // `?? null` rather than `?? 0`: Chart.js draws a gap for null, and a sensor
+  // that reported nothing must not read as zero degrees.
+  const hasSensorPair = dataPoints.some((point) => point.kilnPrimary !== undefined);
+
+  const kilnDatasets = hasSensorPair
+    ? [
+        {
+          label: "Kiln 1 Temperature (°C)",
+          data: dataPoints.map((point) => point.kilnPrimary ?? null),
+          borderColor: "rgb(255, 159, 64)",
+          backgroundColor: "rgba(255, 159, 64, 0.5)",
+          yAxisID: "y-temperature",
+          pointRadius: 2,
+          tension: 0.3,
+        },
+        {
+          label: "Kiln 2 Temperature (°C)",
+          data: dataPoints.map((point) => point.kilnSecondary ?? null),
+          borderColor: "rgb(153, 102, 255)",
+          backgroundColor: "rgba(153, 102, 255, 0.5)",
+          yAxisID: "y-temperature",
+          pointRadius: 2,
+          tension: 0.3,
+        },
+      ]
+    : [
+        {
+          label: "Kiln Temperature (°C)",
+          data: dataPoints.map((point) => point.kiln),
+          borderColor: "rgb(255, 159, 64)",
+          backgroundColor: "rgba(255, 159, 64, 0.5)",
+          yAxisID: "y-temperature",
+          pointRadius: 2,
+          tension: 0.3,
+        },
+      ];
+
   const chartData = {
     labels: timeLabels,
     datasets: [
@@ -152,15 +193,7 @@ export const ExecutionChart: React.FC<ExecutionChartProps> = ({
         pointRadius: 2,
         tension: 0.3,
       },
-      {
-        label: "Kiln Temperature (°C)",
-        data: dataPoints.map((point) => point.kiln),
-        borderColor: "rgb(255, 159, 64)",
-        backgroundColor: "rgba(255, 159, 64, 0.5)",
-        yAxisID: "y-temperature",
-        pointRadius: 2,
-        tension: 0.3,
-      },
+      ...kilnDatasets,
     ],
   };
 

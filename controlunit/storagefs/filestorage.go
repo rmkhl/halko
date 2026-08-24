@@ -1,6 +1,7 @@
 package storagefs
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ type ExecutorFileStorage struct {
 	executedProgramsPath string
 	statusPath           string
 	logPath              string
+	notesPath            string
 	runningPath          string
 }
 
@@ -52,6 +54,14 @@ func NewExecutorFileStorage(basePath string) (*ExecutorFileStorage, error) {
 	err = os.MkdirAll(executorStorage.logPath, os.ModePerm)
 	if err != nil {
 		log.Error("Failed to create logs directory: %v", err)
+		return nil, err
+	}
+
+	executorStorage.notesPath = filepath.Join(executorStorage.executedProgramsPath, "notes")
+	log.Debug("Creating notes directory: %s", executorStorage.notesPath)
+	err = os.MkdirAll(executorStorage.notesPath, os.ModePerm)
+	if err != nil {
+		log.Error("Failed to create notes directory: %v", err)
 		return nil, err
 	}
 
@@ -207,6 +217,15 @@ func (storage *ExecutorFileStorage) DeleteExecutedProgram(programName string) er
 		log.Debug("Successfully deleted state file for '%s'", programName)
 	}
 
+	// Delete the notes
+	notesFilePath := filepath.Join(storage.notesPath, programName+".json")
+	if err := os.Remove(notesFilePath); err != nil && !os.IsNotExist(err) {
+		log.Error("Failed to delete notes for '%s': %v", programName, err)
+		errors = append(errors, "failed to delete notes: "+err.Error())
+	} else {
+		log.Debug("Successfully deleted notes for '%s'", programName)
+	}
+
 	// If there were any errors, combine them into a single error
 	if len(errors) > 0 {
 		log.Warning("Some deletions failed for program '%s': %s", programName, strings.Join(errors, "; "))
@@ -254,6 +273,18 @@ func (storage *ExecutorFileStorage) MoveToHistory(programName string) error {
 		log.Debug("Moved execution log for '%s' to history", programName)
 	}
 
+	// Move the notes. The file loses its .notes extension here: under
+	// history/notes/ there is no running/*.json glob to stay clear of, and the
+	// content was always JSON.
+	runningNotes := filepath.Join(storage.runningPath, programName+".notes")
+	historyNotes := filepath.Join(storage.notesPath, programName+".json")
+	if err := os.Rename(runningNotes, historyNotes); err != nil && !os.IsNotExist(err) {
+		log.Error("Failed to move notes for '%s': %v", programName, err)
+		errors = append(errors, "failed to move notes: "+err.Error())
+	} else if err == nil {
+		log.Debug("Moved notes for '%s' to history", programName)
+	}
+
 	if len(errors) > 0 {
 		log.Warning("Some file moves failed for program '%s': %s", programName, strings.Join(errors, "; "))
 		return fmt.Errorf("move errors: %s", strings.Join(errors, "; "))
@@ -295,4 +326,29 @@ func (storage *ExecutorFileStorage) CleanupOrphanedRunning() error {
 	}
 
 	return nil
+}
+
+// LoadRunNotes reads a finished run's notes. A run nobody annotated has no
+// file and reads back as no notes, which is not an error: the history view
+// asks this of every run it shows.
+func (storage *ExecutorFileStorage) LoadRunNotes(programName string) ([]types.RunNote, error) {
+	if err := types.ValidateStorageName(programName); err != nil {
+		return nil, err
+	}
+
+	content, err := os.ReadFile(filepath.Join(storage.notesPath, programName+".json"))
+	if os.IsNotExist(err) {
+		return []types.RunNote{}, nil
+	}
+	if err != nil {
+		log.Error("Failed to read notes for '%s': %v", programName, err)
+		return nil, err
+	}
+
+	var notes []types.RunNote
+	if err := json.Unmarshal(content, &notes); err != nil {
+		log.Error("Failed to parse notes for '%s': %v", programName, err)
+		return nil, err
+	}
+	return notes, nil
 }
