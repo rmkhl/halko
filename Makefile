@@ -561,6 +561,17 @@ clean-webapp:
 	@rm -rf webapp/dist webapp/node_modules webapp/.parcel-cache
 	@echo "✓ Webapp cleaned"
 
+# What a production build needs cleaned: the bundle and the cache, never
+# node_modules. Deleting those under a running dev server makes Parcel
+# auto-install its own missing plugins, and that installer writes "{}" over
+# webapp/package.json when its manifest lookup comes back empty - the real
+# package.json is gone and the build fails on a missing "build" script.
+.PHONY: clean-webapp-dist
+clean-webapp-dist:
+	@echo "Cleaning webapp bundle..."
+	@rm -rf webapp/dist webapp/.parcel-cache
+	@echo "✓ Webapp bundle cleaned"
+
 webapp/node_modules: $(NODE)
 	@echo "Installing webapp dependencies..."
 	@cd webapp && $(NPM) install
@@ -571,8 +582,11 @@ run-webapp: $(BINDIR)/halkoctl webapp/node_modules
 	@cd webapp && $(NPM) start
 
 .PHONY: build-webapp
-build-webapp: clean-webapp $(NODE) $(BINDIR)/halkoctl
+build-webapp: clean-webapp-dist $(NODE) $(BINDIR)/halkoctl
 	@echo "Building webapp for production (host installation)..."
+	@# install, not ci: ci starts by deleting node_modules, which is the very
+	@# thing this target must not do. A bare install writes no manifest and,
+	@# with the lockfile in sync, installs the same tree.
 	@cd webapp && $(NPM) install
 	@echo "Building production bundle..."
 	@cd webapp && $(NPM) run build
@@ -632,6 +646,7 @@ help:
 	@echo "                               (stripped, -s -w, -trimpath; equivalent to OPTIMIZED=yes make all)."
 	@echo "  clean                      Remove bin/ directory (Go binaries only)."
 	@echo "  clean-webapp               Remove webapp build artifacts (dist/, node_modules, cache)."
+	@echo "  clean-webapp-dist          Remove the webapp bundle and cache, keeping node_modules."
 	@echo "  distclean                  Like clean + clean-webapp, plus removes local Node.js installation."
 	@echo ""
 	@echo "Production Installation (Raspberry Pi / Host):"
