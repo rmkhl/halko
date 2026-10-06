@@ -10,8 +10,7 @@
 // Commands (identical to Arduino version):
 // - "show <text>" - Set the status line text
 // - "addr <text>" - Set the IP address line text
-// - "read" - Read the current temperature values, followed by the cold
-//            junction (chip die) temperature each one is referenced to
+// - "read" - Read the current temperature values
 // - "helo" - Respond with "helo" (initial handshake)
 //
 // Hardware: ESP32 DevKit (Micro-USB)
@@ -68,20 +67,12 @@ const int cs_pin[3] = {KILN_PRIMARY_CS, KILN_SECONDARY_CS, WOOD_CS};
 #define FAULT_VCC  0x4  // thermocouple shorted to supply
 
 const char * const sensorName[3] = {"KilnPrimary", "KilnSecondary", "Wood"};
-const char * const dieName[3] = {"KilnPrimaryDie", "KilnSecondaryDie", "WoodDie"};
 
 float temperature[3] = {0.0, 0.0, 0.0};
 bool is_valid[3] = {false, false, false};
 uint8_t last_fault[3] = {0, 0, 0};
 char addr_text[32] = "";
 uint16_t fault_total[3] = {0, 0, 0};
-
-// Cold junction (chip die) temperature per sensor. The MAX31855 references
-// the thermocouple voltage to this, so when it and the screw terminals drift
-// apart every reading on the board shifts by the difference. Reporting it is
-// the only way to tell that apart from the kiln actually changing.
-float die_temperature[3] = {0.0, 0.0, 0.0};
-bool die_valid[3] = {false, false, false};
 
 // One SPI transaction returns the whole 32-bit MAX31855 frame, so the
 // temperature and the fault bits always come from the same conversion.
@@ -128,27 +119,6 @@ float parseFrame(int idx, uint32_t raw)
     return v * 0.25f;
 }
 
-// Returns the chip's internal (cold junction) temperature from the same
-// frame, or NAN if the module did not answer. Unlike the thermocouple value
-// this stays valid while the fault bits are set: the die sensor is on the
-// chip, so an open or shorted thermocouple says nothing about it, and a
-// faulting probe is exactly when its reference temperature is worth seeing.
-float parseDieTemperature(uint32_t raw)
-{
-    if (raw == 0)
-    {
-        return NAN;
-    }
-
-    // D[15:4] is the 12-bit signed internal value, 0.0625 °C per LSB
-    int16_t v = (int16_t)((raw >> 4) & 0x0FFF);
-    if (v & 0x0800)
-    {
-        v -= 0x1000;
-    }
-    return v * 0.0625f;
-}
-
 // Status and timing
 char status_text[32] = "";
 bool shown_disconnect = false;
@@ -170,14 +140,6 @@ float measurement[3][SAMPLE_COUNT];
 int sample_index[3] = {0, 0, 0};
 bool seeded[3] = {false, false, false};
 int fault_count[3] = {0, 0, 0};
-
-// The die reading gets the same treatment, but on its own counters: it
-// survives thermocouple faults, so it goes stale only when the chip stops
-// answering altogether.
-float die_measurement[3][SAMPLE_COUNT];
-int die_sample_index[3] = {0, 0, 0};
-bool die_seeded[3] = {false, false, false};
-int die_fault_count[3] = {0, 0, 0};
 
 float medianOfSamples(const float *samples)
 {
@@ -355,8 +317,7 @@ void processSerial()
         }
         else if (strcmp(command, "read") == 0)
         {
-            // Three thermocouple readings, then the three cold junction
-            // readings they are referenced to, in one line.
+            // Three thermocouple readings, in one line.
             for (int i = 0; i < 3; i++)
             {
                 Serial.print(sensorName[i]);
@@ -368,21 +329,6 @@ void processSerial()
                 else
                 {
                     Serial.print(temperature[i]);
-                    Serial.print("C");
-                }
-                Serial.print(",");
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                Serial.print(dieName[i]);
-                Serial.print("=");
-                if (!die_valid[i])
-                {
-                    Serial.print("NaN");
-                }
-                else
-                {
-                    Serial.print(die_temperature[i]);
                     Serial.print("C");
                 }
                 if (i < 2)
@@ -467,11 +413,8 @@ void loop()
     // Read one sensor per cycle for better responsiveness
     if (currentMillis - previousMillis >= INTERVAL)
     {
-        // Both values come from the same frame, so they always describe the
-        // same conversion of the same chip.
         uint32_t raw = readRawFrame(cs_pin[current_sensor]);
         float sensor_temperature = parseFrame(current_sensor, raw);
-        float die = parseDieTemperature(raw);
 
         if (isnan(sensor_temperature))
         {
@@ -494,28 +437,6 @@ void loop()
                                                        &seeded[current_sensor],
                                                        sensor_temperature);
             is_valid[current_sensor] = true;
-        }
-
-        if (isnan(die))
-        {
-            if (die_fault_count[current_sensor] < FAULT_LIMIT)
-            {
-                die_fault_count[current_sensor]++;
-            }
-            if (die_fault_count[current_sensor] >= FAULT_LIMIT)
-            {
-                die_valid[current_sensor] = false;
-                die_seeded[current_sensor] = false;
-            }
-        }
-        else
-        {
-            die_fault_count[current_sensor] = 0;
-            die_temperature[current_sensor] = updateMedian(die_measurement[current_sensor],
-                                                           &die_sample_index[current_sensor],
-                                                           &die_seeded[current_sensor],
-                                                           die);
-            die_valid[current_sensor] = true;
         }
 
         // Sensor counter drives display refresh timing

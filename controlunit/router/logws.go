@@ -109,9 +109,6 @@ func StreamLiveRunLog(engine *engine.ControlEngine) http.HandlerFunc {
 					strconv.Itoa(int(status.PowerStatus.Heater)),
 					strconv.Itoa(int(status.PowerStatus.Fan)),
 					strconv.Itoa(int(status.PowerStatus.Steam)),
-					fmt.Sprintf("%.1f", status.Temperatures.MaterialDie),
-					fmt.Sprintf("%.1f", status.Temperatures.KilnPrimaryDie),
-					fmt.Sprintf("%.1f", status.Temperatures.KilnSecondaryDie),
 					fmt.Sprintf("%.1f", status.Temperatures.KilnPrimary),
 					fmt.Sprintf("%.1f", status.Temperatures.KilnSecondary),
 				}); err != nil {

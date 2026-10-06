@@ -54,7 +54,6 @@ func TestExecutionLogWritesItsHeaderOnCreation(t *testing.T) {
 	// webapp reads this CSV by position.
 	want := []string{
 		"time", "step", "steptime", "material", "kiln", "heater", "fan", "steam",
-		"material_die", "kiln_primary_die", "kiln_secondary_die",
 		"kiln_primary", "kiln_secondary",
 	}
 	if len(rows[0]) != len(want) {
@@ -197,38 +196,6 @@ func TestNilExecutionLogWriterIsSafe(t *testing.T) {
 
 	if got := writer.GetStartTime(); got != 0 {
 		t.Fatalf("expected 0 from a nil writer, got %d", got)
-	}
-}
-
-// The die columns are what tell a board-wide reference shift apart from the
-// kiln actually changing, so they have to survive the round trip to the log
-// with the readings they belong to.
-func TestExecutionLogWritesDieTemperatures(t *testing.T) {
-	storage := newTestStorage(t)
-
-	writer := NewExecutionLogWriter(storage, runName, 0, time.Now().Unix())
-	defer writer.Close()
-
-	status := statusAt(stepHeating, 131.75, 122.75)
-	status.Temperatures.MaterialDie = 41.87
-	status.Temperatures.KilnPrimaryDie = 27.5
-	status.Temperatures.KilnSecondaryDie = 28.12
-	writer.AddLine(status)
-
-	rows := readLog(t, runningLogPathOf(t, storage, runName))
-	if len(rows) != 2 {
-		t.Fatalf("expected a header and one row, got %v", rows)
-	}
-
-	row := rows[1]
-	for i, want := range map[int]string{
-		8:  "41.9",
-		9:  "27.5",
-		10: "28.1",
-	} {
-		if row[i] != want {
-			t.Fatalf("column %d: expected %q, got %q (row %v)", i, want, row[i], row)
-		}
 	}
 }
 

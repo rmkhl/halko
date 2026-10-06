@@ -86,35 +86,6 @@ back to whichever sensor is still valid when the other fails. A probe the
 device did not report reads as the invalid sentinel (-273.15), never as zero
 degrees.
 
-#### GET `/temperatures/die`
-
-Fetches the cold junction (chip die) temperatures the thermocouple readings are
-referenced to, one per MAX31855.
-
-**Response Format:**
-
-```json
-{
-  "data": {
-    "kiln_primary_die": 27.5,
-    "kiln_secondary_die": 28.125,
-    "material_die": 41.875
-  }
-}
-```
-
-These are diagnostics about the measurement rather than temperatures the system
-controls on, which is why they are served separately from `/temperatures`. A
-MAX31855 references the thermocouple voltage to its own die temperature, so when
-the die and the screw terminals beside it drift apart, every reading on the board
-shifts by the difference — indistinguishable from the kiln changing temperature
-unless the die readings are visible too.
-
-The endpoint serves the values recorded by the last `/temperatures` read and does
-not trigger a device read of its own, so a response can be one poll old. The
-sensor board's thermal time constant makes that immaterial, and it keeps the
-serial link free for the readings a run depends on.
-
 ### Status Endpoints
 
 #### GET `/status`
@@ -776,10 +747,7 @@ Records a note against the running program.
       "material": 42.5,
       "kiln": 55.0,
       "kiln_primary": 55.0,
-      "kiln_secondary": 54.6,
-      "material_die": 24.1,
-      "kiln_primary_die": 24.3,
-      "kiln_secondary_die": 24.2
+      "kiln_secondary": 54.6
     },
     "text": "opened the door to move a stack"
   }

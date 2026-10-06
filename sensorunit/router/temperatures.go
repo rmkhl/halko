@@ -47,14 +47,12 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Debug("Retrieved %d temperature readings from sensor unit (attempt %d/%d)", len(temperatures), attempt, maxAttempts)
 
-		response, dies := temperatureResponseFrom(temperatures)
-		api.storeDieReadings(dies)
+		response := temperatureResponseFrom(temperatures)
 		kilnPrimary := response["kiln_primary"]
 		kilnSecondary := response["kiln_secondary"]
 
-		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C, dies %.2f/%.2f/%.2f°C",
-			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"],
-			dies["kiln_primary_die"], dies["kiln_secondary_die"], dies["material_die"])
+		log.Debug("Temperature readings processed (attempt %d/%d): KilnPrimary=%.2f°C, KilnSecondary=%.2f°C, Material=%.2f°C",
+			attempt, maxAttempts, kilnPrimary, kilnSecondary, response["material"])
 
 		// Check if all readings are invalid
 		allInvalid := (kilnPrimary == types.InvalidTemperatureReading &&
@@ -93,34 +91,24 @@ func (api *API) getTemperatures(w http.ResponseWriter, r *http.Request) {
 // the firmware, so they live in one place rather than being spelled out at
 // each use.
 const (
-	probeKilnPrimary      = "KilnPrimary"
-	probeKilnSecondary    = "KilnSecondary"
-	probeWood             = "Wood"
-	probeKilnPrimaryDie   = "KilnPrimaryDie"
-	probeKilnSecondaryDie = "KilnSecondaryDie"
-	probeWoodDie          = "WoodDie"
+	probeKilnPrimary   = "KilnPrimary"
+	probeKilnSecondary = "KilnSecondary"
+	probeWood          = "Wood"
 )
 
-// temperatureResponseFrom turns one device read into the two maps this service
-// serves: the temperatures, and the cold junctions the die endpoint answers
-// from. A probe the device did not report reads as the invalid sentinel, never
-// as zero degrees.
+// temperatureResponseFrom turns one device read into the response this
+// service serves. A probe the device did not report reads as the invalid
+// sentinel, never as zero degrees.
 //
 // Both kiln readings are reported unresolved. Which one the controller acts on
 // is configured in the control unit; this service's job is to say what the
 // probes read.
-//
-// The cold junctions stay out of the temperature response: they are diagnostics
-// about the measurement, not temperatures the system controls on. They are kept
-// per chip rather than folded into one value because whether they moved
-// together is what says a shift is the board and not the kiln.
-func temperatureResponseFrom(readings []serial.Temperature) (types.TemperatureResponse, types.TemperatureResponse) {
+func temperatureResponseFrom(readings []serial.Temperature) types.TemperatureResponse {
 	response := types.TemperatureResponse{
 		"kiln_primary":   types.InvalidTemperatureReading,
 		"kiln_secondary": types.InvalidTemperatureReading,
 		"material":       types.InvalidTemperatureReading,
 	}
-	dies := make(types.TemperatureResponse, dieSensorCount)
 
 	for _, reading := range readings {
 		switch reading.Name {
@@ -130,30 +118,8 @@ func temperatureResponseFrom(readings []serial.Temperature) (types.TemperatureRe
 			response["kiln_secondary"] = reading.Value
 		case probeWood:
 			response["material"] = reading.Value
-		case probeKilnPrimaryDie:
-			dies["kiln_primary_die"] = reading.Value
-		case probeKilnSecondaryDie:
-			dies["kiln_secondary_die"] = reading.Value
-		case probeWoodDie:
-			dies["material_die"] = reading.Value
 		}
 	}
 
-	return response, dies
-}
-
-// dieSensorCount is how many cold junctions the unit reports, one per chip.
-const dieSensorCount = 3
-
-// getDieTemperatures serves the cold junction readings recorded by the last
-// temperature read. It deliberately does not trigger a read of its own: the
-// values move with the sensor board, not the kiln, so a poll-old value says
-// the same thing as a fresh one and the serial link stays free for the
-// readings the run depends on.
-func (api *API) getDieTemperatures(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Processing die temperature request from %s", r.RemoteAddr)
-
-	writeJSON(w, http.StatusOK, types.APIResponse[types.TemperatureResponse]{
-		Data: api.dieReadings(),
-	})
+	return response
 }

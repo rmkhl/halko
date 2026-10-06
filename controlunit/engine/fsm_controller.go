@@ -555,9 +555,6 @@ func (p *programFSMController) UpdateStatus(status *types.ExecutionStatus) {
 	status.Temperatures.Kiln = p.temperatures.reading.Kiln
 	status.Temperatures.KilnPrimary = p.temperatures.reading.KilnPrimary
 	status.Temperatures.KilnSecondary = p.temperatures.reading.KilnSecondary
-	status.Temperatures.MaterialDie = p.temperatures.reading.MaterialDie
-	status.Temperatures.KilnPrimaryDie = p.temperatures.reading.KilnPrimaryDie
-	status.Temperatures.KilnSecondaryDie = p.temperatures.reading.KilnSecondaryDie
 	status.PowerStatus.Heater = int8(p.psuStatus.reading.Heater.Percent)
 	status.PowerStatus.Fan = int8(p.psuStatus.reading.Fan.Percent)
 	status.PowerStatus.Steam = int8(p.psuStatus.reading.Steam.Percent)

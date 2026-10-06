@@ -95,7 +95,6 @@ var testConfigData = `{
       "url": "http://localhost:8093",
       "status": "/status",
       "temperatures": "/temperatures",
-      "die_temperatures": "/temperatures/die",
       "display": "/display"
     },
     "powerunit": {

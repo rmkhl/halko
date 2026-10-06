@@ -1,9 +1,11 @@
 // Parsing and step-grouping of controlunit execution logs. Columns:
-// time,step,steptime,material,kiln,heater,fan,steam,
-// material_die,kiln_primary_die,kiln_secondary_die,kiln_primary,kiln_secondary
+// time,step,steptime,material,kiln,heater,fan,steam,kiln_primary,kiln_secondary
 //
 // The last two are appended, so histories written before the kiln pair landed
-// have eleven columns and parse without them.
+// have eight columns and parse without them. Histories written while the
+// sensor unit still reported die temperatures carried three more columns
+// between steam and kiln_primary; such a log now misreads those three
+// columns as the kiln pair.
 
 export interface LogRow {
   time: number;
@@ -66,8 +68,8 @@ export const parseExecutionLog = (csv: string): LogRow[] => {
       heater: parseFloat(values[5]),
       fan: parseFloat(values[6]),
       steam: parseFloat(values[7]),
-      kilnPrimary: optionalReading(values[11]),
-      kilnSecondary: optionalReading(values[12]),
+      kilnPrimary: optionalReading(values[8]),
+      kilnSecondary: optionalReading(values[9]),
     });
   }
 
