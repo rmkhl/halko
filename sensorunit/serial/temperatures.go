@@ -9,16 +9,15 @@ import (
 	"github.com/rmkhl/halko/types/log"
 )
 
-// expectedReadings is how many values the unit reports per read: three
-// thermocouples, then the cold junction each one is referenced to.
-const expectedReadings = 6
+// expectedReadings is how many values the unit reports per read: the three
+// thermocouples.
+const expectedReadings = 3
 
 // parseTemperatureResponse turns a `read` response of the form
-// `KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC,KilnPrimaryDie=XX.XC,
-// KilnSecondaryDie=XX.XC,WoodDie=XX.XC` into readings. A sensor that failed
-// reports `NaN`, which becomes types.InvalidTemperatureReading. Anything
-// else that will not parse rejects the whole response: a partially read line
-// would silently lose a sensor, and the caller can retry.
+// `KilnPrimary=XX.XC,KilnSecondary=XX.XC,Wood=XX.XC` into readings. A sensor
+// that failed reports `NaN`, which becomes types.InvalidTemperatureReading.
+// Anything else that will not parse rejects the whole response: a partially
+// read line would silently lose a sensor, and the caller can retry.
 func parseTemperatureResponse(response string) ([]Temperature, error) {
 	readings := strings.Split(response, ",")
 	if len(readings) != expectedReadings {

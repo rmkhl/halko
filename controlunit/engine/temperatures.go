@@ -65,8 +65,7 @@ func resolveKiln(strategy types.KilnSensorStrategy, primary, secondary float32) 
 }
 
 // observe records a sample, keeping the previous value for any sensor that
-// reported an invalid reading. The cold junction readings are the exception:
-// they are logged, never controlled or failsafed on.
+// reported an invalid reading.
 func (t *fsmTemperatures) observe(sample temperatureReadings, now int64, strategy types.KilnSensorStrategy) {
 	// Resolve the sample that just arrived, never the held values: a sensor
 	// that dropped out ten minutes ago must not be averaged against a live one.
@@ -80,15 +79,10 @@ func (t *fsmTemperatures) observe(sample temperatureReadings, now int64, strateg
 		t.reading.Material = sample.Material
 		t.materialValidAt = now
 	}
-	// The raw pair and the cold junctions are copied straight through rather
-	// than held: a held raw reading would hide the dropout it exists to show,
-	// a stale cold junction would mask the drift it is here to expose, and
-	// nothing controls on any of them.
+	// The raw pair is copied straight through rather than held: a held raw
+	// reading would hide the dropout it exists to show.
 	t.reading.KilnPrimary = sample.KilnPrimary
 	t.reading.KilnSecondary = sample.KilnSecondary
-	t.reading.MaterialDie = sample.MaterialDie
-	t.reading.KilnPrimaryDie = sample.KilnPrimaryDie
-	t.reading.KilnSecondaryDie = sample.KilnSecondaryDie
 }
 
 // invalidFor names the sensor that has gone longest without a valid reading
